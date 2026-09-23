@@ -47,6 +47,13 @@ Keep network-backed live tests separate from deterministic acceptance tests.
 Live services may provide compatibility evidence, but credentials, availability,
 rate limits, and remote data must not decide the mandatory owner suite.
 
+## GitHub Actions
+
+The [CI workflow](../../.github/workflows/ci.yml) checks the root license and
+local links in tracked Markdown files on pushes and pull requests to `main`.
+Each provider extends the workflow with the source, Rust, package, coverage,
+standalone, and embedding checks that apply to it.
+
 ## Coverage
 
 Every production crate requires independent full-scope line and region coverage
