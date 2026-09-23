@@ -1,0 +1,2 @@
+# Geam embeds unmodified upstream Gleam source in this generated Rust artifact.
+src/geam_bindings/program.rs -whitespace

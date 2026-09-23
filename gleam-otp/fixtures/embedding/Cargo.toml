@@ -1,0 +1,17 @@
+[package]
+name = "geam-otp-embedding"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.96"
+publish = false
+
+[package.metadata.geam.embedding]
+generate = "both"
+
+[dependencies]
+geam = { git = "https://github.com/panarch/geam.git", rev = "76c4ab7c6a2c0c35975bdd97e5de7c6284f895e7", default-features = false, features = ["embedding", "gleam-erlang", "geam-builtin", "tokio", "gleam-stdlib"] }
+geam-otp = { path = "../.." }
+tokio = { version = "1.53.1", features = ["rt", "time"] }
+
+[workspace]
+resolver = "3"

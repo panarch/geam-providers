@@ -1042,14 +1042,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "geam-filepath"
-version = "0.1.0"
-dependencies = [
- "geam",
- "tokio",
-]
-
-[[package]]
 name = "geam-gleam-core"
 version = "1.18.1-geam.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1183,18 +1175,15 @@ dependencies = [
 name = "geam-otp"
 version = "0.1.0"
 dependencies = [
- "camino",
  "geam",
- "sha2 0.10.9",
 ]
 
 [[package]]
-name = "geam-regexp"
+name = "geam-otp-embedding"
 version = "0.1.0"
 dependencies = [
  "geam",
- "regex",
- "regex-syntax",
+ "geam-otp",
  "tokio",
 ]
 
@@ -1682,9 +1671,9 @@ checksum = "3eaf3ede3fee6db1a4c2ee091bf8a8b4dccdc6d17f656fb07896ee72867612f2"
 
 [[package]]
 name = "libredox"
-version = "0.1.25"
+version = "0.1.24"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "61ff90caf6077a803a240f62fdbe88645a890bbca49ef8174c3cb0404362171d"
+checksum = "6480ccc157a1389bb2e4891b24751b0f798ba640d22386f23143fbcc89da195a"
 dependencies = [
  "libc",
 ]
