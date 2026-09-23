@@ -1,0 +1,7 @@
+name = "geam_filepath_embedding"
+version = "0.1.0"
+target = "erlang"
+
+[dependencies]
+filepath = ">= 1.1.2 and < 1.1.3"
+gleam_stdlib = ">= 1.0.0 and < 2.0.0"
