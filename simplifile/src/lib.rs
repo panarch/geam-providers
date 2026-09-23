@@ -375,14 +375,16 @@ mod simplifile {
 
     #[cfg(test)]
     mod tests {
+        #[cfg(unix)]
+        use super::create_link;
         use super::{
             BigInt, BitArrayValue, FileError, FileInfo, FileTimes, StringValue, SystemTime,
-            append_bits, create_directory, create_link, create_symlink, delete, delete_file,
-            do_copy_file, do_create_dir_all, do_resolve, erl_do_current_directory, file_error,
-            file_info, link_info, read_bits, read_directory, rename, rename_file,
-            set_permissions_octal, touch, write_bits,
+            append_bits, create_directory, create_symlink, delete, delete_file, do_copy_file,
+            do_create_dir_all, do_resolve, erl_do_current_directory, file_error, file_info,
+            link_info, read_bits, read_directory, rename, rename_file, set_permissions_octal,
+            touch, write_bits,
         };
-        use std::fs::{self, File};
+        use std::fs;
         use std::io;
         use std::path::Path;
         use std::time::Duration;
@@ -595,7 +597,9 @@ mod simplifile {
             );
             fs::write(&file_path, b"keep existing contents").expect("populate touched file");
             let old_time = SystemTime::UNIX_EPOCH + Duration::from_secs(100);
-            File::open(&file_path)
+            fs::OpenOptions::new()
+                .write(true)
+                .open(&file_path)
                 .expect("created file")
                 .set_times(
                     FileTimes::new()
