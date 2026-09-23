@@ -2,7 +2,7 @@
 
 This document defines the test roles and verification baseline for Geam
 Providers. The current production packages are `geam-filepath`,
-`geam-regexp`, `geam-otp`, and `geam-houdini`. This document must remain the
+`geam-regexp`, `geam-otp`, `geam-houdini`, and `geam-crypto`. This document must remain the
 source of truth for the checks actually run.
 
 For acceptance rules, see [review-policy.md](review-policy.md). For practical
@@ -54,8 +54,12 @@ The Rust workspace, fixture consumers, and report service example use Geam
 `main` commit `76c4ab7c6a2c0c35975bdd97e5de7c6284f895e7`. Houdini also
 uses the public `geam-core` byte-slice helper from that commit. The Gleam
 projects resolve the unmodified `filepath` 1.1.2, `gleam_regexp` 1.1.1,
-`gleam_otp` 1.3.0, and `houdini` 1.2.0 packages from Hex. From the repository
-root, download fixture dependencies before running source-backed Rust tests:
+`gleam_otp` 1.3.0, `houdini` 1.2.0, and `gleam_crypto` 1.6.0 packages from Hex. The crypto
+fixtures select `gleam_stdlib` 1.0.3, within the upstream crypto dependency
+range, because that version matches the pinned Geam stdlib declarations. Using
+1.0.5 with the pinned Geam commit failed at the `gleam/bit_array.pad_to_bytes`
+linkage check. From the repository root, download fixture dependencies before
+running source-backed Rust tests:
 
 ```sh
 (cd filepath/fixtures/gleam && gleam deps download)
@@ -64,6 +68,8 @@ root, download fixture dependencies before running source-backed Rust tests:
 (cd gleam-regexp/fixtures/embedding/gleam && gleam deps download)
 (cd gleam-otp/fixtures/gleam && gleam deps download)
 (cd gleam-otp/fixtures/embedding/gleam && gleam deps download)
+(cd gleam-crypto/fixtures/gleam && gleam deps download)
+(cd gleam-crypto/fixtures/embedding/gleam && gleam deps download)
 (cd gleam-otp/examples/report_service && gleam deps download)
 (cd houdini/fixtures/gleam && gleam deps download)
 (cd houdini/fixtures/embedding/gleam && gleam deps download)
@@ -73,10 +79,13 @@ root, download fixture dependencies before running source-backed Rust tests:
 (cd gleam-regexp/fixtures/embedding/gleam && gleam format --check && gleam check)
 (cd gleam-otp/fixtures/gleam && gleam format --check && gleam check)
 (cd gleam-otp/fixtures/embedding/gleam && gleam format --check && gleam check)
+(cd gleam-crypto/fixtures/gleam && gleam format --check && gleam check)
+(cd gleam-crypto/fixtures/embedding/gleam && gleam format --check && gleam check)
 (cd gleam-otp/examples/report_service && gleam format --check && gleam check)
 (cd gleam-otp/fixtures/gleam/build/packages/gleam_otp && shasum -a 256 -c ../../../../upstream.sha256)
 (cd houdini/fixtures/gleam && gleam format --check && gleam check)
 (cd houdini/fixtures/embedding/gleam && gleam format --check && gleam check)
+(cd gleam-crypto/fixtures/gleam/build/packages/gleam_crypto && shasum -a 256 -c ../../../../upstream.sha256)
 ```
 
 The Houdini standalone Gleam fixture can also run on Erlang with `gleam run`
@@ -129,6 +138,12 @@ root workspace members. Check and run each separately:
 (cd houdini/fixtures/embedding && cargo run --locked)
 (cd houdini/fixtures/embedding && cargo clippy --all-targets --locked -- -D warnings)
 (cd houdini/fixtures/embedding && RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --locked)
+(cd gleam-crypto/fixtures/embedding && cargo fmt --all --check)
+(cd gleam-crypto/fixtures/embedding && "$GEAM_BIN" embedding check)
+(cd gleam-crypto/fixtures/embedding && cargo test --locked)
+(cd gleam-crypto/fixtures/embedding && cargo run --locked)
+(cd gleam-crypto/fixtures/embedding && cargo clippy --all-targets --locked -- -D warnings)
+(cd gleam-crypto/fixtures/embedding && RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --locked)
 ```
 
 Each standalone fixture has its own Cargo lockfile too. Run `prepare`, `run`,
@@ -153,6 +168,12 @@ FIXTURE="$PWD/gleam-otp/fixtures/gleam"
 (cd "$FIXTURE" && "$GEAM_BIN" build)
 (cd /tmp && "$FIXTURE/build/geam/target/debug/otp_service_fixture")
 
+FIXTURE="$PWD/gleam-crypto/fixtures/gleam"
+(cd "$FIXTURE" && "$GEAM_BIN" prepare)
+(cd "$FIXTURE" && "$GEAM_BIN" run)
+(cd "$FIXTURE" && "$GEAM_BIN" build)
+(cd /tmp && "$FIXTURE/build/geam/target/debug/geam_crypto_fixture")
+
 EXAMPLE="$PWD/gleam-otp/examples/report_service"
 (cd "$EXAMPLE" && "$GEAM_BIN" prepare)
 (cd "$EXAMPLE" && output=$("$GEAM_BIN" run) && diff -u expected-output.txt <(printf '%s\n' "$output"))
@@ -171,6 +192,7 @@ cargo package --list --package geam-filepath --locked
 cargo package --list --package geam-regexp --locked
 cargo package --list --package geam-otp --locked
 cargo package --list --package geam-houdini --locked
+cargo package --list --package geam-crypto --locked
 ```
 
 Confirm that each list contains `LICENSE` along with the manifest, README, and
@@ -266,6 +288,11 @@ cargo llvm-cov --package geam-houdini --locked \
   --json --summary-only --output-path target/houdini-coverage.json \
   --fail-under-lines 100 \
   --fail-under-regions 100
+cargo llvm-cov clean --workspace
+cargo llvm-cov --package geam-crypto --locked \
+  --json --summary-only --output-path target/gleam-crypto-coverage.json \
+  --fail-under-lines 100 \
+  --fail-under-regions 100
 ```
 
 Read each package file entry in its JSON report to confirm line and region counts
@@ -286,8 +313,8 @@ cargo llvm-cov report --package geam-regexp \
   --show-missing-lines
 ```
 
-Substitute `geam-filepath`, `geam-otp`, or `geam-houdini` when inspecting those
-crates.
+Substitute `geam-filepath`, `geam-otp`, `geam-houdini`, or `geam-crypto` when
+inspecting those crates.
 
 Generate a package-scoped HTML report from the same profile when source context
 is easier to inspect visually:

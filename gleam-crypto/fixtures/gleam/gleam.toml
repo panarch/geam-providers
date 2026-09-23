@@ -1,0 +1,9 @@
+name = "geam_crypto_fixture"
+version = "0.1.0"
+target = "erlang"
+description = "Unmodified gleam_crypto 1.6.0 provider fixture"
+licences = ["Apache-2.0"]
+
+[dependencies]
+gleam_crypto = ">= 1.6.0 and < 1.6.1"
+gleam_stdlib = ">= 1.0.3 and < 1.0.4"
