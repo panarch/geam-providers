@@ -1,0 +1,7 @@
+name = "geam_houdini_fixture"
+version = "0.1.0"
+description = "Unmodified houdini 1.2.0 standalone provider fixture"
+licences = ["Apache-2.0"]
+
+[dependencies]
+houdini = ">= 1.2.0 and < 1.2.1"
