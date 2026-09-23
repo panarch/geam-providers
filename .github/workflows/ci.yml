@@ -201,19 +201,31 @@ jobs:
             .data[].files[]
             | "\(.filename): lines \(.summary.lines.covered)/\(.summary.lines.count), regions \(.summary.regions.covered)/\(.summary.regions.count)"
           ' target/provider-coverage.json
-          jq -e --arg prefix "$PROVIDER_DIR/src/" '
+          if ! jq -e --arg prefix "$PROVIDER_DIR/src/" '
             [.data[].files[]
               | select(.filename | gsub("\\\\"; "/") | contains($prefix))] as $files
             | ($files | length > 0)
               and ($files | all(.summary.lines.covered == .summary.lines.count
                 and .summary.regions.covered == .summary.regions.count))
-          ' target/provider-coverage.json
+          ' target/provider-coverage.json; then
+            cargo llvm-cov report --package "$PROVIDER_CRATE" --json \
+              --output-path target/provider-coverage-detail.json
+            jq -r --arg prefix "$PROVIDER_DIR/src/" '
+              .data[].files[]
+              | select(.filename | gsub("\\\\"; "/") | contains($prefix))
+              | .filename as $file
+              | .segments[]
+              | select(.[2] == 0 and .[3] and .[4])
+              | "\($file):\(.[0]):\(.[1]) uncovered region"
+            ' target/provider-coverage-detail.json
+            exit 1
+          fi
 
   integration:
     name: Integration (${{ matrix.crate }}, ${{ matrix.runner }})
     needs: providers
     runs-on: ${{ matrix.runner }}
-    timeout-minutes: 30
+    timeout-minutes: 45
     defaults:
       run:
         shell: bash
