@@ -196,8 +196,12 @@ jobs:
       - name: Require full provider coverage
         run: |
           cargo llvm-cov --package "$PROVIDER_CRATE" --locked \
-            --json --summary-only --output-path target/provider-coverage.json \
-            --fail-under-lines 100 --fail-under-regions 100
+            --json --summary-only --output-path target/provider-coverage.json
+          jq -r --arg prefix "/$PROVIDER_DIR/src/" '
+            .data[].files[]
+            | select(.filename | gsub("\\\\"; "/") | contains($prefix))
+            | "\(.filename): lines \(.summary.lines.covered)/\(.summary.lines.count), regions \(.summary.regions.covered)/\(.summary.regions.count)"
+          ' target/provider-coverage.json
           jq -e --arg prefix "/$PROVIDER_DIR/src/" '
             [.data[].files[]
               | select(.filename | gsub("\\\\"; "/") | contains($prefix))] as $files

@@ -375,14 +375,12 @@ mod simplifile {
 
     #[cfg(test)]
     mod tests {
-        #[cfg(unix)]
-        use super::create_link;
         use super::{
             BigInt, BitArrayValue, FileError, FileInfo, FileTimes, StringValue, SystemTime,
-            append_bits, create_directory, create_symlink, delete, delete_file, do_copy_file,
-            do_create_dir_all, do_resolve, erl_do_current_directory, file_error, file_info,
-            link_info, read_bits, read_directory, rename, rename_file, set_permissions_octal,
-            touch, write_bits,
+            append_bits, create_directory, create_link, create_symlink, delete, delete_file,
+            do_copy_file, do_create_dir_all, do_resolve, erl_do_current_directory, file_error,
+            file_info, link_info, read_bits, read_directory, rename, rename_file,
+            set_permissions_octal, touch, write_bits,
         };
         use std::fs;
         use std::io;
@@ -527,6 +525,14 @@ mod simplifile {
             let file = source_path(&temp.path().join("target.txt"));
             write_bits(file.clone(), BitArrayValue::from_bytes(b"target".to_vec()))
                 .expect("create file target");
+            let hard_link = source_path(&temp.path().join("hard-link"));
+            create_link(file.clone(), hard_link.clone()).expect("hard link to file");
+            let FileInfo::FileInfo { size, .. } =
+                file_info(hard_link.clone()).expect("hard link metadata");
+            assert_eq!(size, BigInt::from(6));
+            delete_file(hard_link).expect("delete hard link only");
+            assert!(temp.path().join("target.txt").is_file());
+
             let file_link = source_path(&temp.path().join("file-link"));
             create_symlink("target.txt".into(), file_link.clone()).expect("symbolic link to file");
             let FileInfo::FileInfo { mode, .. } =
@@ -536,7 +542,10 @@ mod simplifile {
             assert!(temp.path().join("target.txt").is_file());
 
             let directory = source_path(&temp.path().join("target-directory"));
-            create_directory(directory).expect("create directory target");
+            create_directory(directory.clone()).expect("create directory target");
+            let FileInfo::FileInfo { mode, .. } = file_info(directory).expect("directory metadata");
+            assert_eq!(mode & BigInt::from(0o170000), BigInt::from(0o040000));
+            assert_eq!(mode & BigInt::from(0o111), BigInt::from(0o111));
             let directory_link = source_path(&temp.path().join("directory-link"));
             create_symlink("target-directory".into(), directory_link.clone())
                 .expect("symbolic link to directory");
