@@ -52,7 +52,9 @@ jobs:
                     | {
                         crate: .name,
                         dir: (.manifest_path | sub("/Cargo.toml$"; "") | ltrimstr($root)),
-                        fixture_bin: (.name | gsub("-"; "_") + "_fixture")
+                        gleam_package: .metadata.geam.provider."gleam-package",
+                        fixture_bin: (.metadata.geam.ci."fixture-bin" // (.name | gsub("-"; "_") + "_fixture")),
+                        example_dir: (.metadata.geam.ci."example-dir" // "")
                       }
                   ]}
                 | select(.include | length > 0)
@@ -111,9 +113,15 @@ jobs:
         env:
           PROVIDER_MATRIX: ${{ needs.providers.outputs.matrix }}
         run: |
-          while IFS= read -r provider_dir; do
-            (cd "$provider_dir/fixtures/embedding/gleam" && gleam deps download)
-          done < <(jq -r '.include[].dir' <<< "$PROVIDER_MATRIX")
+          while IFS=$'\t' read -r provider_dir gleam_package; do
+            for fixture in gleam embedding/gleam; do
+              (cd "$provider_dir/fixtures/$fixture" && gleam deps download)
+            done
+            if [[ -f "$provider_dir/fixtures/upstream.sha256" ]]; then
+              (cd "$provider_dir/fixtures/gleam/build/packages/$gleam_package" && \
+                sha256sum --check ../../../../upstream.sha256)
+            fi
+          done < <(jq -r '.include[] | [.dir, .gleam_package] | @tsv' <<< "$PROVIDER_MATRIX")
 
       - name: Check Rust formatting
         run: cargo fmt --all --check
@@ -170,8 +178,11 @@ jobs:
         with:
           tool: cargo-llvm-cov@0.8.7
 
-      - name: Download original Gleam package
-        run: (cd "$PROVIDER_DIR/fixtures/embedding/gleam" && gleam deps download)
+      - name: Download original Gleam packages
+        run: |
+          for fixture in gleam embedding/gleam; do
+            (cd "$PROVIDER_DIR/fixtures/$fixture" && gleam deps download)
+          done
 
       - name: Clean coverage profile
         run: cargo llvm-cov clean --workspace
@@ -181,12 +192,11 @@ jobs:
           cargo llvm-cov --package "$PROVIDER_CRATE" --locked \
             --json --summary-only --output-path "$RUNNER_TEMP/provider-coverage.json" \
             --fail-under-lines 100 --fail-under-regions 100
-          jq -e --arg file "/$PROVIDER_DIR/src/lib.rs" '
-            [.data[].files[]
-              | select(.filename | endswith($file))
-              | select(.summary.lines.covered == .summary.lines.count
-                  and .summary.regions.covered == .summary.regions.count)]
-            | length == 1
+          jq -e --arg prefix "/$PROVIDER_DIR/src/" '
+            [.data[].files[] | select(.filename | contains($prefix))] as $files
+            | ($files | length > 0)
+              and ($files | all(.summary.lines.covered == .summary.lines.count
+                and .summary.regions.covered == .summary.regions.count))
           ' "$RUNNER_TEMP/provider-coverage.json"
 
   integration:
@@ -201,6 +211,7 @@ jobs:
       PROVIDER_CRATE: ${{ matrix.crate }}
       PROVIDER_DIR: ${{ matrix.dir }}
       FIXTURE_BIN: ${{ matrix.fixture_bin }}
+      EXAMPLE_DIR: ${{ matrix.example_dir }}
 
     steps:
       - name: Checkout
@@ -247,6 +258,16 @@ jobs:
               exit 1
             }
           done
+          if [[ -n "$EXAMPLE_DIR" ]]; then
+            grep -Fq "rev = \"$GEAM_REV\"" "$PROVIDER_DIR/$EXAMPLE_DIR/.cargo/config.toml" || {
+              echo "::error file=$PROVIDER_DIR/$EXAMPLE_DIR/.cargo/config.toml::Geam revision differs from CI"
+              exit 1
+            }
+            grep -Fq "$GEAM_REV#$GEAM_REV" "$PROVIDER_DIR/$EXAMPLE_DIR/Cargo.lock" || {
+              echo "::error file=$PROVIDER_DIR/$EXAMPLE_DIR/Cargo.lock::Geam revision is absent from lockfile"
+              exit 1
+            }
+          fi
 
       - name: Download original Gleam packages
         run: |
@@ -268,6 +289,12 @@ jobs:
         working-directory: ${{ matrix.dir }}/fixtures/embedding
         run: cargo clippy --all-targets --locked -- -D warnings
 
+      - name: Build embedding Rust documentation
+        working-directory: ${{ matrix.dir }}/fixtures/embedding
+        env:
+          RUSTDOCFLAGS: -D warnings
+        run: cargo doc --no-deps --locked
+
       - name: Check package file list
         shell: bash
         run: |
@@ -276,10 +303,15 @@ jobs:
           for required in Cargo.toml LICENSE README.md src/lib.rs; do
             grep -Fxq "$required" <<< "$files"
           done
-          if grep -Eq '^(fixtures|tests)/' <<< "$files"; then
+          if grep -Eq '^(fixtures|tests|examples)/|^src/test_support(/|[.]rs$)' <<< "$files"; then
             echo "::error::$PROVIDER_CRATE included a fixture or repository-only test"
             exit 1
           fi
+
+      - name: Check example Gleam source
+        if: matrix.example_dir != ''
+        run: |
+          (cd "$PROVIDER_DIR/$EXAMPLE_DIR" && gleam deps download && gleam format --check && gleam check)
 
       - name: Install pinned Geam CLI
         env:
@@ -321,3 +353,11 @@ jobs:
         run: |
           cd "$RUNNER_TEMP"
           "$GITHUB_WORKSPACE/$PROVIDER_DIR/fixtures/gleam/build/geam/target/debug/$FIXTURE_BIN"
+
+      - name: Run provider example
+        if: matrix.example_dir != ''
+        run: |
+          cd "$PROVIDER_DIR/$EXAMPLE_DIR"
+          "$RUNNER_TEMP/geam-cli/bin/geam" prepare
+          output=$("$RUNNER_TEMP/geam-cli/bin/geam" run)
+          diff -u expected-output.txt <(printf '%s\n' "$output")

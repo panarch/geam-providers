@@ -1,0 +1,33 @@
+[package]
+name = "geam-otp"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Geam Rust provider for the original gleam_otp package"
+repository = "https://github.com/panarch/geam-providers"
+readme = "README.md"
+exclude = ["examples/", "fixtures/", "tests/", "src/test_support.rs", "src/test_support/"]
+keywords = ["geam", "gleam", "otp", "provider"]
+categories = ["concurrency", "development-tools"]
+autotests = false
+
+[package.metadata.geam.provider]
+schema = 2
+gleam-package = "gleam_otp"
+gleam-version = ">= 1.3.0 and < 1.3.1"
+component = "profile"
+execution-service = false
+requires-services = ["gleam_erlang"]
+
+[package.metadata.geam.ci]
+fixture-bin = "otp_service_fixture"
+example-dir = "examples/report_service"
+
+[dependencies]
+geam = { workspace = true, features = ["gleam-erlang"] }
+
+[dev-dependencies]
+geam = { workspace = true, features = ["embedding", "gleam-stdlib", "tokio", "geam-builtin"] }
+camino = "1"
+sha2 = "0.10"

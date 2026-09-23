@@ -1,0 +1,26 @@
+# Managed by Geam. Use `geam provider` commands to change providers.
+
+[package]
+name = "otp_service_fixture-geam-runner"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[package.metadata.geam.runner]
+schema = 1
+
+[[bin]]
+name = "geam-runner"
+path = "build/geam/runner.rs"
+
+[[bin]]
+name = "otp_service_fixture"
+path = "build/geam/application.rs"
+
+[dependencies]
+geam = { version = "=0.2.3", default-features = false, features = ["standalone"] }
+tokio = { version = "1.53.1", default-features = false, features = ["rt-multi-thread", "net", "time"] }
+geam_provider_gleam_otp = { package = "geam-otp", path = "../.." }
+
+[workspace]
+resolver = "3"
