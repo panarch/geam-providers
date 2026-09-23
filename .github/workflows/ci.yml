@@ -197,12 +197,11 @@ jobs:
         run: |
           cargo llvm-cov --package "$PROVIDER_CRATE" --locked \
             --json --summary-only --output-path target/provider-coverage.json
-          jq -r --arg prefix "/$PROVIDER_DIR/src/" '
+          jq -r '
             .data[].files[]
-            | select(.filename | gsub("\\\\"; "/") | contains($prefix))
             | "\(.filename): lines \(.summary.lines.covered)/\(.summary.lines.count), regions \(.summary.regions.covered)/\(.summary.regions.count)"
           ' target/provider-coverage.json
-          jq -e --arg prefix "/$PROVIDER_DIR/src/" '
+          jq -e --arg prefix "$PROVIDER_DIR/src/" '
             [.data[].files[]
               | select(.filename | gsub("\\\\"; "/") | contains($prefix))] as $files
             | ($files | length > 0)

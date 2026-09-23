@@ -1,1 +1,2 @@
 *.gleam text eol=lf
+geam_bindings.rs text eol=lf
