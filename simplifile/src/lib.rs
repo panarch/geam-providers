@@ -290,19 +290,18 @@ mod simplifile {
         let file_type = metadata.file_type();
         let type_bits = if file_type.is_symlink() {
             0o120000
-        } else if metadata.is_dir() {
+        } else if file_type.is_dir() {
             0o040000
-        } else if metadata.is_file() {
-            0o100000
         } else {
-            0
+            // Windows FileType classifies every other entry as a regular file.
+            0o100000
         };
         let write_bits = if metadata.permissions().readonly() {
             0
         } else {
             0o222
         };
-        let execute_bits = if metadata.is_dir() { 0o111 } else { 0 };
+        let execute_bits = if file_type.is_dir() { 0o111 } else { 0 };
 
         FileInfo::FileInfo {
             size: metadata.file_size().into(),
