@@ -1,0 +1,26 @@
+[package]
+name = "geam-gzlib"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Geam Rust provider for the original gzlib package"
+repository = "https://github.com/panarch/geam-providers"
+readme = "README.md"
+exclude = ["fixtures/", "tests/"]
+keywords = ["geam", "gleam", "gzlib", "provider"]
+categories = ["compression", "encoding"]
+
+[package.metadata.geam.provider]
+schema = 1
+gleam-package = "gzlib"
+gleam-version = ">= 2.0.0 and < 2.0.1"
+
+[dependencies]
+geam.workspace = true
+miniz_oxide.workspace = true
+crc32fast.workspace = true
+
+[dev-dependencies]
+geam = { workspace = true, features = ["embedding", "tokio", "geam-builtin"] }
+tokio = { version = "1.53.1", default-features = false, features = ["rt"] }

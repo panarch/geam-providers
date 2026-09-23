@@ -1,0 +1,7 @@
+name = "geam_gzlib_embedding"
+version = "0.1.0"
+description = "Unmodified gzlib 2.0.0 embedding provider fixture"
+licences = ["Apache-2.0"]
+
+[dependencies]
+gzlib = ">= 2.0.0 and < 2.0.1"
