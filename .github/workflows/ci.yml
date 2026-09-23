@@ -14,6 +14,10 @@ concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  CARGO_TERM_COLOR: always
+  GEAM_REV: 76c4ab7c6a2c0c35975bdd97e5de7c6284f895e7
+
 jobs:
   repository:
     name: Repository documents
@@ -26,3 +30,228 @@ jobs:
 
       - name: Check license and Markdown links
         run: python3 scripts/check_repository.py
+
+  quality:
+    name: Source and Rust checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Install Gleam toolchain
+        uses: erlef/setup-beam@v1
+        with:
+          otp-version: "29"
+          gleam-version: "1.18.1"
+          rebar3-version: "3"
+
+      - name: Install Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: "1.96"
+          components: rustfmt, clippy
+          cache: false
+          rustflags: ""
+
+      - name: Cache Rust builds
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            . -> target
+            gleam-regexp/fixtures/embedding -> target
+
+      - name: Check Geam revision across consumers
+        shell: bash
+        run: |
+          for manifest in \
+            Cargo.toml \
+            gleam-regexp/fixtures/embedding/Cargo.toml \
+            gleam-regexp/fixtures/gleam/.cargo/config.toml; do
+            grep -Fq "rev = \"$GEAM_REV\"" "$manifest" || {
+              echo "::error file=$manifest::Geam revision differs from CI"
+              exit 1
+            }
+          done
+          for lock in \
+            Cargo.lock \
+            gleam-regexp/fixtures/embedding/Cargo.lock \
+            gleam-regexp/fixtures/gleam/Cargo.lock; do
+            grep -Fq "$GEAM_REV#$GEAM_REV" "$lock" || {
+              echo "::error file=$lock::Geam revision is absent from lockfile"
+              exit 1
+            }
+          done
+
+      - name: Download original Gleam packages
+        run: |
+          (cd gleam-regexp/fixtures/gleam && gleam deps download)
+          (cd gleam-regexp/fixtures/embedding/gleam && gleam deps download)
+
+      - name: Check Gleam source
+        run: |
+          (cd gleam-regexp/fixtures/gleam && gleam format --check && gleam check)
+          (cd gleam-regexp/fixtures/embedding/gleam && gleam format --check && gleam check)
+
+      - name: Check Rust formatting
+        run: |
+          cargo fmt --all --check
+          (cd gleam-regexp/fixtures/embedding && cargo fmt --all --check)
+
+      - name: Test provider and original-source contract
+        run: cargo test --workspace --locked
+
+      - name: Lint provider and embedding consumer
+        run: |
+          cargo clippy --workspace --all-targets --locked -- -D warnings
+          (cd gleam-regexp/fixtures/embedding && cargo clippy --all-targets --locked -- -D warnings)
+
+      - name: Build Rust documentation
+        env:
+          RUSTDOCFLAGS: -D warnings
+        run: cargo doc --workspace --no-deps --locked
+
+      - name: Check package file list
+        shell: bash
+        run: |
+          files=$(cargo package --list --package geam-regexp --locked)
+          printf '%s\n' "$files"
+          grep -Fxq 'Cargo.toml' <<< "$files"
+          grep -Fxq 'LICENSE' <<< "$files"
+          grep -Fxq 'README.md' <<< "$files"
+          grep -Fxq 'src/lib.rs' <<< "$files"
+          if grep -Eq '^(fixtures|tests)/' <<< "$files"; then
+            echo '::error::Fixture or repository-only test entered the package'
+            exit 1
+          fi
+
+  coverage:
+    name: Provider line and region coverage
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Install Gleam toolchain
+        uses: erlef/setup-beam@v1
+        with:
+          otp-version: "29"
+          gleam-version: "1.18.1"
+          rebar3-version: "3"
+
+      - name: Install Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: "1.96"
+          components: llvm-tools-preview
+          cache: false
+          rustflags: ""
+
+      - name: Cache Rust builds
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: ". -> target"
+
+      - name: Install cargo-llvm-cov
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-llvm-cov@0.8.7
+
+      - name: Download original Gleam package
+        working-directory: gleam-regexp/fixtures/embedding/gleam
+        run: gleam deps download
+
+      - name: Clean coverage profile
+        run: cargo llvm-cov clean --workspace
+
+      - name: Require full provider coverage
+        run: |
+          cargo llvm-cov --package geam-regexp --locked \
+            --json --summary-only --output-path target/gleam-regexp-coverage.json \
+            --fail-under-lines 100 --fail-under-regions 100
+          jq -e '
+            [.data[].files[]
+              | select(.filename | endswith("/gleam-regexp/src/lib.rs"))
+              | select(.summary.lines.covered == .summary.lines.count
+                  and .summary.regions.covered == .summary.regions.count)]
+            | length == 1
+          ' target/gleam-regexp-coverage.json
+
+  integration:
+    name: Standalone and Rust embedding
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Install Gleam toolchain
+        uses: erlef/setup-beam@v1
+        with:
+          otp-version: "29"
+          gleam-version: "1.18.1"
+          rebar3-version: "3"
+
+      - name: Install Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: "1.96"
+          cache: false
+          rustflags: ""
+
+      - name: Cache Rust builds
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            . -> target
+            gleam-regexp/fixtures/embedding -> target
+
+      - name: Install pinned Geam CLI
+        env:
+          CARGO_TARGET_DIR: ${{ github.workspace }}/target/geam-cli-build
+        run: |
+          cargo install --git https://github.com/panarch/geam.git \
+            --rev "$GEAM_REV" --locked \
+            --root "$RUNNER_TEMP/geam-cli" --bin geam geam
+
+      - name: Download original Gleam packages
+        run: |
+          (cd gleam-regexp/fixtures/gleam && gleam deps download)
+          (cd gleam-regexp/fixtures/embedding/gleam && gleam deps download)
+
+      - name: Check generated embedding bindings
+        working-directory: gleam-regexp/fixtures/embedding
+        run: |
+          "$RUNNER_TEMP/geam-cli/bin/geam" embedding check
+
+      - name: Test Rust embedding consumer
+        working-directory: gleam-regexp/fixtures/embedding
+        run: cargo test --locked
+
+      - name: Run Rust embedding consumer
+        working-directory: gleam-regexp/fixtures/embedding
+        run: cargo run --locked
+
+      - name: Prepare standalone consumer
+        working-directory: gleam-regexp/fixtures/gleam
+        run: |
+          "$RUNNER_TEMP/geam-cli/bin/geam" prepare
+
+      - name: Run standalone consumer
+        working-directory: gleam-regexp/fixtures/gleam
+        run: |
+          "$RUNNER_TEMP/geam-cli/bin/geam" run
+
+      - name: Build standalone executable
+        working-directory: gleam-regexp/fixtures/gleam
+        run: |
+          "$RUNNER_TEMP/geam-cli/bin/geam" build
+
+      - name: Run executable outside its fixture
+        run: |
+          cd "$RUNNER_TEMP"
+          "$GITHUB_WORKSPACE/gleam-regexp/fixtures/gleam/build/geam/target/debug/geam_regexp_fixture"
