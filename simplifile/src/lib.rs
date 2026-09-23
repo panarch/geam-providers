@@ -544,8 +544,7 @@ mod simplifile {
             let directory = source_path(&temp.path().join("target-directory"));
             create_directory(directory.clone()).expect("create directory target");
             let FileInfo::FileInfo { mode, .. } = file_info(directory).expect("directory metadata");
-            assert_eq!(mode & BigInt::from(0o170000), BigInt::from(0o040000));
-            assert_eq!(mode & BigInt::from(0o111), BigInt::from(0o111));
+            assert_eq!(mode & BigInt::from(0o170111), BigInt::from(0o040111));
             let directory_link = source_path(&temp.path().join("directory-link"));
             create_symlink("target-directory".into(), directory_link.clone())
                 .expect("symbolic link to directory");
