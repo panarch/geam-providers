@@ -1,0 +1,14 @@
+[package]
+name = "geam-filepath-embedding"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.96"
+publish = false
+
+[dependencies]
+geam = { git = "https://github.com/panarch/geam.git", rev = "76c4ab7c6a2c0c35975bdd97e5de7c6284f895e7", default-features = false, features = ["embedding", "gleam-stdlib", "tokio", "geam-builtin"] }
+geam-filepath = { path = "../.." }
+tokio = { version = "1.53.1", default-features = false, features = ["rt"] }
+
+[workspace]
+resolver = "3"

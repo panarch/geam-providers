@@ -1029,6 +1029,14 @@ name = "geam-filepath"
 version = "0.1.0"
 dependencies = [
  "geam",
+]
+
+[[package]]
+name = "geam-filepath-embedding"
+version = "0.1.0"
+dependencies = [
+ "geam",
+ "geam-filepath",
  "tokio",
 ]
 
@@ -1160,16 +1168,6 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.119",
-]
-
-[[package]]
-name = "geam-regexp"
-version = "0.1.0"
-dependencies = [
- "geam",
- "regex",
- "regex-syntax",
- "tokio",
 ]
 
 [[package]]

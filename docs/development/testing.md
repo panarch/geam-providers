@@ -1,8 +1,9 @@
 # Testing
 
 This document defines the test roles and verification baseline for Geam
-Providers. The current production package is `geam-regexp`.
-It must remain the source of truth for the checks actually run.
+Providers. The current production packages are `geam-filepath` and
+`geam-regexp`. This document must remain the source of truth for the checks
+actually run.
 
 For acceptance rules, see [review-policy.md](review-policy.md). For practical
 test construction and difficult coverage work, see
@@ -49,14 +50,19 @@ rate limits, and remote data must not decide the mandatory owner suite.
 
 ## Dependency Preparation
 
-The Rust workspace and both fixture consumers use Geam `main` commit
+The Rust workspace and fixture consumers use Geam `main` commit
 `76c4ab7c6a2c0c35975bdd97e5de7c6284f895e7`. The Gleam fixtures resolve the
-unmodified `gleam_regexp` 1.1.1 package from Hex. From the repository root,
-download the fixture dependencies before running the source-backed Rust test:
+unmodified `filepath` 1.1.2 and `gleam_regexp` 1.1.1 packages from Hex. From the
+repository root, download fixture dependencies before running source-backed
+Rust tests:
 
 ```sh
+(cd filepath/fixtures/gleam && gleam deps download)
+(cd filepath/fixtures/embedding/gleam && gleam deps download)
 (cd gleam-regexp/fixtures/gleam && gleam deps download)
 (cd gleam-regexp/fixtures/embedding/gleam && gleam deps download)
+(cd filepath/fixtures/gleam && gleam format --check && gleam check)
+(cd filepath/fixtures/embedding/gleam && gleam format --check && gleam check)
 (cd gleam-regexp/fixtures/gleam && gleam format --check && gleam check)
 (cd gleam-regexp/fixtures/embedding/gleam && gleam format --check && gleam check)
 ```
@@ -82,10 +88,15 @@ cargo clippy --workspace --all-targets --locked -- -D warnings
 RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps --locked
 ```
 
-The independent embedding fixture has its own Cargo lockfile and is not a root
-workspace member. Check and run it separately:
+The independent embedding fixtures have their own Cargo lockfiles and are not
+root workspace members. Check and run each separately:
 
 ```sh
+(cd filepath/fixtures/embedding && cargo fmt --all --check)
+(cd filepath/fixtures/embedding && "$GEAM_BIN" embedding check)
+(cd filepath/fixtures/embedding && cargo test --locked)
+(cd filepath/fixtures/embedding && cargo run --locked)
+(cd filepath/fixtures/embedding && cargo clippy --all-targets --locked -- -D warnings)
 (cd gleam-regexp/fixtures/embedding && cargo fmt --all --check)
 (cd gleam-regexp/fixtures/embedding && "$GEAM_BIN" embedding check)
 (cd gleam-regexp/fixtures/embedding && cargo test --locked)
@@ -93,10 +104,16 @@ workspace member. Check and run it separately:
 (cd gleam-regexp/fixtures/embedding && cargo clippy --all-targets --locked -- -D warnings)
 ```
 
-The standalone fixture has its own Cargo lockfile too. Run `prepare`, `run`, and
-`build`, then execute the built program from outside the fixture directory:
+Each standalone fixture has its own Cargo lockfile too. Run `prepare`, `run`,
+and `build`, then execute each built program from outside its fixture directory:
 
 ```sh
+FIXTURE="$PWD/filepath/fixtures/gleam"
+(cd "$FIXTURE" && "$GEAM_BIN" prepare)
+(cd "$FIXTURE" && "$GEAM_BIN" run)
+(cd "$FIXTURE" && "$GEAM_BIN" build)
+(cd /tmp && "$FIXTURE/build/geam/target/debug/geam_filepath_fixture")
+
 FIXTURE="$PWD/gleam-regexp/fixtures/gleam"
 (cd "$FIXTURE" && "$GEAM_BIN" prepare)
 (cd "$FIXTURE" && "$GEAM_BIN" run)
@@ -104,15 +121,16 @@ FIXTURE="$PWD/gleam-regexp/fixtures/gleam"
 (cd /tmp && "$FIXTURE/build/geam/target/debug/geam_regexp_fixture")
 ```
 
-Inspect the production package's published-file view:
+Inspect both production packages' published-file views:
 
 ```sh
+cargo package --list --package geam-filepath --locked
 cargo package --list --package geam-regexp --locked
 ```
 
-Confirm that the list contains `LICENSE` along with the manifest, README, and
-provider source. The repository root and the package each carry the same
-Apache-2.0 license text.
+Confirm that each list contains `LICENSE` along with the manifest, README, and
+provider source, and excludes fixtures and repository-only tests. The repository
+root and each package carry the same Apache-2.0 license text.
 
 Use `--allow-dirty` before the first commit or when verifying uncommitted edits.
 The current Git-pinned Geam dependency is not publishable through Cargo's
@@ -123,20 +141,36 @@ required API and features. Do not treat `--list` as proof of registry readiness.
 ## GitHub Actions
 
 The [CI workflow](../../.github/workflows/ci.yml) runs on pushes and pull
-requests to `main`, and can be started manually. It has four independent jobs:
+requests to `main`, and can be started manually. Its `providers` job reads
+workspace members marked with `[package.metadata.geam.provider]` through
+`cargo metadata` and passes their crate names and directories to the other
+jobs. CI fails if that provider list is empty. Each provider uses the standard
+`<provider>/fixtures/embedding` and `<provider>/fixtures/gleam` layout; the
+standalone executable is named after the crate with hyphens replaced by
+underscores, followed by `_fixture`.
 
-- `repository` checks the root license and local links in tracked Markdown
-  files, including each provider's README.
-- `quality` checks the shared Geam revision, original Gleam package source,
-  both languages' formatting, the source-backed Rust tests, Clippy, Rust docs,
-  and the provider's package file list.
-- `coverage` downloads the original Gleam package, starts with a clean profile,
-  and requires independent line and full-scope region coverage of 100% for
-  `geam-regexp`.
-- `integration` installs the Geam CLI from the pinned Git commit, checks the
-  generated embedding bindings, tests and runs the Rust embedding consumer,
-  and verifies standalone `prepare`, `run`, `build`, and execution outside the
-  fixture.
+- `quality` checks the root license and Geam revision, downloads each
+  provider's original Gleam package for source-backed Rust tests, and checks
+  workspace Rust formatting, tests, Clippy, and documentation once.
+- `coverage` runs independently for each provider. Every matrix job downloads
+  its original Gleam package, starts with a clean profile, and requires 100%
+  line and full-scope region coverage for that production crate and its
+  `src/lib.rs`.
+- `integration` runs independently for each provider. Every matrix job checks
+  fixture Geam revisions, Gleam source and embedding Rust formatting, the
+  embedding consumer's Clippy result, and the package file list. It installs
+  the pinned Geam CLI, checks generated bindings, tests and runs the embedding
+  consumer, then verifies standalone `prepare`, `run`, `build`, and execution
+  outside the fixture.
+
+To register another provider in CI, add its crate to the Cargo workspace,
+declare its Gleam package in `[package.metadata.geam.provider]`, and provide
+both standard fixtures. The workflow does not need another package-specific
+entry. Local Markdown links are not checked by this workflow.
+
+The hosted workflow runs on Ubuntu. The `filepath` fixtures check the active
+host's `split` branch and both explicit split functions; native Windows Geam
+execution has not been verified by this workflow.
 
 The workflow needs only read access to the repository. It does not publish a
 crate or assume that a Git-pinned provider can already be uploaded to crates.io.
@@ -155,10 +189,15 @@ rustup component add llvm-tools-preview
 cargo install cargo-llvm-cov --locked
 ```
 
-The single production package is measured independently, with owner and
-source-backed integration tests together:
+Each production package is measured independently, with owner and source-backed
+integration tests together:
 
 ```sh
+cargo llvm-cov clean --workspace
+cargo llvm-cov --package geam-filepath --locked \
+  --json --summary-only --output-path target/filepath-coverage.json \
+  --fail-under-lines 100 \
+  --fail-under-regions 100
 cargo llvm-cov clean --workspace
 cargo llvm-cov --package geam-regexp --locked \
   --json --summary-only --output-path target/gleam-regexp-coverage.json \
@@ -166,10 +205,11 @@ cargo llvm-cov --package geam-regexp --locked \
   --fail-under-regions 100
 ```
 
-Read the package file entry in the JSON report to confirm line and region counts
-for `gleam-regexp/src/lib.rs`. As the repository gains production crates, add an
-independent closure for each one. A consumer may execute another crate's code,
-but its coverage must not compensate for missing owner coverage.
+Read each package file entry in its JSON report to confirm line and region counts
+for `filepath/src/lib.rs` and `gleam-regexp/src/lib.rs`. As the repository gains
+production crates, add an independent closure for each one. A consumer may
+execute another crate's code, but its coverage must not compensate for missing
+owner coverage.
 
 When a gap is unclear, inspect region and monomorph detail for the affected
 package:
@@ -180,6 +220,8 @@ cargo llvm-cov report --package geam-regexp \
   --show-instantiations \
   --show-missing-lines
 ```
+
+Substitute `geam-filepath` when inspecting that crate.
 
 Generate a package-scoped HTML report from the same profile when source context
 is easier to inspect visually:

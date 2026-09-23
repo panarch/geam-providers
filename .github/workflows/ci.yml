@@ -19,20 +19,50 @@ env:
   GEAM_REV: 76c4ab7c6a2c0c35975bdd97e5de7c6284f895e7
 
 jobs:
-  repository:
-    name: Repository documents
+  providers:
+    name: Discover providers
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    outputs:
+      matrix: ${{ steps.matrix.outputs.providers }}
 
     steps:
       - name: Checkout
         uses: actions/checkout@v7
 
-      - name: Check license and Markdown links
-        run: python3 scripts/check_repository.py
+      - name: Install Rust toolchain
+        uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          toolchain: "1.96"
+          cache: false
+          rustflags: ""
+
+      - name: Build provider matrix from Cargo metadata
+        id: matrix
+        shell: bash
+        run: |
+          providers="$(
+            cargo metadata --no-deps --format-version 1 --locked |
+              jq -ce --arg root "$GITHUB_WORKSPACE/" '
+                .workspace_members as $members
+                | {include: [
+                    .packages[]
+                    | select(.id as $id | $members | index($id))
+                    | select(.metadata.geam.provider != null)
+                    | {
+                        crate: .name,
+                        dir: (.manifest_path | sub("/Cargo.toml$"; "") | ltrimstr($root)),
+                        fixture_bin: (.name | gsub("-"; "_") + "_fixture")
+                      }
+                  ]}
+                | select(.include | length > 0)
+              '
+          )"
+          echo "providers=$providers" >> "$GITHUB_OUTPUT"
 
   quality:
-    name: Source and Rust checks
+    name: Workspace quality
+    needs: providers
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -58,78 +88,58 @@ jobs:
       - name: Cache Rust builds
         uses: Swatinem/rust-cache@v2
         with:
-          workspaces: |
-            . -> target
-            gleam-regexp/fixtures/embedding -> target
+          workspaces: ". -> target"
 
-      - name: Check Geam revision across consumers
+      - name: Check root license and Geam revision
         shell: bash
         run: |
-          for manifest in \
-            Cargo.toml \
-            gleam-regexp/fixtures/embedding/Cargo.toml \
-            gleam-regexp/fixtures/gleam/.cargo/config.toml; do
-            grep -Fq "rev = \"$GEAM_REV\"" "$manifest" || {
-              echo "::error file=$manifest::Geam revision differs from CI"
-              exit 1
-            }
-          done
-          for lock in \
-            Cargo.lock \
-            gleam-regexp/fixtures/embedding/Cargo.lock \
-            gleam-regexp/fixtures/gleam/Cargo.lock; do
-            grep -Fq "$GEAM_REV#$GEAM_REV" "$lock" || {
-              echo "::error file=$lock::Geam revision is absent from lockfile"
-              exit 1
-            }
-          done
+          test -s LICENSE || {
+            echo "::error file=LICENSE::Missing root license"
+            exit 1
+          }
+          grep -Fq "rev = \"$GEAM_REV\"" Cargo.toml || {
+            echo "::error file=Cargo.toml::Geam revision differs from CI"
+            exit 1
+          }
+          grep -Fq "$GEAM_REV#$GEAM_REV" Cargo.lock || {
+            echo "::error file=Cargo.lock::Geam revision is absent from lockfile"
+            exit 1
+          }
 
-      - name: Download original Gleam packages
+      - name: Download original Gleam packages for Rust tests
+        shell: bash
+        env:
+          PROVIDER_MATRIX: ${{ needs.providers.outputs.matrix }}
         run: |
-          (cd gleam-regexp/fixtures/gleam && gleam deps download)
-          (cd gleam-regexp/fixtures/embedding/gleam && gleam deps download)
-
-      - name: Check Gleam source
-        run: |
-          (cd gleam-regexp/fixtures/gleam && gleam format --check && gleam check)
-          (cd gleam-regexp/fixtures/embedding/gleam && gleam format --check && gleam check)
+          while IFS= read -r provider_dir; do
+            (cd "$provider_dir/fixtures/embedding/gleam" && gleam deps download)
+          done < <(jq -r '.include[].dir' <<< "$PROVIDER_MATRIX")
 
       - name: Check Rust formatting
-        run: |
-          cargo fmt --all --check
-          (cd gleam-regexp/fixtures/embedding && cargo fmt --all --check)
+        run: cargo fmt --all --check
 
-      - name: Test provider and original-source contract
+      - name: Test provider and original-source contracts
         run: cargo test --workspace --locked
 
-      - name: Lint provider and embedding consumer
-        run: |
-          cargo clippy --workspace --all-targets --locked -- -D warnings
-          (cd gleam-regexp/fixtures/embedding && cargo clippy --all-targets --locked -- -D warnings)
+      - name: Lint provider workspace
+        run: cargo clippy --workspace --all-targets --locked -- -D warnings
 
       - name: Build Rust documentation
         env:
           RUSTDOCFLAGS: -D warnings
         run: cargo doc --workspace --no-deps --locked
 
-      - name: Check package file list
-        shell: bash
-        run: |
-          files=$(cargo package --list --package geam-regexp --locked)
-          printf '%s\n' "$files"
-          grep -Fxq 'Cargo.toml' <<< "$files"
-          grep -Fxq 'LICENSE' <<< "$files"
-          grep -Fxq 'README.md' <<< "$files"
-          grep -Fxq 'src/lib.rs' <<< "$files"
-          if grep -Eq '^(fixtures|tests)/' <<< "$files"; then
-            echo '::error::Fixture or repository-only test entered the package'
-            exit 1
-          fi
-
   coverage:
-    name: Provider line and region coverage
+    name: Coverage (${{ matrix.crate }})
+    needs: providers
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.providers.outputs.matrix) }}
+    env:
+      PROVIDER_CRATE: ${{ matrix.crate }}
+      PROVIDER_DIR: ${{ matrix.dir }}
 
     steps:
       - name: Checkout
@@ -161,29 +171,36 @@ jobs:
           tool: cargo-llvm-cov@0.8.7
 
       - name: Download original Gleam package
-        working-directory: gleam-regexp/fixtures/embedding/gleam
-        run: gleam deps download
+        run: (cd "$PROVIDER_DIR/fixtures/embedding/gleam" && gleam deps download)
 
       - name: Clean coverage profile
         run: cargo llvm-cov clean --workspace
 
       - name: Require full provider coverage
         run: |
-          cargo llvm-cov --package geam-regexp --locked \
-            --json --summary-only --output-path target/gleam-regexp-coverage.json \
+          cargo llvm-cov --package "$PROVIDER_CRATE" --locked \
+            --json --summary-only --output-path "$RUNNER_TEMP/provider-coverage.json" \
             --fail-under-lines 100 --fail-under-regions 100
-          jq -e '
+          jq -e --arg file "/$PROVIDER_DIR/src/lib.rs" '
             [.data[].files[]
-              | select(.filename | endswith("/gleam-regexp/src/lib.rs"))
+              | select(.filename | endswith($file))
               | select(.summary.lines.covered == .summary.lines.count
                   and .summary.regions.covered == .summary.regions.count)]
             | length == 1
-          ' target/gleam-regexp-coverage.json
+          ' "$RUNNER_TEMP/provider-coverage.json"
 
   integration:
-    name: Standalone and Rust embedding
+    name: Integration (${{ matrix.crate }})
+    needs: providers
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJSON(needs.providers.outputs.matrix) }}
+    env:
+      PROVIDER_CRATE: ${{ matrix.crate }}
+      PROVIDER_DIR: ${{ matrix.dir }}
+      FIXTURE_BIN: ${{ matrix.fixture_bin }}
 
     steps:
       - name: Checkout
@@ -200,6 +217,7 @@ jobs:
         uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           toolchain: "1.96"
+          components: rustfmt, clippy
           cache: false
           rustflags: ""
 
@@ -208,7 +226,60 @@ jobs:
         with:
           workspaces: |
             . -> target
-            gleam-regexp/fixtures/embedding -> target
+            ${{ matrix.dir }}/fixtures/embedding -> target
+
+      - name: Check Geam revision in fixtures
+        shell: bash
+        run: |
+          for manifest in \
+            "$PROVIDER_DIR/fixtures/embedding/Cargo.toml" \
+            "$PROVIDER_DIR/fixtures/gleam/.cargo/config.toml"; do
+            grep -Fq "rev = \"$GEAM_REV\"" "$manifest" || {
+              echo "::error file=$manifest::Geam revision differs from CI"
+              exit 1
+            }
+          done
+          for lock in \
+            "$PROVIDER_DIR/fixtures/embedding/Cargo.lock" \
+            "$PROVIDER_DIR/fixtures/gleam/Cargo.lock"; do
+            grep -Fq "$GEAM_REV#$GEAM_REV" "$lock" || {
+              echo "::error file=$lock::Geam revision is absent from lockfile"
+              exit 1
+            }
+          done
+
+      - name: Download original Gleam packages
+        run: |
+          for fixture in gleam embedding/gleam; do
+            (cd "$PROVIDER_DIR/fixtures/$fixture" && gleam deps download)
+          done
+
+      - name: Check Gleam source
+        run: |
+          for fixture in gleam embedding/gleam; do
+            (cd "$PROVIDER_DIR/fixtures/$fixture" && gleam format --check && gleam check)
+          done
+
+      - name: Check embedding Rust formatting
+        working-directory: ${{ matrix.dir }}/fixtures/embedding
+        run: cargo fmt --all --check
+
+      - name: Lint embedding consumer
+        working-directory: ${{ matrix.dir }}/fixtures/embedding
+        run: cargo clippy --all-targets --locked -- -D warnings
+
+      - name: Check package file list
+        shell: bash
+        run: |
+          files=$(cargo package --list --package "$PROVIDER_CRATE" --locked)
+          printf '%s\n' "$files"
+          for required in Cargo.toml LICENSE README.md src/lib.rs; do
+            grep -Fxq "$required" <<< "$files"
+          done
+          if grep -Eq '^(fixtures|tests)/' <<< "$files"; then
+            echo "::error::$PROVIDER_CRATE included a fixture or repository-only test"
+            exit 1
+          fi
 
       - name: Install pinned Geam CLI
         env:
@@ -218,40 +289,35 @@ jobs:
             --rev "$GEAM_REV" --locked \
             --root "$RUNNER_TEMP/geam-cli" --bin geam geam
 
-      - name: Download original Gleam packages
-        run: |
-          (cd gleam-regexp/fixtures/gleam && gleam deps download)
-          (cd gleam-regexp/fixtures/embedding/gleam && gleam deps download)
-
       - name: Check generated embedding bindings
-        working-directory: gleam-regexp/fixtures/embedding
+        working-directory: ${{ matrix.dir }}/fixtures/embedding
         run: |
           "$RUNNER_TEMP/geam-cli/bin/geam" embedding check
 
       - name: Test Rust embedding consumer
-        working-directory: gleam-regexp/fixtures/embedding
+        working-directory: ${{ matrix.dir }}/fixtures/embedding
         run: cargo test --locked
 
       - name: Run Rust embedding consumer
-        working-directory: gleam-regexp/fixtures/embedding
+        working-directory: ${{ matrix.dir }}/fixtures/embedding
         run: cargo run --locked
 
       - name: Prepare standalone consumer
-        working-directory: gleam-regexp/fixtures/gleam
+        working-directory: ${{ matrix.dir }}/fixtures/gleam
         run: |
           "$RUNNER_TEMP/geam-cli/bin/geam" prepare
 
       - name: Run standalone consumer
-        working-directory: gleam-regexp/fixtures/gleam
+        working-directory: ${{ matrix.dir }}/fixtures/gleam
         run: |
           "$RUNNER_TEMP/geam-cli/bin/geam" run
 
       - name: Build standalone executable
-        working-directory: gleam-regexp/fixtures/gleam
+        working-directory: ${{ matrix.dir }}/fixtures/gleam
         run: |
           "$RUNNER_TEMP/geam-cli/bin/geam" build
 
       - name: Run executable outside its fixture
         run: |
           cd "$RUNNER_TEMP"
-          "$GITHUB_WORKSPACE/gleam-regexp/fixtures/gleam/build/geam/target/debug/geam_regexp_fixture"
+          "$GITHUB_WORKSPACE/$PROVIDER_DIR/fixtures/gleam/build/geam/target/debug/$FIXTURE_BIN"
