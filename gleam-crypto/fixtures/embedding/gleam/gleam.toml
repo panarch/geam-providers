@@ -1,0 +1,8 @@
+name = "geam_crypto_embedding"
+version = "0.1.0"
+target = "erlang"
+
+[dependencies]
+geam_crypto_fixture = { path = "../../gleam" }
+gleam_crypto = ">= 1.6.0 and < 1.6.1"
+gleam_stdlib = ">= 1.0.3 and < 1.0.4"
