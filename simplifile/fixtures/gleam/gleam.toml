@@ -1,0 +1,10 @@
+name = "geam_simplifile_fixture"
+version = "0.1.0"
+description = "Unmodified simplifile 2.7.0 provider fixture"
+licences = ["Apache-2.0"]
+target = "erlang"
+
+[dependencies]
+simplifile = ">= 2.7.0 and < 2.7.1"
+filepath = ">= 1.1.2 and < 1.1.3"
+gleam_stdlib = ">= 1.0.3 and < 1.0.4"

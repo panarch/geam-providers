@@ -988,7 +988,6 @@ source = "git+https://github.com/panarch/geam.git?rev=76c4ab7c6a2c0c35975bdd97e5
 dependencies = [
  "geam-builtin",
  "geam-core",
- "geam-erlang",
  "geam-macros",
  "geam-stdlib",
 ]
@@ -1026,27 +1025,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "geam-erlang"
-version = "0.2.3"
-source = "git+https://github.com/panarch/geam.git?rev=76c4ab7c6a2c0c35975bdd97e5de7c6284f895e7#76c4ab7c6a2c0c35975bdd97e5de7c6284f895e7"
-dependencies = [
- "ecow",
- "futures-channel",
- "futures-util",
- "geam-core",
- "geam-stdlib",
- "im",
- "num-bigint",
- "num-traits",
- "priority-queue",
-]
-
-[[package]]
 name = "geam-filepath"
 version = "0.1.0"
 dependencies = [
  "geam",
- "tokio",
 ]
 
 [[package]]
@@ -1169,15 +1151,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "geam-houdini"
-version = "0.1.0"
-dependencies = [
- "geam",
- "geam-core",
- "tokio",
-]
-
-[[package]]
 name = "geam-macros"
 version = "0.2.3"
 source = "git+https://github.com/panarch/geam.git?rev=76c4ab7c6a2c0c35975bdd97e5de7c6284f895e7#76c4ab7c6a2c0c35975bdd97e5de7c6284f895e7"
@@ -1189,30 +1162,19 @@ dependencies = [
 ]
 
 [[package]]
-name = "geam-otp"
-version = "0.1.0"
-dependencies = [
- "camino",
- "geam",
- "sha2 0.10.9",
-]
-
-[[package]]
-name = "geam-regexp"
-version = "0.1.0"
-dependencies = [
- "geam",
- "regex",
- "regex-syntax",
- "tokio",
-]
-
-[[package]]
 name = "geam-simplifile"
 version = "0.1.0"
 dependencies = [
  "geam",
+]
+
+[[package]]
+name = "geam-simplifile-embedding"
+version = "0.1.0"
+dependencies = [
+ "geam",
  "geam-filepath",
+ "geam-simplifile",
  "tempfile",
  "tokio",
 ]

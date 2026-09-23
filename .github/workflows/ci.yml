@@ -25,6 +25,7 @@ jobs:
     timeout-minutes: 10
     outputs:
       matrix: ${{ steps.matrix.outputs.providers }}
+      targets: ${{ steps.matrix.outputs.targets }}
 
     steps:
       - name: Checkout
@@ -41,11 +42,11 @@ jobs:
         id: matrix
         shell: bash
         run: |
-          providers="$(
+          provider_rows="$(
             cargo metadata --no-deps --format-version 1 --locked |
               jq -ce --arg root "$GITHUB_WORKSPACE/" '
                 .workspace_members as $members
-                | {include: [
+                | [
                     .packages[]
                     | select(.id as $id | $members | index($id))
                     | select(.metadata.geam.provider != null)
@@ -54,13 +55,15 @@ jobs:
                         dir: (.manifest_path | sub("/Cargo.toml$"; "") | ltrimstr($root)),
                         gleam_package: .metadata.geam.provider."gleam-package",
                         fixture_bin: (.metadata.geam.ci."fixture-bin" // (.name | gsub("-"; "_") + "_fixture")),
-                        example_dir: (.metadata.geam.ci."example-dir" // "")
+                        example_dir: (.metadata.geam.ci."example-dir" // ""),
+                        runners: (.metadata.geam.ci.runners // ["ubuntu-24.04"])
                       }
-                  ]}
-                | select(.include | length > 0)
+                  ]
+                | select(length > 0 and all(.[]; .runners | length > 0))
               '
           )"
-          echo "providers=$providers" >> "$GITHUB_OUTPUT"
+          echo "providers=$(jq -c '{include: map(del(.runners))}' <<< "$provider_rows")" >> "$GITHUB_OUTPUT"
+          echo "targets=$(jq -c '{include: [.[] | . as $provider | .runners[] | $provider + {runner: .} | del(.runners)]}' <<< "$provider_rows")" >> "$GITHUB_OUTPUT"
 
   quality:
     name: Workspace quality
@@ -138,13 +141,16 @@ jobs:
         run: cargo doc --workspace --no-deps --locked
 
   coverage:
-    name: Coverage (${{ matrix.crate }})
+    name: Coverage (${{ matrix.crate }}, ${{ matrix.runner }})
     needs: providers
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash
     strategy:
       fail-fast: false
-      matrix: ${{ fromJSON(needs.providers.outputs.matrix) }}
+      matrix: ${{ fromJSON(needs.providers.outputs.targets) }}
     env:
       PROVIDER_CRATE: ${{ matrix.crate }}
       PROVIDER_DIR: ${{ matrix.dir }}
@@ -190,23 +196,27 @@ jobs:
       - name: Require full provider coverage
         run: |
           cargo llvm-cov --package "$PROVIDER_CRATE" --locked \
-            --json --summary-only --output-path "$RUNNER_TEMP/provider-coverage.json" \
+            --json --summary-only --output-path target/provider-coverage.json \
             --fail-under-lines 100 --fail-under-regions 100
           jq -e --arg prefix "/$PROVIDER_DIR/src/" '
-            [.data[].files[] | select(.filename | contains($prefix))] as $files
+            [.data[].files[]
+              | select(.filename | gsub("\\\\"; "/") | contains($prefix))] as $files
             | ($files | length > 0)
               and ($files | all(.summary.lines.covered == .summary.lines.count
                 and .summary.regions.covered == .summary.regions.count))
-          ' "$RUNNER_TEMP/provider-coverage.json"
+          ' target/provider-coverage.json
 
   integration:
-    name: Integration (${{ matrix.crate }})
+    name: Integration (${{ matrix.crate }}, ${{ matrix.runner }})
     needs: providers
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash
     strategy:
       fail-fast: false
-      matrix: ${{ fromJSON(needs.providers.outputs.matrix) }}
+      matrix: ${{ fromJSON(needs.providers.outputs.targets) }}
     env:
       PROVIDER_CRATE: ${{ matrix.crate }}
       PROVIDER_DIR: ${{ matrix.dir }}
@@ -320,11 +330,16 @@ jobs:
           cargo install --git https://github.com/panarch/geam.git \
             --rev "$GEAM_REV" --locked \
             --root "$RUNNER_TEMP/geam-cli" --bin geam geam
+          if [[ "$RUNNER_OS" == Windows ]]; then
+            echo "GEAM_BIN=$(cygpath -u "$RUNNER_TEMP")/geam-cli/bin/geam.exe" >> "$GITHUB_ENV"
+          else
+            echo "GEAM_BIN=$RUNNER_TEMP/geam-cli/bin/geam" >> "$GITHUB_ENV"
+          fi
 
       - name: Check generated embedding bindings
         working-directory: ${{ matrix.dir }}/fixtures/embedding
         run: |
-          "$RUNNER_TEMP/geam-cli/bin/geam" embedding check
+          "$GEAM_BIN" embedding check
 
       - name: Test Rust embedding consumer
         working-directory: ${{ matrix.dir }}/fixtures/embedding
@@ -337,27 +352,36 @@ jobs:
       - name: Prepare standalone consumer
         working-directory: ${{ matrix.dir }}/fixtures/gleam
         run: |
-          "$RUNNER_TEMP/geam-cli/bin/geam" prepare
+          "$GEAM_BIN" prepare
 
       - name: Run standalone consumer
         working-directory: ${{ matrix.dir }}/fixtures/gleam
         run: |
-          "$RUNNER_TEMP/geam-cli/bin/geam" run
+          "$GEAM_BIN" run
 
       - name: Build standalone executable
         working-directory: ${{ matrix.dir }}/fixtures/gleam
         run: |
-          "$RUNNER_TEMP/geam-cli/bin/geam" build
+          "$GEAM_BIN" build
 
       - name: Run executable outside its fixture
         run: |
-          cd "$RUNNER_TEMP"
-          "$GITHUB_WORKSPACE/$PROVIDER_DIR/fixtures/gleam/build/geam/target/debug/$FIXTURE_BIN"
+          if [[ "$RUNNER_OS" == Windows ]]; then
+            workspace="$(cygpath -u "$GITHUB_WORKSPACE")"
+            temp="$(cygpath -u "$RUNNER_TEMP")"
+            executable="$FIXTURE_BIN.exe"
+          else
+            workspace="$GITHUB_WORKSPACE"
+            temp="$RUNNER_TEMP"
+            executable="$FIXTURE_BIN"
+          fi
+          cd "$temp"
+          "$workspace/$PROVIDER_DIR/fixtures/gleam/build/geam/target/debug/$executable"
 
       - name: Run provider example
         if: matrix.example_dir != ''
         run: |
           cd "$PROVIDER_DIR/$EXAMPLE_DIR"
-          "$RUNNER_TEMP/geam-cli/bin/geam" prepare
-          output=$("$RUNNER_TEMP/geam-cli/bin/geam" run)
+          "$GEAM_BIN" prepare
+          output=$("$GEAM_BIN" run)
           diff -u expected-output.txt <(printf '%s\n' "$output")
