@@ -3,8 +3,8 @@
 This document defines the test roles and verification baseline for Geam
 Providers. The current production packages are `geam-filepath`,
 `geam-regexp`, `geam-otp`, `geam-houdini`, `geam-gzlib`, `geam-crypto`,
-`geam-simplifile`, `geam-platform`, `geam-logging`, `geam-term-size`, and
-`geam-birl`.
+`geam-simplifile`, `geam-platform`, `geam-logging`, `geam-term-size`,
+`geam-birl`, and `geam-global-value`.
 This document must remain the source of truth for the checks actually run.
 
 For acceptance rules, see [review-policy.md](review-policy.md). For practical
@@ -58,9 +58,10 @@ uses the public `geam-core` byte-slice helper from that commit. The Gleam
 projects resolve the unmodified `filepath` 1.1.2, `gleam_regexp` 1.1.1,
 `gleam_otp` 1.3.0, `houdini` 1.2.0, `gzlib` 2.0.0, `gleam_crypto` 1.6.0,
 `simplifile` 2.7.0, `platform` 1.0.0, `logging` 1.5.0, `term_size` 1.0.1,
-and `birl` 2.0.0 packages from Hex. The crypto, simplifile, logging,
-term_size, and birl fixtures pin `gleam_stdlib` 1.0.3 for compatibility with
-this Geam commit; the simplifile fixtures also select `geam-filepath`.
+`birl` 2.0.0, and `global_value` 1.0.0 packages from Hex. The crypto,
+simplifile, logging, term_size, birl, and global_value fixtures pin
+`gleam_stdlib` 1.0.3 for compatibility with this Geam commit; the simplifile
+fixtures also select `geam-filepath`.
 Resolving crypto with stdlib 1.0.5
 failed at the `gleam/bit_array.pad_to_bytes` linkage check. From the repository
 root, download fixture dependencies before running source-backed Rust tests:
@@ -89,6 +90,8 @@ root, download fixture dependencies before running source-backed Rust tests:
 (cd term-size/fixtures/embedding/gleam && gleam deps download)
 (cd birl/fixtures/gleam && gleam deps download)
 (cd birl/fixtures/embedding/gleam && gleam deps download)
+(cd global-value/fixtures/gleam && gleam deps download)
+(cd global-value/fixtures/embedding/gleam && gleam deps download)
 (cd filepath/fixtures/gleam && gleam format --check && gleam check)
 (cd filepath/fixtures/embedding/gleam && gleam format --check && gleam check)
 (cd gleam-regexp/fixtures/gleam && gleam format --check && gleam check)
@@ -119,6 +122,9 @@ root, download fixture dependencies before running source-backed Rust tests:
 (cd birl/fixtures/gleam/build/packages/birl && shasum -a 256 -c ../../../../upstream.sha256)
 (cd birl/fixtures/gleam && gleam format --check && gleam check)
 (cd birl/fixtures/embedding/gleam && gleam format --check && gleam check)
+(cd global-value/fixtures/gleam/build/packages/global_value && shasum -a 256 -c ../../../../upstream.sha256)
+(cd global-value/fixtures/gleam && gleam format --check && gleam check)
+(cd global-value/fixtures/embedding/gleam && gleam format --check && gleam check)
 ```
 
 The platform and birl standalone Gleam fixtures can also run on Erlang with
@@ -220,6 +226,12 @@ root workspace members. Check and run each separately:
 (cd birl/fixtures/embedding && cargo run --locked)
 (cd birl/fixtures/embedding && cargo clippy --all-targets --locked -- -D warnings)
 (cd birl/fixtures/embedding && RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --locked)
+(cd global-value/fixtures/embedding && cargo fmt --all --check)
+(cd global-value/fixtures/embedding && "$GEAM_BIN" embedding check)
+(cd global-value/fixtures/embedding && cargo test --locked)
+(cd global-value/fixtures/embedding && cargo run --locked)
+(cd global-value/fixtures/embedding && cargo clippy --all-targets --locked -- -D warnings)
+(cd global-value/fixtures/embedding && RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --locked)
 ```
 
 Each standalone fixture has its own Cargo lockfile too. Run `prepare`, `run`,
@@ -295,6 +307,12 @@ FIXTURE="$PWD/birl/fixtures/gleam"
 (cd "$FIXTURE" && "$GEAM_BIN" run)
 (cd "$FIXTURE" && "$GEAM_BIN" build)
 (cd /tmp && "$FIXTURE/build/geam/target/debug/geam_birl_fixture")
+
+FIXTURE="$PWD/global-value/fixtures/gleam"
+(cd "$FIXTURE" && "$GEAM_BIN" prepare)
+(cd "$FIXTURE" && "$GEAM_BIN" run)
+(cd "$FIXTURE" && "$GEAM_BIN" build)
+(cd /tmp && "$FIXTURE/build/geam/target/debug/geam_global_value_fixture")
 ```
 
 Inspect all production packages' published-file views:
@@ -311,6 +329,7 @@ cargo package --list --package geam-platform --locked
 cargo package --list --package geam-logging --locked
 cargo package --list --package geam-term-size --locked
 cargo package --list --package geam-birl --locked
+cargo package --list --package geam-global-value --locked
 ```
 
 Confirm that each list contains `LICENSE` along with the manifest, README, and
@@ -426,6 +445,14 @@ document any host-specific visible difference instead of comparing live clock
 values. `birl` also depends on the captured-group `split` contract of
 `geam-regexp`, so changes to that provider must revalidate `birl`.
 
+The `global_value` provider uses the Ubuntu runner by default. Its source-backed
+contract tests compile the original Gleam body and check generic retained
+values, wrong-type name reuse, concurrent initialisation, and retry after a
+process fails or is cancelled during initialisation. The concurrency test uses
+a controlled clock. The standalone fixture checks installation-shaped linkage;
+the embedding fixture checks repeated calls and fresh values in a second
+execution domain. Each domain owns its cache and releases it on close.
+
 The workflow needs only read access to the repository. It does not publish a
 crate or assume that a Git-pinned provider can already be uploaded to crates.io.
 After the repository is pushed, the hosted job results must be checked
@@ -502,6 +529,11 @@ cargo llvm-cov --package geam-birl --locked \
   --json --summary-only --output-path target/birl-coverage.json \
   --fail-under-lines 100 \
   --fail-under-regions 100
+cargo llvm-cov clean --workspace
+cargo llvm-cov --package geam-global-value --locked \
+  --json --summary-only --output-path target/global-value-coverage.json \
+  --fail-under-lines 100 \
+  --fail-under-regions 100
 ```
 
 Read each package file entry in its JSON report to confirm line and region counts
@@ -511,9 +543,9 @@ an independent closure for each one. A consumer may execute another crate's
 code, but its coverage must not compensate for missing owner coverage. Run the
 same closure on every declared OS so conditional source paths are included.
 
-For Houdini, gzlib, platform, term_size, and birl, confirm the
+For Houdini, gzlib, platform, term_size, birl, and global_value, confirm the
 `houdini/src/lib.rs`, `gzlib/src/lib.rs`, `platform/src/lib.rs`,
-`term-size/src/lib.rs`, and `birl/src/lib.rs` file counts directly.
+`term-size/src/lib.rs`, `birl/src/lib.rs`, and `global-value/src/lib.rs` file counts directly.
 
 When a gap is unclear, inspect region and monomorph detail for the affected
 package:
@@ -527,7 +559,7 @@ cargo llvm-cov report --package geam-regexp \
 
 Substitute `geam-filepath`, `geam-otp`, `geam-houdini`, `geam-gzlib`,
 `geam-crypto`, `geam-simplifile`, `geam-platform`, `geam-logging`,
-`geam-term-size`, or `geam-birl` when inspecting those crates.
+`geam-term-size`, `geam-birl`, or `geam-global-value` when inspecting those crates.
 
 Generate a package-scoped HTML report from the same profile when source context
 is easier to inspect visually:
