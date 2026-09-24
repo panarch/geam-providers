@@ -1,0 +1,7 @@
+name = "geam_platform_fixture"
+version = "0.1.0"
+description = "Unmodified platform 1.0.0 standalone provider fixture"
+licences = ["Apache-2.0"]
+
+[dependencies]
+platform = ">= 1.0.0 and < 1.0.1"

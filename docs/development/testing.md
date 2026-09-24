@@ -3,7 +3,7 @@
 This document defines the test roles and verification baseline for Geam
 Providers. The current production packages are `geam-filepath`,
 `geam-regexp`, `geam-otp`, `geam-houdini`, `geam-gzlib`, `geam-crypto`,
-`geam-simplifile`, and `geam-logging`.
+`geam-simplifile`, `geam-platform`, and `geam-logging`.
 This document must remain the source of truth for the checks actually run.
 
 For acceptance rules, see [review-policy.md](review-policy.md). For practical
@@ -56,11 +56,11 @@ The Rust workspace, fixture consumers, and report service example use Geam
 uses the public `geam-core` byte-slice helper from that commit. The Gleam
 projects resolve the unmodified `filepath` 1.1.2, `gleam_regexp` 1.1.1,
 `gleam_otp` 1.3.0, `houdini` 1.2.0, `gzlib` 2.0.0, `gleam_crypto` 1.6.0,
-`simplifile` 2.7.0, and `logging` 1.5.0 packages from Hex. The crypto,
-simplifile, and logging fixtures pin `gleam_stdlib` 1.0.3 for compatibility
-with this Geam commit; the simplifile fixtures also select `geam-filepath`.
-Resolving crypto with stdlib 1.0.5 failed
-at the `gleam/bit_array.pad_to_bytes` linkage check. From the repository root,
+`simplifile` 2.7.0, `platform` 1.0.0, and `logging` 1.5.0 packages from Hex.
+The crypto, simplifile, and logging fixtures pin `gleam_stdlib` 1.0.3 for
+compatibility with this Geam commit; the simplifile fixtures also select
+`geam-filepath`. Resolving crypto with stdlib 1.0.5 failed at the
+`gleam/bit_array.pad_to_bytes` linkage check. From the repository root,
 download fixture dependencies before running source-backed Rust tests:
 
 ```sh
@@ -79,6 +79,8 @@ download fixture dependencies before running source-backed Rust tests:
 (cd gzlib/fixtures/embedding/gleam && gleam deps download)
 (cd simplifile/fixtures/gleam && gleam deps download)
 (cd simplifile/fixtures/embedding/gleam && gleam deps download)
+(cd platform/fixtures/gleam && gleam deps download)
+(cd platform/fixtures/embedding/gleam && gleam deps download)
 (cd logging/fixtures/gleam && gleam deps download)
 (cd logging/fixtures/embedding/gleam && gleam deps download)
 (cd filepath/fixtures/gleam && gleam format --check && gleam check)
@@ -99,13 +101,21 @@ download fixture dependencies before running source-backed Rust tests:
 (cd gzlib/fixtures/embedding/gleam && gleam format --check && gleam check)
 (cd simplifile/fixtures/gleam && gleam format --check && gleam check)
 (cd simplifile/fixtures/embedding/gleam && gleam format --check && gleam check)
-(cd logging/fixtures/gleam/build/packages/logging && shasum -a 256 -c ../../../../upstream.sha256)
+(cd platform/fixtures/gleam && gleam format --check && gleam check)
+(cd platform/fixtures/embedding/gleam && gleam format --check && gleam check)
+(cd platform/fixtures/gleam/build/packages/platform && shasum -a 256 -c ../../../../upstream.sha256)
 (cd logging/fixtures/gleam && gleam format --check && gleam check)
 (cd logging/fixtures/embedding/gleam && gleam format --check && gleam check)
+(cd logging/fixtures/gleam/build/packages/logging && shasum -a 256 -c ../../../../upstream.sha256)
 ```
 
-The Houdini standalone Gleam fixture can also run on Erlang with `gleam run`
-to check the original FFI as an independent behavioral reference.
+The Houdini and platform standalone Gleam fixtures can also run on Erlang with
+`gleam run` to check the original FFI as an independent behavioral reference.
+The platform fixture asserts the macOS ARM64 or Linux x86_64 public result:
+
+```sh
+(cd platform/fixtures/gleam && gleam run)
+```
 
 Use a `geam` CLI built from the same Git commit for the standalone and embedding
 checks. For a local, repository-scoped installation:
@@ -172,6 +182,12 @@ root workspace members. Check and run each separately:
 (cd simplifile/fixtures/embedding && cargo run --locked)
 (cd simplifile/fixtures/embedding && cargo clippy --all-targets --locked -- -D warnings)
 (cd simplifile/fixtures/embedding && RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --locked)
+(cd platform/fixtures/embedding && cargo fmt --all --check)
+(cd platform/fixtures/embedding && "$GEAM_BIN" embedding check)
+(cd platform/fixtures/embedding && cargo test --locked)
+(cd platform/fixtures/embedding && cargo run --locked)
+(cd platform/fixtures/embedding && cargo clippy --all-targets --locked -- -D warnings)
+(cd platform/fixtures/embedding && RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --locked)
 (cd logging/fixtures/embedding && cargo fmt --all --check)
 (cd logging/fixtures/embedding && "$GEAM_BIN" embedding check)
 (cd logging/fixtures/embedding && cargo test --locked)
@@ -230,6 +246,12 @@ FIXTURE="$PWD/simplifile/fixtures/gleam"
 (cd "$FIXTURE" && "$GEAM_BIN" build)
 (cd /tmp && "$FIXTURE/build/geam/target/debug/geam_simplifile_fixture")
 
+FIXTURE="$PWD/platform/fixtures/gleam"
+(cd "$FIXTURE" && "$GEAM_BIN" prepare)
+(cd "$FIXTURE" && "$GEAM_BIN" run)
+(cd "$FIXTURE" && "$GEAM_BIN" build)
+(cd /tmp && "$FIXTURE/build/geam/target/debug/geam_platform_fixture")
+
 FIXTURE="$PWD/logging/fixtures/gleam"
 (cd "$FIXTURE" && "$GEAM_BIN" prepare)
 (cd "$FIXTURE" && "$GEAM_BIN" run)
@@ -247,6 +269,7 @@ cargo package --list --package geam-houdini --locked
 cargo package --list --package geam-crypto --locked
 cargo package --list --package geam-gzlib --locked
 cargo package --list --package geam-simplifile --locked
+cargo package --list --package geam-platform --locked
 cargo package --list --package geam-logging --locked
 ```
 
@@ -289,7 +312,8 @@ underscores, followed by `_fixture`. A provider can override that name with
   runs the embedding consumer, then verifies standalone `prepare`, `run`,
   `build`, and execution outside the fixture. If `example-dir` is set, it
   checks the example's Geam revision and Gleam source, then compares its
-  output with `expected-output.txt`.
+  output with `expected-output.txt`. The platform job also runs the original
+  Erlang fixture with `gleam run` before running the Geam consumer.
 
 To register another provider in CI, add its crate to the Cargo workspace,
 declare its Gleam package in `[package.metadata.geam.provider]`, and provide
@@ -322,6 +346,11 @@ The `filepath` fixtures check the active host's `split` branch and both
 explicit split functions. A `simplifile` Windows row also exercises its
 `filepath` dependency. Declaring a runner does not establish a passing CI
 result; inspect the hosted jobs before claiming platform verification.
+
+The `platform` provider uses the default Ubuntu runner. Its full validation
+job also runs the original Erlang fixture with `gleam run`; local validation
+checks macOS ARM64. Windows OS and word-size mapping have owner tests, but no
+native Windows Geam execution is claimed.
 
 The workflow needs only read access to the repository. It does not publish a
 crate or assume that a Git-pinned provider can already be uploaded to crates.io.
@@ -380,6 +409,11 @@ cargo llvm-cov --package geam-gzlib --locked \
   --fail-under-lines 100 \
   --fail-under-regions 100
 cargo llvm-cov clean --workspace
+cargo llvm-cov --package geam-platform --locked \
+  --json --summary-only --output-path target/platform-coverage.json \
+  --fail-under-lines 100 \
+  --fail-under-regions 100
+cargo llvm-cov clean --workspace
 cargo llvm-cov --package geam-logging --locked \
   --json --summary-only --output-path target/logging-coverage.json \
   --fail-under-lines 100 \
@@ -407,7 +441,8 @@ cargo llvm-cov report --package geam-regexp \
 ```
 
 Substitute `geam-filepath`, `geam-otp`, `geam-houdini`, `geam-gzlib`,
-`geam-crypto`, `geam-simplifile`, or `geam-logging` when inspecting those crates.
+`geam-crypto`, `geam-simplifile`, `geam-platform`, or `geam-logging` when
+inspecting those crates.
 
 Generate a package-scoped HTML report from the same profile when source context
 is easier to inspect visually:
