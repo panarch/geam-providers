@@ -1,0 +1,6 @@
+name = "geam_platform_embedding"
+version = "0.1.0"
+target = "erlang"
+
+[dependencies]
+platform = ">= 1.0.0 and < 1.0.1"

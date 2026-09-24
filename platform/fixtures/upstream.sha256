@@ -1,0 +1,3 @@
+a08fba8cda425540f8d3e9d5c545ee4b8d60e9d110f1e935a214aabeb6d95606  src/platform.gleam
+5fca81dd169e15bea1c15aa3fd8cb0a3bd903507531c8562e6f61eacb96c8953  src/platform_ffi.erl
+a3333048ad714cdc0eb8903cc9296d048b9c3566a92bb2c4ec1a440ee8655e60  gleam.toml

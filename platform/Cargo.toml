@@ -1,0 +1,24 @@
+[package]
+name = "geam-platform"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Geam Rust provider for the original platform package"
+repository = "https://github.com/panarch/geam-providers"
+readme = "README.md"
+exclude = ["fixtures/", "tests/"]
+keywords = ["geam", "gleam", "platform", "provider"]
+categories = ["development-tools"]
+
+[package.metadata.geam.provider]
+schema = 1
+gleam-package = "platform"
+gleam-version = ">= 1.0.0 and < 1.0.1"
+
+[dependencies]
+geam.workspace = true
+
+[dev-dependencies]
+geam = { workspace = true, features = ["embedding", "tokio", "geam-builtin"] }
+tokio = { version = "1.53.1", default-features = false, features = ["rt"] }
