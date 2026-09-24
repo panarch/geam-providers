@@ -4,8 +4,8 @@ This document defines the test roles and verification baseline for Geam
 Providers. The current production packages are `geam-filepath`,
 `geam-regexp`, `geam-otp`, `geam-houdini`, `geam-gzlib`, `geam-crypto`,
 `geam-simplifile`, `geam-platform`, `geam-logging`, `geam-term-size`,
-`geam-birl`, and `geam-global-value`.
-This document must remain the source of truth for the checks actually run.
+`geam-birl`, `geam-httpc`, and `geam-global-value`. This document must remain
+the source of truth for the checks actually run.
 
 For acceptance rules, see [review-policy.md](review-policy.md). For practical
 test construction and difficult coverage work, see
@@ -53,18 +53,18 @@ rate limits, and remote data must not decide the mandatory owner suite.
 ## Dependency Preparation
 
 The Rust workspace, fixture consumers, and report service example use Geam
-`main` commit `76c4ab7c6a2c0c35975bdd97e5de7c6284f895e7`. Houdini also
+`main` commit `bd95b872c578df88f76ed5c4175fb1ea55ee8607`. Houdini also
 uses the public `geam-core` byte-slice helper from that commit. The Gleam
 projects resolve the unmodified `filepath` 1.1.2, `gleam_regexp` 1.1.1,
 `gleam_otp` 1.3.0, `houdini` 1.2.0, `gzlib` 2.0.0, `gleam_crypto` 1.6.0,
 `simplifile` 2.7.0, `platform` 1.0.0, `logging` 1.5.0, `term_size` 1.0.1,
-`birl` 2.0.0, and `global_value` 1.0.0 packages from Hex. The crypto,
-simplifile, logging, term_size, birl, and global_value fixtures pin
-`gleam_stdlib` 1.0.3 for compatibility with this Geam commit; the simplifile
-fixtures also select `geam-filepath`.
-Resolving crypto with stdlib 1.0.5
-failed at the `gleam/bit_array.pad_to_bytes` linkage check. From the repository
-root, download fixture dependencies before running source-backed Rust tests:
+`birl` 2.0.0, `gleam_httpc` 5.0.0, and `global_value` 1.0.0 packages from Hex.
+The crypto, simplifile, logging, term_size, birl, and global_value fixtures
+pin `gleam_stdlib` 1.0.3 for compatibility with this Geam commit; the
+simplifile fixtures also select `geam-filepath`. Resolving crypto with stdlib
+1.0.5 failed at the `gleam/bit_array.pad_to_bytes` linkage check. From the
+repository root, download fixture dependencies before running source-backed
+Rust tests:
 
 ```sh
 (cd filepath/fixtures/gleam && gleam deps download)
@@ -92,6 +92,8 @@ root, download fixture dependencies before running source-backed Rust tests:
 (cd birl/fixtures/embedding/gleam && gleam deps download)
 (cd global-value/fixtures/gleam && gleam deps download)
 (cd global-value/fixtures/embedding/gleam && gleam deps download)
+(cd gleam-httpc/fixtures/gleam && gleam deps download)
+(cd gleam-httpc/fixtures/embedding/gleam && gleam deps download)
 (cd filepath/fixtures/gleam && gleam format --check && gleam check)
 (cd filepath/fixtures/embedding/gleam && gleam format --check && gleam check)
 (cd gleam-regexp/fixtures/gleam && gleam format --check && gleam check)
@@ -125,6 +127,9 @@ root, download fixture dependencies before running source-backed Rust tests:
 (cd global-value/fixtures/gleam/build/packages/global_value && shasum -a 256 -c ../../../../upstream.sha256)
 (cd global-value/fixtures/gleam && gleam format --check && gleam check)
 (cd global-value/fixtures/embedding/gleam && gleam format --check && gleam check)
+(cd gleam-httpc/fixtures/gleam && gleam format --check && gleam check)
+(cd gleam-httpc/fixtures/embedding/gleam && gleam format --check && gleam check)
+(cd gleam-httpc/fixtures/gleam/build/packages/gleam_httpc && shasum -a 256 -c ../../../../upstream.sha256)
 ```
 
 The platform and birl standalone Gleam fixtures can also run on Erlang with
@@ -142,7 +147,7 @@ checks. For a local, repository-scoped installation:
 
 ```sh
 cargo install --git https://github.com/panarch/geam.git \
-  --rev 76c4ab7c6a2c0c35975bdd97e5de7c6284f895e7 \
+  --rev bd95b872c578df88f76ed5c4175fb1ea55ee8607 \
   --locked --root "$PWD/target/geam-cli" --bin geam geam
 GEAM_BIN="$PWD/target/geam-cli/bin/geam"
 ```
@@ -232,6 +237,12 @@ root workspace members. Check and run each separately:
 (cd global-value/fixtures/embedding && cargo run --locked)
 (cd global-value/fixtures/embedding && cargo clippy --all-targets --locked -- -D warnings)
 (cd global-value/fixtures/embedding && RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --locked)
+(cd gleam-httpc/fixtures/embedding && cargo fmt --all --check)
+(cd gleam-httpc/fixtures/embedding && "$GEAM_BIN" embedding check)
+(cd gleam-httpc/fixtures/embedding && cargo test --locked)
+(cd gleam-httpc/fixtures/embedding && cargo run --locked)
+(cd gleam-httpc/fixtures/embedding && cargo clippy --all-targets --locked -- -D warnings)
+(cd gleam-httpc/fixtures/embedding && RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --locked)
 ```
 
 Each standalone fixture has its own Cargo lockfile too. Run `prepare`, `run`,
@@ -313,7 +324,24 @@ FIXTURE="$PWD/global-value/fixtures/gleam"
 (cd "$FIXTURE" && "$GEAM_BIN" run)
 (cd "$FIXTURE" && "$GEAM_BIN" build)
 (cd /tmp && "$FIXTURE/build/geam/target/debug/geam_global_value_fixture")
+
+FIXTURE="$PWD/gleam-httpc/fixtures/gleam"
+(cd "$FIXTURE" && "$GEAM_BIN" prepare)
+(cd "$FIXTURE" && for module in geam_httpc_fixture httpc_redirect httpc_binary httpc_tls; do
+  python3 ../server.py "$GEAM_BIN" run --module "$module" \
+    --provider-config gleam_httpc=../config/provider.toml
+done)
+(cd "$FIXTURE" && "$GEAM_BIN" build)
+(cd /tmp && GEAM_CONFIG="$FIXTURE/../config/runtime.toml" \
+  python3 "$FIXTURE/../server.py" \
+  "$FIXTURE/build/geam/target/debug/geam_httpc_fixture")
 ```
+
+The `gleam-httpc` local server script binds only loopback, starts HTTP and
+HTTPS before each command, and shuts both down afterwards. Its checked-in CA
+and server key are for tests only. The fixture uses separate entry modules for
+HTTP, redirect, binary, and TLS scenarios so each generated runner stays
+within the pinned Geam compiler's recursion limit.
 
 Inspect all production packages' published-file views:
 
@@ -330,6 +358,7 @@ cargo package --list --package geam-logging --locked
 cargo package --list --package geam-term-size --locked
 cargo package --list --package geam-birl --locked
 cargo package --list --package geam-global-value --locked
+cargo package --list --package geam-httpc --locked
 ```
 
 Confirm that each list contains `LICENSE` along with the manifest, README, and
@@ -356,6 +385,10 @@ underscores, followed by `_fixture`. A provider can override that name with
 `otp_service_fixture` and declares its runnable report service with
 `example-dir`.
 
+`[package.metadata.geam.ci]` also accepts `integration-case`; its default is
+`standard`, and the current named exception is `httpc` for `geam-httpc`.
+Discovery rejects other values before building the provider matrix.
+
 - `quality` checks the root license and Geam revision, downloads both Gleam
   fixture projects per provider, verifies any `fixtures/upstream.sha256`
   against the original Hex source, and checks workspace Rust formatting,
@@ -368,23 +401,30 @@ underscores, followed by `_fixture`. A provider can override that name with
   fixture Geam revisions, Gleam source and embedding Rust formatting, the
   embedding consumer's Clippy and Rust documentation, and the package file
   list. It installs the pinned Geam CLI, checks generated bindings, tests and
-  runs the embedding consumer, then verifies standalone `prepare`, `run`,
-  `build`, and execution outside the fixture. If `example-dir` is set, it
-  checks the example's Geam revision and Gleam source, then compares its
-  output with `expected-output.txt`. The platform and birl jobs also run their
-  original Erlang fixtures with `gleam run` before running the Geam consumer.
+  runs the embedding consumer, then verifies standalone `prepare`, the declared
+  integration case, `build`, and execution outside the fixture. The standard
+  case runs the default module and built executable directly. The `httpc` case
+  runs four entry modules against `fixtures/server.py` with explicit provider
+  configuration, then runs the built executable against the same local
+  HTTP/HTTPS server with fixture runtime configuration from outside the
+  fixture. If `example-dir` is set, it checks the example's Geam revision and
+  Gleam source, then compares its output with `expected-output.txt`. The
+  platform and birl jobs also run their original Erlang fixtures with
+  `gleam run` before running the Geam consumer.
 
 To register another provider in CI, add its crate to the Cargo workspace,
 declare its Gleam package in `[package.metadata.geam.provider]`, and provide
-both standard fixtures. The workflow does not need another package-specific
-entry. If its fixture executable differs from the default or it has a runnable
-example, declare those paths in `[package.metadata.geam.ci]`. Its optional
-`runners` list declares operating systems; without it, the provider runs on
-`ubuntu-24.04`. The discovery job builds provider-by-runner rows. Currently
-`geam-simplifile` and `geam-birl` declare `ubuntu-24.04`, `macos-15`, and
-`windows-2025`; the other providers keep the Ubuntu default. `quality` runs
-once on Ubuntu for the entire workspace, while `validate` runs for each
-selected row. Local Markdown links are not checked by this workflow.
+both standard fixtures. The `standard` integration case needs no
+package-specific workflow entry. If a fixture needs an explicitly named
+integration case, declare it in `[package.metadata.geam.ci]` and add visible
+case steps to the workflow. If its fixture executable differs from the default
+or it has a runnable example, declare those paths in the same metadata. Its
+optional `runners` list declares operating systems; without it, the provider
+runs on `ubuntu-24.04`. The discovery job builds provider-by-runner rows. Currently
+`geam-simplifile`, `geam-birl`, and `geam-httpc` declare `ubuntu-24.04`,
+`macos-15`, and `windows-2025`; the other providers keep the Ubuntu default.
+`quality` runs once on Ubuntu for the entire workspace, while `validate` runs
+for each selected row. Local Markdown links are not checked by this workflow.
 
 On PRs and `main` pushes, [`select_providers.py`](../../.github/scripts/select_providers.py)
 compares the base and checked-out commits, then selects changed providers and
@@ -534,6 +574,11 @@ cargo llvm-cov --package geam-global-value --locked \
   --json --summary-only --output-path target/global-value-coverage.json \
   --fail-under-lines 100 \
   --fail-under-regions 100
+cargo llvm-cov clean --workspace
+cargo llvm-cov --package geam-httpc --locked \
+  --json --summary-only --output-path target/gleam-httpc-coverage.json \
+  --fail-under-lines 100 \
+  --fail-under-regions 100
 ```
 
 Read each package file entry in its JSON report to confirm line and region counts
@@ -559,7 +604,8 @@ cargo llvm-cov report --package geam-regexp \
 
 Substitute `geam-filepath`, `geam-otp`, `geam-houdini`, `geam-gzlib`,
 `geam-crypto`, `geam-simplifile`, `geam-platform`, `geam-logging`,
-`geam-term-size`, `geam-birl`, or `geam-global-value` when inspecting those crates.
+`geam-term-size`, `geam-birl`, `geam-httpc`, or `geam-global-value` when
+inspecting those crates.
 
 Generate a package-scoped HTML report from the same profile when source context
 is easier to inspect visually:

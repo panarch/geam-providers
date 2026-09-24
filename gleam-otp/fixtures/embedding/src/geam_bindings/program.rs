@@ -77606,10 +77606,26 @@ pub fn main() {
                     },
                 ]),
                 constructions: data::Storage::Static(&[
+                    data::host::RegistrationType::External {
+                        schema: data::host::ExternalSchema {
+                            package: data::Text::Static("gleam_erlang"),
+                            module: data::Text::Static("gleam/erlang/charlist"),
+                            name: data::Text::Static("Charlist"),
+                            parameter_count: 0,
+                        },
+                        arguments: data::Storage::Static(&[]),
+                    },
                     data::host::RegistrationType::List(data::Storage::Static(&data::host::RegistrationType::UtfCodepoint)),
                 ]),
                 construction_customs: data::Storage::Static(&[]),
-                construction_externals: data::Storage::Static(&[]),
+                construction_externals: data::Storage::Static(&[
+                    data::host::ExternalSchema {
+                        package: data::Text::Static("gleam_erlang"),
+                        module: data::Text::Static("gleam/erlang/charlist"),
+                        name: data::Text::Static("Charlist"),
+                        parameter_count: 0,
+                    },
+                ]),
                 native_rules: None,
             }),
         },
@@ -85073,4 +85089,4 @@ pub fn main() {
     callables: data::Storage::Static(&[]),
 };
 
-// Preparation inputs: sha256:d305f0c0cc2e7b8057fc392da240f8b3383be10f9f81a65480a09414fa0a3936
+// Preparation inputs: sha256:9344ac43364b179e8ef0386033702372f3356e181644512777d3f6c4fd0e88d4
