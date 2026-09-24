@@ -16,6 +16,7 @@ This repository implements native functions for existing Gleam packages through 
 | [`term_size`](https://hex.pm/packages/term_size) | [`geam-term-size`](term-size/README.md) | 1.0.1 |
 | [`birl`](https://hex.pm/packages/birl) | [`geam-birl`](birl/README.md) | 2.0.0 |
 | [`gleam_httpc`](https://hex.pm/packages/gleam_httpc) | [`geam-httpc`](gleam-httpc/README.md) | 5.0.0 |
+| [`global_value`](https://hex.pm/packages/global_value) | [`geam-global-value`](global-value/README.md) | 1.0.0 |
 
 The Geam dependencies are pinned to `main` commit `bd95b872c578df88f76ed5c4175fb1ea55ee8607` rather than a released version or local path. The Gleam packages come from Hex without changes to their upstream source. Publishing provider crates and testing consumption of published packages are separate steps after the required Geam features are released.
 

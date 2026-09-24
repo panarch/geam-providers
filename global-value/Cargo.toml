@@ -1,0 +1,29 @@
+[package]
+name = "geam-global-value"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Geam Rust provider for the original global_value package"
+repository = "https://github.com/panarch/geam-providers"
+readme = "README.md"
+exclude = ["fixtures/", "tests/"]
+keywords = ["geam", "gleam", "global-value", "provider"]
+categories = ["development-tools"]
+
+[package.metadata.geam.provider]
+schema = 2
+gleam-package = "global_value"
+gleam-version = ">= 1.0.0 and < 1.0.1"
+component = "plain"
+execution-service = true
+requires-services = []
+
+[dependencies]
+geam.workspace = true
+geam-core.workspace = true
+tokio = { version = "1.53.1", default-features = false, features = ["sync"] }
+
+[dev-dependencies]
+geam = { workspace = true, features = ["embedding", "gleam-stdlib", "gleam-erlang", "tokio", "geam-builtin"] }
+tokio = { version = "1.53.1", default-features = false, features = ["rt", "sync"] }
