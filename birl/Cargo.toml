@@ -1,0 +1,30 @@
+[package]
+name = "geam-birl"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Geam Rust provider for the original birl package"
+repository = "https://github.com/panarch/geam-providers"
+readme = "README.md"
+exclude = ["fixtures/", "tests/"]
+keywords = ["geam", "gleam", "date", "time", "provider"]
+categories = ["date-and-time"]
+
+[package.metadata.geam.provider]
+schema = 1
+gleam-package = "birl"
+gleam-version = ">= 2.0.0 and < 2.0.1"
+
+[package.metadata.geam.ci]
+runners = ["ubuntu-24.04", "macos-15", "windows-2025"]
+
+[dependencies]
+geam.workspace = true
+jiff.workspace = true
+num-integer.workspace = true
+
+[dev-dependencies]
+geam = { workspace = true, features = ["embedding", "gleam-stdlib", "gleam-time", "tokio", "geam-builtin"] }
+geam-regexp = { path = "../gleam-regexp" }
+tokio = { version = "1.53.1", default-features = false, features = ["rt"] }

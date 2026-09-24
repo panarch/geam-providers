@@ -50,6 +50,8 @@ pub fn verify() -> Bool {
   let assert Ok(comma) = regexp.from_string(",\\s*")
   assert regexp.split(comma, ",é,b,") == ["", "é", "b", ""]
   assert regexp.split(comma, "plain") == ["plain"]
+  let assert Ok(optional) = regexp.from_string("(a)?b")
+  assert regexp.split(optional, "1b2ab3") == ["1", "", "2", "a", "3"]
 
   let assert Ok(names) = regexp.from_string("(\\w+)-(\\d+)")
   assert regexp.replace(names, "é-12 b-3", "$2:$1") == "12:é 3:b"

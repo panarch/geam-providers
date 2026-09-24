@@ -114,10 +114,21 @@ mod regexp {
 
     #[geam::function]
     fn do_split(regexp: &Regexp, string: StringValue) -> Vec<StringValue> {
+        split_value(&regexp.regex, string)
+    }
+
+    fn split_value(regex: &Regex, string: StringValue) -> Vec<StringValue> {
         let mut pieces = Vec::new();
         let mut previous_end = 0;
-        for matched in regexp.regex.find_iter(string.as_str()) {
+        for captures in regex.captures_iter(string.as_str()) {
+            let matched = captures.get_match();
             pieces.push(string.slice(previous_end..matched.start()));
+            for group in captures.iter().skip(1) {
+                pieces.push(match group {
+                    Some(group) => string.slice(group.range()),
+                    None => StringValue::from(""),
+                });
+            }
             previous_end = matched.end();
         }
         pieces.push(string.slice(previous_end..string.len()));
@@ -332,6 +343,18 @@ mod regexp {
             let Match::Match { submatches, .. } = match_value(&text, &captures);
             assert!(submatches.is_empty());
             assert!(!compile("z+").regex.is_match(text.as_str()));
+        }
+
+        #[test]
+        fn split_keeps_captured_delimiters_and_empty_optional_groups() {
+            assert_eq!(
+                split_value(&compile("([+-])").regex, "-01:00".into()),
+                vec!["", "-", "01:00"]
+            );
+            assert_eq!(
+                split_value(&compile("(a)?b").regex, "1b2ab3".into()),
+                vec!["1", "", "2", "a", "3"]
+            );
         }
     }
 }

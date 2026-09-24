@@ -1,0 +1,13 @@
+name = "geam_birl_fixture"
+version = "0.1.0"
+target = "erlang"
+description = "Unmodified birl 2.0.0 provider fixture"
+licences = ["Apache-2.0"]
+
+[dependencies]
+birl = ">= 2.0.0 and < 2.0.1"
+gleam_regexp = ">= 1.1.1 and < 1.1.2"
+gleam_stdlib = ">= 1.0.3 and < 1.0.4"
+gleam_time = ">= 1.8.0 and < 1.8.1"
+ranger = ">= 1.4.0 and < 1.4.1"
+gleam_yielder = ">= 1.1.0 and < 1.1.1"
