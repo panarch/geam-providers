@@ -2,8 +2,8 @@
 
 This document defines the test roles and verification baseline for Geam
 Providers. The current production packages are `geam-filepath`,
-`geam-regexp`, `geam-otp`, `geam-houdini`, `geam-gzlib`, `geam-crypto`, and
-`geam-simplifile`.
+`geam-regexp`, `geam-otp`, `geam-houdini`, `geam-gzlib`, `geam-crypto`,
+`geam-simplifile`, and `geam-logging`.
 This document must remain the source of truth for the checks actually run.
 
 For acceptance rules, see [review-policy.md](review-policy.md). For practical
@@ -55,10 +55,11 @@ The Rust workspace, fixture consumers, and report service example use Geam
 `main` commit `76c4ab7c6a2c0c35975bdd97e5de7c6284f895e7`. Houdini also
 uses the public `geam-core` byte-slice helper from that commit. The Gleam
 projects resolve the unmodified `filepath` 1.1.2, `gleam_regexp` 1.1.1,
-`gleam_otp` 1.3.0, `houdini` 1.2.0, `gzlib` 2.0.0, `gleam_crypto` 1.6.0, and
-`simplifile` 2.7.0 packages from Hex. The crypto and simplifile fixtures pin
-`gleam_stdlib` 1.0.3 for compatibility with this Geam commit; the simplifile
-fixtures also select `geam-filepath`. Resolving crypto with stdlib 1.0.5 failed
+`gleam_otp` 1.3.0, `houdini` 1.2.0, `gzlib` 2.0.0, `gleam_crypto` 1.6.0,
+`simplifile` 2.7.0, and `logging` 1.5.0 packages from Hex. The crypto,
+simplifile, and logging fixtures pin `gleam_stdlib` 1.0.3 for compatibility
+with this Geam commit; the simplifile fixtures also select `geam-filepath`.
+Resolving crypto with stdlib 1.0.5 failed
 at the `gleam/bit_array.pad_to_bytes` linkage check. From the repository root,
 download fixture dependencies before running source-backed Rust tests:
 
@@ -78,6 +79,8 @@ download fixture dependencies before running source-backed Rust tests:
 (cd gzlib/fixtures/embedding/gleam && gleam deps download)
 (cd simplifile/fixtures/gleam && gleam deps download)
 (cd simplifile/fixtures/embedding/gleam && gleam deps download)
+(cd logging/fixtures/gleam && gleam deps download)
+(cd logging/fixtures/embedding/gleam && gleam deps download)
 (cd filepath/fixtures/gleam && gleam format --check && gleam check)
 (cd filepath/fixtures/embedding/gleam && gleam format --check && gleam check)
 (cd gleam-regexp/fixtures/gleam && gleam format --check && gleam check)
@@ -96,6 +99,9 @@ download fixture dependencies before running source-backed Rust tests:
 (cd gzlib/fixtures/embedding/gleam && gleam format --check && gleam check)
 (cd simplifile/fixtures/gleam && gleam format --check && gleam check)
 (cd simplifile/fixtures/embedding/gleam && gleam format --check && gleam check)
+(cd logging/fixtures/gleam/build/packages/logging && shasum -a 256 -c ../../../../upstream.sha256)
+(cd logging/fixtures/gleam && gleam format --check && gleam check)
+(cd logging/fixtures/embedding/gleam && gleam format --check && gleam check)
 ```
 
 The Houdini standalone Gleam fixture can also run on Erlang with `gleam run`
@@ -166,6 +172,12 @@ root workspace members. Check and run each separately:
 (cd simplifile/fixtures/embedding && cargo run --locked)
 (cd simplifile/fixtures/embedding && cargo clippy --all-targets --locked -- -D warnings)
 (cd simplifile/fixtures/embedding && RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --locked)
+(cd logging/fixtures/embedding && cargo fmt --all --check)
+(cd logging/fixtures/embedding && "$GEAM_BIN" embedding check)
+(cd logging/fixtures/embedding && cargo test --locked)
+(cd logging/fixtures/embedding && cargo run --locked)
+(cd logging/fixtures/embedding && cargo clippy --all-targets --locked -- -D warnings)
+(cd logging/fixtures/embedding && RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --locked)
 ```
 
 Each standalone fixture has its own Cargo lockfile too. Run `prepare`, `run`,
@@ -217,6 +229,12 @@ FIXTURE="$PWD/simplifile/fixtures/gleam"
 (cd "$FIXTURE" && "$GEAM_BIN" run)
 (cd "$FIXTURE" && "$GEAM_BIN" build)
 (cd /tmp && "$FIXTURE/build/geam/target/debug/geam_simplifile_fixture")
+
+FIXTURE="$PWD/logging/fixtures/gleam"
+(cd "$FIXTURE" && "$GEAM_BIN" prepare)
+(cd "$FIXTURE" && "$GEAM_BIN" run)
+(cd "$FIXTURE" && "$GEAM_BIN" build)
+(cd /tmp && "$FIXTURE/build/geam/target/debug/geam_logging_fixture")
 ```
 
 Inspect all production packages' published-file views:
@@ -229,6 +247,7 @@ cargo package --list --package geam-houdini --locked
 cargo package --list --package geam-crypto --locked
 cargo package --list --package geam-gzlib --locked
 cargo package --list --package geam-simplifile --locked
+cargo package --list --package geam-logging --locked
 ```
 
 Confirm that each list contains `LICENSE` along with the manifest, README, and
@@ -360,6 +379,11 @@ cargo llvm-cov --package geam-gzlib --locked \
   --json --summary-only --output-path target/gzlib-coverage.json \
   --fail-under-lines 100 \
   --fail-under-regions 100
+cargo llvm-cov clean --workspace
+cargo llvm-cov --package geam-logging --locked \
+  --json --summary-only --output-path target/logging-coverage.json \
+  --fail-under-lines 100 \
+  --fail-under-regions 100
 ```
 
 Read each package file entry in its JSON report to confirm line and region counts
@@ -383,7 +407,7 @@ cargo llvm-cov report --package geam-regexp \
 ```
 
 Substitute `geam-filepath`, `geam-otp`, `geam-houdini`, `geam-gzlib`,
-`geam-crypto`, or `geam-simplifile` when inspecting those crates.
+`geam-crypto`, `geam-simplifile`, or `geam-logging` when inspecting those crates.
 
 Generate a package-scoped HTML report from the same profile when source context
 is easier to inspect visually:

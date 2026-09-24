@@ -1,5 +1,5 @@
 [workspace]
-members = ["filepath", "gleam-regexp", "gleam-otp", "houdini", "gzlib", "gleam-crypto", "simplifile"]
+members = ["filepath", "gleam-regexp", "gleam-otp", "houdini", "gzlib", "gleam-crypto", "simplifile", "logging"]
 resolver = "3"
 
 [workspace.package]

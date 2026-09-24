@@ -1,0 +1,13 @@
+# geam-logging
+
+This crate implements the three native externals of the unchanged [`logging` 1.5.0](https://hex.pm/packages/logging/1.5.0) Gleam package through Geam's public typed provider API. Add `logging` to the Gleam project and select `geam-logging` as its provider. The verified package range is 1.5.0 only.
+
+`logging.configure()`, `logging.log(level, message)`, and `logging.set_level(level)` run with a provider-owned level and a host-owned output writer. The initial level is `Info`. Messages sent through `logging.log` use the original level labels, ANSI styles, filtering order, and trailing newline. The standalone default writes to stdout. An embedding host can supply any `Write + Send` destination through `RunState::with_writer`, including a deterministic collector. Writer failures become Geam host failures.
+
+The original package reads `NO_COLOR` and `NO_COLOUR` when `configure()` runs on BEAM. This provider does not read process environment variables implicitly. Pass either environment value explicitly as a string in provider configuration, for example a TOML file containing `NO_COLOR = "1"` passed to `geam run --provider-config logging=path/to/logging.toml`. Embedding hosts can pass the values to `RunState::with_writer`. An absent value, an empty string, or the exact string `false` leaves color enabled; any other nonempty value disables it. Without configuration, color is enabled. Configuration and writer ownership are per run; `configure()` resets the level to `Info` and uses the color choice supplied at initialization.
+
+## Compatibility boundary
+
+On BEAM, `configure()` modifies the shared Erlang logger's primary level, default handler, and filters for `sasl`, `supervisor_report`, and progress reports. Geam does not run that Erlang logger. This provider handles messages sent through the `logging` package's own public API; it does not intercept or reformat events emitted by other providers, the embedding host, or the Geam runtime. `set_level` therefore changes visibility for this provider's messages, not a process-wide logger. Supporting a shared event stream would require a separate generic host logging contract.
+
+The [standalone fixture](fixtures/gleam/) and [Rust embedding fixture](fixtures/embedding/) compile the original Hex package. They verify all eight levels, formatting, color, level changes, reset, independent run state, and output failure propagation. The fixtures pin `gleam_stdlib` 1.0.3 for compatibility with Geam `main` commit `76c4ab7c6a2c0c35975bdd97e5de7c6284f895e7`. See the [testing guide](../docs/development/testing.md) for commands and coverage requirements. Registry publication and consumption remain separate while Geam is Git-pinned.
