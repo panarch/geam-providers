@@ -286,7 +286,7 @@ required API and features. Do not treat `--list` as proof of registry readiness.
 ## GitHub Actions
 
 The [CI workflow](../../.github/workflows/ci.yml) runs on pushes and pull
-requests to `main`, and can be started manually. Its `providers` job reads
+requests to `main` and can be started manually. Its `providers` job reads
 workspace members marked with `[package.metadata.geam.provider]` through
 `cargo metadata` and passes their crate names and directories to the other
 jobs. CI fails if that provider list is empty. Each provider uses the standard
@@ -301,11 +301,11 @@ underscores, followed by `_fixture`. A provider can override that name with
   fixture projects per provider, verifies any `fixtures/upstream.sha256`
   against the original Hex source, and checks workspace Rust formatting,
   tests, Clippy, and documentation once.
-- `validate` runs once for each provider and declared operating system. It
-  downloads both fixture projects, starts with a clean profile, and first
-  requires 100% line and full-scope region coverage for that production crate
-  and every file reported under its `src/` directory. If coverage fails, the
-  job stops before integration. After coverage passes, the same job checks
+- `validate` runs once for each selected provider and declared operating
+  system. It downloads both fixture projects, starts with a clean profile, and
+  first requires 100% line and full-scope region coverage for that production
+  crate and every file reported under its `src/` directory. If coverage fails,
+  the job stops before integration. After coverage passes, the same job checks
   fixture Geam revisions, Gleam source and embedding Rust formatting, the
   embedding consumer's Clippy and Rust documentation, and the package file
   list. It installs the pinned Geam CLI, checks generated bindings, tests and
@@ -323,9 +323,26 @@ example, declare those paths in `[package.metadata.geam.ci]`. Its optional
 `runners` list declares operating systems; without it, the provider runs on
 `ubuntu-24.04`. The discovery job builds provider-by-runner rows. Currently
 `geam-simplifile` declares `ubuntu-24.04`, `macos-15`, and `windows-2025`;
-the other providers keep the Ubuntu default. `quality` runs once on Ubuntu,
-while `validate` runs for every row. Local Markdown links are not checked by
-this workflow.
+the other providers keep the Ubuntu default. `quality` runs once on Ubuntu
+for the entire workspace, while `validate` runs for each selected row. Local
+Markdown links are not checked by this workflow.
+
+On PRs and `main` pushes, [`select_providers.py`](../../.github/scripts/select_providers.py)
+compares the base and checked-out commits, then selects changed providers and
+their workspace or fixture path dependents. Each selected provider runs on all
+its declared operating systems. For example, changing `platform/` selects
+only `geam-platform` on Ubuntu; changing `filepath/` also selects
+`geam-simplifile` on Ubuntu, macOS, and Windows. Pure additions of new provider
+members and lockfile packages can be scoped, including accompanying root README
+and Markdown documentation changes. Documentation-only changes, changes to
+existing workspace or lockfile records, shared or unrecognized paths, and
+unavailable change analysis run the full matrix. Ordinary manual runs also
+use the full matrix. Every selected row keeps its 100% line and region coverage
+gate and fixture integration checks. To check the selector locally, run:
+
+```sh
+python3 -m unittest discover -s .github/scripts -p 'test_*.py'
+```
 
 A manual run with empty `coverage_provider` and `coverage_runner` inputs uses
 the full CI matrix. Set both inputs to run only coverage for one declared
