@@ -653,11 +653,15 @@ mod tests {
                 b"hello"
             );
             let untrusted = HttpTransport::new(None).unwrap();
-            assert!(matches!(
-                untrusted.send(http_request(url.clone())).await,
-                Err(Failure::FailedToConnect { ip4: ConnectError::TlsAlert { code, .. }, .. })
-                if code == "unknown_ca"
-            ));
+            let untrusted_failure = untrusted.send(http_request(url.clone())).await;
+            assert!(
+                matches!(
+                    &untrusted_failure,
+                    Err(Failure::FailedToConnect { ip4: ConnectError::TlsAlert { code, .. }, .. })
+                    if ["unknown_ca", "bad_certificate"].contains(&code.as_str())
+                ),
+                "{untrusted_failure:?}"
+            );
             let mut explicitly_unverified = http_request(url.clone());
             explicitly_unverified.verify_tls = false;
             assert_eq!(
@@ -677,7 +681,7 @@ mod tests {
     }
 
     #[test]
-    fn refused_socket_maps_to_connection_error() {
+    fn closed_local_port_reports_refusal_or_timeout() {
         let executor = tokio::runtime::Builder::new_current_thread()
             .enable_all()
             .build()
@@ -687,15 +691,20 @@ mod tests {
             let address = listener.local_addr().unwrap();
             drop(listener);
             let transport = HttpTransport::new(None).unwrap();
-            assert_eq!(
-                transport
-                    .send(http_request(format!("http://{address}/hello")))
-                    .await
-                    .unwrap_err(),
-                Failure::FailedToConnect {
-                    ip4: ConnectError::Posix("econnrefused".into()),
-                    ip6: ConnectError::Posix("econnrefused".into()),
-                }
+            let failure = transport
+                .send(http_request(format!("http://{address}/hello")))
+                .await
+                .unwrap_err();
+            assert!(
+                [
+                    Failure::Timeout,
+                    Failure::FailedToConnect {
+                        ip4: ConnectError::Posix("econnrefused".into()),
+                        ip6: ConnectError::Posix("econnrefused".into()),
+                    },
+                ]
+                .contains(&failure),
+                "{failure:?}"
             );
         });
     }

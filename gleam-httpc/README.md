@@ -35,7 +35,10 @@ at most ten redirects when enabled. The Rust HTTP client reports one connection
 failure for a request; the provider places that same failure in both the
 `ip4` and `ip6` fields of the upstream `FailedToConnect` type. It does not
 claim Erlang `httpc`'s separate IPv4/IPv6 dial diagnostics or exact socket
-error text. Invalid request syntax and body shapes fail at the host boundary.
+error text. The TLS alert for an untrusted certificate may be `unknown_ca` or
+`bad_certificate`, depending on the platform verifier. A closed local port may
+also time out instead of reporting `econnrefused` on Windows. Invalid request
+syntax and body shapes fail at the host boundary.
 
 The [source contract](fixtures/CONTRACTS.md) pins the original Hex contents.
 The [standalone fixture](fixtures/gleam) and [embedding fixture](fixtures/embedding)
