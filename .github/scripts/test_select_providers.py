@@ -44,12 +44,17 @@ class SelectionTests(unittest.TestCase):
         selected, _ = ci.affected_providers(["simplifile/src/lib.rs"], ROWS, DEPENDENCIES)
         self.assertEqual(selected, {"geam-simplifile"})
 
-    def test_documentation_only_has_no_validate_target(self):
+    def test_documentation_only_uses_full_matrix(self):
         selected, reason = ci.affected_providers(
             ["README.md", "docs/development/testing.md"], ROWS, DEPENDENCIES
         )
-        self.assertEqual(selected, set())
-        self.assertEqual(reason, "documentation only")
+        self.assertEqual(selected, ALL)
+        self.assertEqual(reason, "no provider change")
+
+    def test_no_provider_change_uses_full_matrix(self):
+        selected, reason = ci.affected_providers([], ROWS, DEPENDENCIES)
+        self.assertEqual(selected, ALL)
+        self.assertEqual(reason, "no provider change")
 
     def test_shared_and_unknown_paths_require_full_matrix(self):
         for path in (".github/workflows/ci.yml", ".github/scripts/select_providers.py", "LICENSE"):
@@ -60,7 +65,13 @@ class SelectionTests(unittest.TestCase):
 
     def test_new_member_selects_its_provider(self):
         selected, _ = ci.affected_providers(
-            ["Cargo.toml", "Cargo.lock", "platform/Cargo.toml"],
+            [
+                "Cargo.toml",
+                "Cargo.lock",
+                "README.md",
+                "docs/development/testing.md",
+                "platform/Cargo.toml",
+            ],
             ROWS,
             DEPENDENCIES,
             added_members={"platform"},
@@ -79,17 +90,6 @@ class SelectionTests(unittest.TestCase):
                     ["Cargo.toml", "Cargo.lock"], ROWS, DEPENDENCIES, **options
                 )
                 self.assertEqual(selected, ALL)
-
-    def test_focused_coverage_requires_declared_pair(self):
-        self.assertEqual(
-            ci.focus_target(ROWS, "geam-simplifile", "windows-2025")["crate"],
-            "geam-simplifile",
-        )
-        self.assertIsNone(ci.focus_target(ROWS, "", ""))
-        for crate, runner in (("geam-platform", ""), ("geam-platform", "windows-2025")):
-            with self.subTest(crate=crate, runner=runner):
-                with self.assertRaises(ValueError):
-                    ci.focus_target(ROWS, crate, runner)
 
 
 class CargoChangeTests(unittest.TestCase):
@@ -135,9 +135,7 @@ class RepositoryTests(unittest.TestCase):
                 cwd=ci.ROOT,
             )
         )
-        rows = ci.provider_rows(metadata, ci.ROOT)
-        self.assertIn("geam-platform", {row["crate"] for row in rows})
-        graph = ci.provider_dependencies(rows, metadata, ci.ROOT, ci.fixture_manifests(ci.ROOT))
+        graph = ci.provider_dependencies(ROWS, metadata, ci.ROOT, ci.fixture_manifests(ci.ROOT))
         self.assertIn("geam-filepath", graph["geam-simplifile"])
 
     def test_fixture_only_provider_dependency_is_detected(self):
@@ -162,6 +160,9 @@ class RepositoryTests(unittest.TestCase):
                 rows, metadata, root, ["first/fixtures/gleam/Cargo.toml"]
             )
             self.assertEqual(graph["first"], {"second"})
+            manifest.write_text("other = { path = '../../../second' }\n")
+            with self.assertRaises(ValueError):
+                ci.provider_dependencies(rows, metadata, root, ["first/fixtures/gleam/Cargo.toml"])
 
     def test_rename_reports_both_paths_and_missing_diff_fails_closed(self):
         with tempfile.TemporaryDirectory() as directory:

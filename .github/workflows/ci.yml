@@ -5,8 +5,6 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
-  schedule:
-    - cron: '17 18 * * 0'
   workflow_dispatch:
     inputs:
       coverage_provider:
@@ -20,7 +18,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}
+  group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 env:
@@ -35,7 +33,6 @@ jobs:
     outputs:
       matrix: ${{ steps.matrix.outputs.providers }}
       targets: ${{ steps.matrix.outputs.targets }}
-      has_targets: ${{ steps.matrix.outputs.has_targets }}
       coverage_only: ${{ steps.matrix.outputs.coverage_only }}
 
     steps:
@@ -56,12 +53,58 @@ jobs:
 
       - name: Build provider matrix from Cargo metadata
         id: matrix
+        shell: bash
         env:
           COVERAGE_PROVIDER: ${{ inputs.coverage_provider }}
           COVERAGE_RUNNER: ${{ inputs.coverage_runner }}
           CI_EVENT: ${{ github.event_name }}
           CI_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
-        run: python3 .github/scripts/select_providers.py
+        run: |
+          provider_rows="$(
+            cargo metadata --no-deps --format-version 1 --locked |
+              jq -ce --arg root "$GITHUB_WORKSPACE/" '
+                .workspace_members as $members
+                | [
+                    .packages[]
+                    | select(.id as $id | $members | index($id))
+                    | select(.metadata.geam.provider != null)
+                    | {
+                        crate: .name,
+                        dir: (.manifest_path | sub("/Cargo.toml$"; "") | ltrimstr($root)),
+                        gleam_package: .metadata.geam.provider."gleam-package",
+                        fixture_bin: (.metadata.geam.ci."fixture-bin" // (.name | gsub("-"; "_") + "_fixture")),
+                        example_dir: (.metadata.geam.ci."example-dir" // ""),
+                        runners: (.metadata.geam.ci.runners // ["ubuntu-24.04"])
+                      }
+                  ]
+                | select(length > 0 and all(.[]; .runners | length > 0))
+              '
+          )"
+          targets="$(jq -c '{include: [.[] | . as $provider | .runners[] | $provider + {runner: .} | del(.runners)]}' <<< "$provider_rows")"
+          if [[ -n "$COVERAGE_PROVIDER" || -n "$COVERAGE_RUNNER" ]]; then
+            if [[ -z "$COVERAGE_PROVIDER" || -z "$COVERAGE_RUNNER" ]]; then
+              echo "::error::Set both coverage_provider and coverage_runner for a focused run" >&2
+              exit 1
+            fi
+            targets="$(jq -ce --arg crate "$COVERAGE_PROVIDER" --arg runner "$COVERAGE_RUNNER" '
+              {include: [.include[] | select(.crate == $crate and .runner == $runner)]}
+              | select(.include | length == 1)
+            ' <<< "$targets")" || {
+              echo "::error::No declared coverage target for $COVERAGE_PROVIDER on $COVERAGE_RUNNER" >&2
+              exit 1
+            }
+            echo "coverage_only=true" >> "$GITHUB_OUTPUT"
+          else
+            if [[ "$CI_EVENT" == push || "$CI_EVENT" == pull_request ]]; then
+              selected="$(PROVIDER_ROWS="$provider_rows" python3 .github/scripts/select_providers.py)"
+              targets="$(jq -c --argjson selected "$selected" '
+                {include: [.include[] | select(.crate as $crate | $selected | index($crate) != null)]}
+              ' <<< "$targets")"
+            fi
+            echo "coverage_only=false" >> "$GITHUB_OUTPUT"
+          fi
+          echo "providers=$(jq -c '{include: map(del(.runners))}' <<< "$provider_rows")" >> "$GITHUB_OUTPUT"
+          echo "targets=$targets" >> "$GITHUB_OUTPUT"
 
   quality:
     name: Workspace quality
@@ -142,7 +185,6 @@ jobs:
   validate:
     name: Validate (${{ matrix.crate }}, ${{ matrix.runner }})
     needs: providers
-    if: needs.providers.outputs.has_targets == 'true'
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 60
     defaults:
@@ -363,30 +405,3 @@ jobs:
           "$GEAM_BIN" prepare
           output=$("$GEAM_BIN" run)
           diff -u expected-output.txt <(printf '%s\n' "$output")
-
-  ci_result:
-    name: CI result
-    needs: [providers, quality, validate]
-    if: always()
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check selected jobs
-        env:
-          PROVIDERS_RESULT: ${{ needs.providers.result }}
-          QUALITY_RESULT: ${{ needs.quality.result }}
-          VALIDATE_RESULT: ${{ needs.validate.result }}
-          COVERAGE_ONLY: ${{ needs.providers.outputs.coverage_only }}
-          HAS_TARGETS: ${{ needs.providers.outputs.has_targets }}
-        run: |
-          test "$PROVIDERS_RESULT" = success
-          if [[ "$COVERAGE_ONLY" == true ]]; then
-            test "$QUALITY_RESULT" = skipped
-            test "$VALIDATE_RESULT" = success
-          else
-            test "$QUALITY_RESULT" = success
-            if [[ "$HAS_TARGETS" == true ]]; then
-              test "$VALIDATE_RESULT" = success
-            else
-              test "$VALIDATE_RESULT" = skipped
-            fi
-          fi

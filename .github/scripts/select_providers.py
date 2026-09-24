@@ -1,4 +1,4 @@
-"""Choose Geam provider CI targets, falling back to the full matrix on doubt."""
+"""Choose affected providers for CI; use every provider when unsure."""
 
 import json
 import os
@@ -15,45 +15,6 @@ PATH_DEPENDENCY = re.compile(r'\bpath\s*=\s*"([^"]+)"')
 
 def git(*args, root=ROOT):
     return subprocess.check_output(["git", *args], cwd=root)
-
-
-def provider_rows(metadata, root):
-    members = set(metadata["workspace_members"])
-    rows = []
-    directories = set()
-    for package in metadata["packages"]:
-        if package["id"] not in members:
-            continue
-        geam = package.get("metadata", {}).get("geam", {})
-        provider = geam.get("provider")
-        if provider is None:
-            continue
-        directory = Path(package["manifest_path"]).parent.resolve().relative_to(root).as_posix()
-        ci = geam.get("ci", {})
-        runners = ci.get("runners", ["ubuntu-24.04"])
-        if (
-            not isinstance(runners, list)
-            or not runners
-            or not all(isinstance(runner, str) and runner for runner in runners)
-            or len(runners) != len(set(runners))
-        ):
-            raise ValueError("Provider runners must be distinct non-empty names")
-        if directory in directories:
-            raise ValueError("Two providers share a directory")
-        directories.add(directory)
-        rows.append(
-            {
-                "crate": package["name"],
-                "dir": directory,
-                "gleam_package": provider["gleam-package"],
-                "fixture_bin": ci.get("fixture-bin", package["name"].replace("-", "_") + "_fixture"),
-                "example_dir": ci.get("example-dir", ""),
-                "runners": runners,
-            }
-        )
-    if not rows:
-        raise ValueError("No workspace providers were discovered")
-    return rows
 
 
 def fixture_manifests(root):
@@ -89,7 +50,11 @@ def provider_dependencies(rows, metadata, root, manifests):
         if owner is None:
             continue
         manifest = root / relative_path
-        for path in PATH_DEPENDENCY.findall(manifest.read_text()):
+        content = manifest.read_text()
+        paths = PATH_DEPENDENCY.findall(content)
+        if len(paths) != len(re.findall(r"\bpath\s*=", content)):
+            raise ValueError("Unsupported fixture path syntax")
+        for path in paths:
             target = by_directory.get((manifest.parent / path).resolve())
             if target and target != owner:
                 dependencies[owner].add(target)
@@ -193,7 +158,9 @@ def affected_providers(paths, rows, dependencies, added_members=(), manifest_saf
         direct.add(by_directory[member])
 
     for path in paths:
-        if path in ("Cargo.toml", "Cargo.lock", "README.md") or path.startswith("docs/"):
+        if path in ("Cargo.toml", "Cargo.lock", "README.md") or (
+            path.startswith("docs/") and path.endswith(".md")
+        ):
             continue
         owner = next(
             (row["crate"] for row in rows if path.startswith(row["dir"] + "/")),
@@ -203,6 +170,9 @@ def affected_providers(paths, rows, dependencies, added_members=(), manifest_saf
             return all_crates, "shared or unknown path changed"
         direct.add(owner)
 
+    if not direct:
+        return all_crates, "no provider change"
+
     affected = set(direct)
     while True:
         dependents = {
@@ -211,95 +181,45 @@ def affected_providers(paths, rows, dependencies, added_members=(), manifest_saf
         if dependents <= affected:
             break
         affected |= dependents
-    return affected, "affected providers" if affected else "documentation only"
-
-
-def focus_target(rows, crate, runner):
-    if not crate and not runner:
-        return None
-    if not crate or not runner:
-        raise ValueError("Set both coverage_provider and coverage_runner for a focused run")
-    matches = [row for row in rows if row["crate"] == crate and runner in row["runners"]]
-    if len(matches) != 1:
-        raise ValueError("No declared coverage target for {} on {}".format(crate, runner))
-    return matches[0]
+    return affected, "affected providers"
 
 
 def main():
-    metadata = json.loads(
-        subprocess.check_output(
-            ["cargo", "metadata", "--no-deps", "--format-version", "1", "--locked"],
-            cwd=ROOT,
-        )
-    )
-    rows = provider_rows(metadata, ROOT)
-    focused = focus_target(
-        rows, os.environ.get("COVERAGE_PROVIDER", ""), os.environ.get("COVERAGE_RUNNER", "")
-    )
-    coverage_only = focused is not None
-    event = os.environ.get("CI_EVENT", "")
-
-    if focused:
-        selected = {focused["crate"]}
-        reason = "focused coverage"
-    elif event in ("push", "pull_request"):
-        base = os.environ.get("CI_BASE_SHA", "")
-        head = os.environ.get("GITHUB_SHA", "")
-        try:
-            paths = changed_paths(base, head)
-            manifest_safe = True
-            lock_safe = True
-            added_members = set()
-            if "Cargo.toml" in paths:
-                added_members = manifest_additions(
-                    git("show", base + ":Cargo.toml").decode(),
-                    (ROOT / "Cargo.toml").read_text(),
-                )
-                manifest_safe = added_members is not None
-            if "Cargo.lock" in paths:
-                lock_safe = lock_additions_only(
-                    git("show", base + ":Cargo.lock").decode(),
-                    (ROOT / "Cargo.lock").read_text(),
-                )
-            dependencies = provider_dependencies(rows, metadata, ROOT, fixture_manifests(ROOT))
-            selected, reason = affected_providers(
-                paths, rows, dependencies, added_members or (), manifest_safe, lock_safe
+    rows = json.loads(os.environ["PROVIDER_ROWS"])
+    all_crates = {row["crate"] for row in rows}
+    base = os.environ.get("CI_BASE_SHA", "")
+    head = os.environ.get("GITHUB_SHA", "")
+    try:
+        paths = changed_paths(base, head)
+        added_members = set()
+        manifest_safe = True
+        lock_safe = True
+        if "Cargo.toml" in paths:
+            added_members = manifest_additions(
+                git("show", base + ":Cargo.toml").decode(),
+                (ROOT / "Cargo.toml").read_text(),
             )
-        except (KeyError, OSError, subprocess.CalledProcessError, TypeError, UnicodeError, ValueError):
-            selected, reason = {row["crate"] for row in rows}, "change analysis unavailable"
-    else:
-        selected = {row["crate"] for row in rows}
-        reason = "scheduled or manual full run"
-
-    targets = [
-        {**{key: value for key, value in row.items() if key != "runners"}, "runner": runner}
-        for row in rows
-        if row["crate"] in selected
-        for runner in row["runners"]
-        if not focused or runner == os.environ["COVERAGE_RUNNER"]
-    ]
-    values = {
-        "providers": {"include": [{key: value for key, value in row.items() if key != "runners"} for row in rows]},
-        "targets": {"include": targets},
-        "has_targets": "true" if targets else "false",
-        "coverage_only": "true" if coverage_only else "false",
-    }
-    lines = [
-        key + "=" + (value if isinstance(value, str) else json.dumps(value, separators=(",", ":")))
-        for key, value in values.items()
-    ]
-    output = os.environ.get("GITHUB_OUTPUT")
-    if output:
-        with open(output, "a") as destination:
-            destination.write("\n".join(lines) + "\n")
-    print("CI selection: {}; {} target(s)".format(reason, len(targets)))
-    if not output:
-        print("\n".join(lines))
+            manifest_safe = added_members is not None
+        if "Cargo.lock" in paths:
+            lock_safe = lock_additions_only(
+                git("show", base + ":Cargo.lock").decode(),
+                (ROOT / "Cargo.lock").read_text(),
+            )
+        metadata = json.loads(
+            subprocess.check_output(
+                ["cargo", "metadata", "--no-deps", "--format-version", "1", "--locked"],
+                cwd=ROOT,
+            )
+        )
+        dependencies = provider_dependencies(rows, metadata, ROOT, fixture_manifests(ROOT))
+        selected, reason = affected_providers(
+            paths, rows, dependencies, added_members or (), manifest_safe, lock_safe
+        )
+    except (KeyError, OSError, subprocess.CalledProcessError, TypeError, UnicodeError, ValueError):
+        selected, reason = all_crates, "change analysis unavailable"
+    print("CI selection: {}".format(reason), file=sys.stderr)
+    print(json.dumps(sorted(selected)))
 
 
 if __name__ == "__main__":
-    try:
-        main()
-    except (KeyError, OSError, subprocess.CalledProcessError, ValueError) as error:
-        print("::error::{}".format(error), file=sys.stderr)
-        sys.exit(1)
+    main()
