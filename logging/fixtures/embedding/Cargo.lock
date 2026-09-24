@@ -984,7 +984,7 @@ dependencies = [
 [[package]]
 name = "geam"
 version = "0.2.3"
-source = "git+https://github.com/panarch/geam.git?rev=76c4ab7c6a2c0c35975bdd97e5de7c6284f895e7#76c4ab7c6a2c0c35975bdd97e5de7c6284f895e7"
+source = "git+https://github.com/panarch/geam.git?rev=bd95b872c578df88f76ed5c4175fb1ea55ee8607#bd95b872c578df88f76ed5c4175fb1ea55ee8607"
 dependencies = [
  "geam-builtin",
  "geam-core",
@@ -995,7 +995,7 @@ dependencies = [
 [[package]]
 name = "geam-builtin"
 version = "0.2.3"
-source = "git+https://github.com/panarch/geam.git?rev=76c4ab7c6a2c0c35975bdd97e5de7c6284f895e7#76c4ab7c6a2c0c35975bdd97e5de7c6284f895e7"
+source = "git+https://github.com/panarch/geam.git?rev=bd95b872c578df88f76ed5c4175fb1ea55ee8607#bd95b872c578df88f76ed5c4175fb1ea55ee8607"
 dependencies = [
  "ecow",
  "geam-core",
@@ -1004,7 +1004,7 @@ dependencies = [
 [[package]]
 name = "geam-core"
 version = "0.2.3"
-source = "git+https://github.com/panarch/geam.git?rev=76c4ab7c6a2c0c35975bdd97e5de7c6284f895e7#76c4ab7c6a2c0c35975bdd97e5de7c6284f895e7"
+source = "git+https://github.com/panarch/geam.git?rev=bd95b872c578df88f76ed5c4175fb1ea55ee8607#bd95b872c578df88f76ed5c4175fb1ea55ee8607"
 dependencies = [
  "bitvec",
  "camino",
@@ -1014,7 +1014,6 @@ dependencies = [
  "geam-gleam-core",
  "half",
  "im",
- "imbl",
  "miette",
  "num-bigint",
  "parking_lot",
@@ -1162,7 +1161,7 @@ dependencies = [
 [[package]]
 name = "geam-macros"
 version = "0.2.3"
-source = "git+https://github.com/panarch/geam.git?rev=76c4ab7c6a2c0c35975bdd97e5de7c6284f895e7#76c4ab7c6a2c0c35975bdd97e5de7c6284f895e7"
+source = "git+https://github.com/panarch/geam.git?rev=bd95b872c578df88f76ed5c4175fb1ea55ee8607#bd95b872c578df88f76ed5c4175fb1ea55ee8607"
 dependencies = [
  "proc-macro-crate",
  "proc-macro2",
@@ -1173,7 +1172,7 @@ dependencies = [
 [[package]]
 name = "geam-stdlib"
 version = "0.2.3"
-source = "git+https://github.com/panarch/geam.git?rev=76c4ab7c6a2c0c35975bdd97e5de7c6284f895e7#76c4ab7c6a2c0c35975bdd97e5de7c6284f895e7"
+source = "git+https://github.com/panarch/geam.git?rev=bd95b872c578df88f76ed5c4175fb1ea55ee8607#bd95b872c578df88f76ed5c4175fb1ea55ee8607"
 dependencies = [
  "base64 0.22.1",
  "bitvec",
