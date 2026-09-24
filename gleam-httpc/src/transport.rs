@@ -113,8 +113,8 @@ fn build_client(
             redirect::Policy::none()
         })
         .tls_danger_accept_invalid_certs(!verify_tls);
-    for certificate in certificates {
-        builder = builder.add_root_certificate(certificate.clone());
+    if !certificates.is_empty() {
+        builder = builder.tls_certs_only(certificates.to_vec());
     }
     builder.build().map_err(|error| error.to_string())
 }
@@ -186,9 +186,7 @@ fn request_failure(error: reqwest::Error) -> Failure {
             detail: tls.to_string(),
         }
     } else {
-        ConnectError::Posix(
-            posix_code(innermost_io_error(&error).map(std::io::Error::kind)).to_owned(),
-        )
+        ConnectError::Posix(connection_code(&error).to_owned())
     };
     Failure::FailedToConnect {
         ip4: failure.clone(),
@@ -227,14 +225,41 @@ fn find_error<'a, E: Error + 'static>(error: &'a (dyn Error + 'static)) -> Optio
     error.source().and_then(find_error::<E>)
 }
 
-fn innermost_io_error<'a>(error: &'a (dyn Error + 'static)) -> Option<&'a std::io::Error> {
-    let io = error.downcast_ref::<std::io::Error>();
-    if let Some(inner) = io.and_then(std::io::Error::get_ref)
-        && let Some(found) = innermost_io_error(inner)
+fn connection_code(error: &(dyn Error + 'static)) -> &'static str {
+    if let Some(io) = error.downcast_ref::<std::io::Error>()
+        && let Some(inner) = io.get_ref()
     {
-        return Some(found);
+        let code = connection_code(inner);
+        if code != "eio" {
+            return code;
+        }
     }
-    error.source().and_then(innermost_io_error).or(io)
+    if let Some(source) = error.source() {
+        let code = connection_code(source);
+        if code != "eio" {
+            return code;
+        }
+    }
+    if let Some(io) = error.downcast_ref::<std::io::Error>() {
+        let code = posix_code(Some(io.kind()));
+        if code != "eio" {
+            return code;
+        }
+        if let Some(raw) = io.raw_os_error() {
+            return windows_socket_code(raw).unwrap_or("eio");
+        }
+    }
+    "eio"
+}
+
+fn windows_socket_code(raw: i32) -> Option<&'static str> {
+    match raw {
+        10061 => Some("econnrefused"),
+        10054 => Some("econnreset"),
+        10065 => Some("ehostunreach"),
+        10051 => Some("enetunreach"),
+        _ => None,
+    }
 }
 
 #[cfg(test)]
@@ -289,9 +314,29 @@ mod tests {
             std::io::ErrorKind::ConnectionReset,
             "reset",
         ));
+        assert_eq!(connection_code(&nested), "econnreset");
+        let outer = std::io::Error::new(std::io::ErrorKind::ConnectionRefused, std::fmt::Error);
+        assert_eq!(connection_code(&outer), "econnrefused");
+        assert_eq!(connection_code(&std::fmt::Error), "eio");
+        let invalid_url = Client::new().get("not a URL").build().unwrap_err();
+        assert!(invalid_url.source().is_some());
+        assert_eq!(connection_code(&invalid_url), "eio");
         assert_eq!(
-            innermost_io_error(&nested).map(std::io::Error::kind),
-            Some(std::io::ErrorKind::ConnectionReset)
+            connection_code(&std::io::Error::other(std::fmt::Error)),
+            "eio"
+        );
+        for (raw, expected) in [
+            (10061, Some("econnrefused")),
+            (10054, Some("econnreset")),
+            (10065, Some("ehostunreach")),
+            (10051, Some("enetunreach")),
+            (0, None),
+        ] {
+            assert_eq!(windows_socket_code(raw), expected);
+        }
+        assert_eq!(
+            connection_code(&std::io::Error::from_raw_os_error(10061)),
+            "econnrefused"
         );
         assert!(find_error::<std::io::Error>(&nested).is_some());
     }
@@ -642,11 +687,16 @@ mod tests {
             let address = listener.local_addr().unwrap();
             drop(listener);
             let transport = HttpTransport::new(None).unwrap();
-            assert!(matches!(
-                transport.send(http_request(format!("http://{address}/hello"))).await,
-                Err(Failure::FailedToConnect { ip4: ConnectError::Posix(code), .. })
-                if code == "econnrefused"
-            ));
+            assert_eq!(
+                transport
+                    .send(http_request(format!("http://{address}/hello")))
+                    .await
+                    .unwrap_err(),
+                Failure::FailedToConnect {
+                    ip4: ConnectError::Posix("econnrefused".into()),
+                    ip6: ConnectError::Posix("econnrefused".into()),
+                }
+            );
         });
     }
 

@@ -12,9 +12,11 @@ the Geam dependency is pinned to `main` commit
 Add `gleam_httpc` to the Gleam project, then select this crate for that package
 with Geam's `provider add --path` command. Embedding applications depend on
 `geam-httpc` directly and initialize the generated provider run-state input.
-The provider has no required configuration. To trust a private CA, pass a
-`root_certificate_pem` string containing PEM root certificates in the provider's
-TOML configuration (standalone) or its `HostProviderConfiguration` (embedding).
+The provider has no required configuration and normally uses the platform trust
+store. To use a private CA, pass a `root_certificate_pem` string containing PEM
+root certificates in the provider's TOML configuration (standalone) or its
+`HostProviderConfiguration` (embedding). When set, this bundle replaces the
+platform trust store; include every root the application needs.
 An embedding host can supply a different network capability with
 `State::set_transport` before execution. The public `transport::Transport`
 contract takes owned requests and returns a cancellable future; the provider
