@@ -294,8 +294,8 @@ jobs:
             (cd "$PROVIDER_DIR/fixtures/$fixture" && gleam format --check && gleam check)
           done
 
-      - name: Run original platform Erlang fixture
-        if: env.COVERAGE_ONLY != 'true' && matrix.gleam_package == 'platform'
+      - name: Run original OS-sensitive Erlang fixture
+        if: env.COVERAGE_ONLY != 'true' && (matrix.gleam_package == 'platform' || matrix.gleam_package == 'birl')
         working-directory: ${{ matrix.dir }}/fixtures/gleam
         run: gleam run
 

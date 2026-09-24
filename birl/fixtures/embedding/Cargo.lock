@@ -215,7 +215,7 @@ dependencies = [
  "nom",
  "num-traits",
  "rusticata-macros",
- "thiserror 2.0.20",
+ "thiserror 2.0.21",
  "time",
 ]
 
@@ -435,12 +435,6 @@ name = "cfg-if"
 version = "1.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4e7648175b45a9a48536d676f68d918270699102aa8dab5496df06904c914600"
-
-[[package]]
-name = "cfg_aliases"
-version = "0.2.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f079e83a288787bcd14a6aea84cee5c87a67c5a3e660c30f557a3d24761b3527"
 
 [[package]]
 name = "chacha20"
@@ -703,7 +697,7 @@ version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "10d60334b3b2e7c9d91ef8150abfb6fa4c1c39ebbcf4a81c2e346aad939fee3e"
 dependencies = [
- "thiserror 2.0.20",
+ "thiserror 2.0.21",
 ]
 
 [[package]]
@@ -1031,7 +1025,6 @@ source = "git+https://github.com/panarch/geam.git?rev=76c4ab7c6a2c0c35975bdd97e5
 dependencies = [
  "geam-builtin",
  "geam-core",
- "geam-erlang",
  "geam-macros",
  "geam-stdlib",
  "geam-time",
@@ -1042,9 +1035,17 @@ name = "geam-birl"
 version = "0.1.0"
 dependencies = [
  "geam",
- "geam-regexp",
  "jiff",
  "num-integer",
+]
+
+[[package]]
+name = "geam-birl-embedding"
+version = "0.1.0"
+dependencies = [
+ "geam",
+ "geam-birl",
+ "geam-regexp",
  "tokio",
 ]
 
@@ -1074,46 +1075,10 @@ dependencies = [
  "miette",
  "num-bigint",
  "parking_lot",
- "thiserror 2.0.20",
+ "thiserror 2.0.21",
  "tokio",
  "toml 0.9.12+spec-1.1.0",
  "vec1",
-]
-
-[[package]]
-name = "geam-crypto"
-version = "0.1.0"
-dependencies = [
- "geam",
- "getrandom 0.4.3",
- "md-5",
- "sha1",
- "sha2 0.10.9",
- "tokio",
-]
-
-[[package]]
-name = "geam-erlang"
-version = "0.2.3"
-source = "git+https://github.com/panarch/geam.git?rev=76c4ab7c6a2c0c35975bdd97e5de7c6284f895e7#76c4ab7c6a2c0c35975bdd97e5de7c6284f895e7"
-dependencies = [
- "ecow",
- "futures-channel",
- "futures-util",
- "geam-core",
- "geam-stdlib",
- "im",
- "num-bigint",
- "num-traits",
- "priority-queue",
-]
-
-[[package]]
-name = "geam-filepath"
-version = "0.1.0"
-dependencies = [
- "geam",
- "tokio",
 ]
 
 [[package]]
@@ -1165,7 +1130,7 @@ dependencies = [
  "strum",
  "tar",
  "termcolor",
- "thiserror 2.0.20",
+ "thiserror 2.0.21",
  "toml 0.9.12+spec-1.1.0",
  "tracing",
  "unicode-segmentation",
@@ -1217,7 +1182,7 @@ dependencies = [
  "ring",
  "serde",
  "serde_json",
- "thiserror 2.0.20",
+ "thiserror 2.0.21",
  "url",
  "x509-parser",
 ]
@@ -1236,33 +1201,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "geam-gzlib"
-version = "0.1.0"
-dependencies = [
- "crc32fast",
- "geam",
- "miniz_oxide",
- "tokio",
-]
-
-[[package]]
-name = "geam-houdini"
-version = "0.1.0"
-dependencies = [
- "geam",
- "geam-core",
- "tokio",
-]
-
-[[package]]
-name = "geam-logging"
-version = "0.1.0"
-dependencies = [
- "geam",
- "tokio",
-]
-
-[[package]]
 name = "geam-macros"
 version = "0.2.3"
 source = "git+https://github.com/panarch/geam.git?rev=76c4ab7c6a2c0c35975bdd97e5de7c6284f895e7#76c4ab7c6a2c0c35975bdd97e5de7c6284f895e7"
@@ -1274,40 +1212,12 @@ dependencies = [
 ]
 
 [[package]]
-name = "geam-otp"
-version = "0.1.0"
-dependencies = [
- "camino",
- "geam",
- "sha2 0.10.9",
-]
-
-[[package]]
-name = "geam-platform"
-version = "0.1.0"
-dependencies = [
- "geam",
- "tokio",
-]
-
-[[package]]
 name = "geam-regexp"
 version = "0.1.0"
 dependencies = [
  "geam",
  "regex",
  "regex-syntax",
- "tokio",
-]
-
-[[package]]
-name = "geam-simplifile"
-version = "0.1.0"
-dependencies = [
- "geam",
- "geam-filepath",
- "tempfile",
- "tokio",
 ]
 
 [[package]]
@@ -1327,16 +1237,6 @@ dependencies = [
  "num-traits",
  "rand 0.10.2",
  "unicode-segmentation",
-]
-
-[[package]]
-name = "geam-term-size"
-version = "0.1.0"
-dependencies = [
- "geam",
- "nix",
- "terminal_size",
- "tokio",
 ]
 
 [[package]]
@@ -1918,16 +1818,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "md-5"
-version = "0.10.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d89e7ee0cfbedfc4da3340218492196241d89eefb6dab27de5df917a6d2e78cf"
-dependencies = [
- "cfg-if",
- "digest 0.10.7",
-]
-
-[[package]]
 name = "memchr"
 version = "2.8.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2011,18 +1901,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "77a5d83df9f36fe23f0c3648c6bbb8b0298bb5f1939c8f2704431371f4b84d43"
 dependencies = [
  "smallvec",
-]
-
-[[package]]
-name = "nix"
-version = "0.30.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "74523f3a35e05aba87a1d978330aef40f67b0304ac79c1c00b294c9830543db6"
-dependencies = [
- "bitflags 2.13.2",
- "cfg-if",
- "cfg_aliases",
- "libc",
 ]
 
 [[package]]
@@ -2403,7 +2281,7 @@ dependencies = [
  "log",
  "priority-queue",
  "rustc-hash 2.1.3",
- "thiserror 2.0.20",
+ "thiserror 2.0.21",
  "version-ranges",
 ]
 
@@ -2801,17 +2679,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "sha1"
-version = "0.10.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a978451301f4db1d02937a4ab3ccce137717b81826e79b7d49ffe3244a13c3b8"
-dependencies = [
- "cfg-if",
- "cpufeatures 0.2.17",
- "digest 0.10.7",
-]
-
-[[package]]
 name = "sha2"
 version = "0.10.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3024,7 +2891,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "32497e9a4c7b38532efcdebeef879707aa9f794296a4f0244f6f69e9bc8574bd"
 dependencies = [
  "fastrand",
- "getrandom 0.4.3",
  "once_cell",
  "rustix",
  "windows-sys 0.61.2",
@@ -3040,16 +2906,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "terminal_size"
-version = "0.4.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "230a1b821ccbd75b185820a1f1ff7b14d21da1e442e22c0863ea5f08771a8874"
-dependencies = [
- "rustix",
- "windows-sys 0.61.2",
-]
-
-[[package]]
 name = "thiserror"
 version = "1.0.69"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3060,11 +2916,11 @@ dependencies = [
 
 [[package]]
 name = "thiserror"
-version = "2.0.20"
+version = "2.0.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ec86235f5fcc2a73650310756d2ac5b138a5780bbbdfae3eeccec992c435ba4f"
+checksum = "09e52cb86a36cede5cb101bf8908837b3e4c6e5e59fe7fd85c23fb56200d189e"
 dependencies = [
- "thiserror-impl 2.0.20",
+ "thiserror-impl 2.0.21",
 ]
 
 [[package]]
@@ -3080,9 +2936,9 @@ dependencies = [
 
 [[package]]
 name = "thiserror-impl"
-version = "2.0.20"
+version = "2.0.21"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "bc04cd3e1236dd4a98afca4569f2deb3f120e5422a4023be2cb683f8486292af"
+checksum = "fe5197923287db20a58125f0bc85c062f7f2c892de97b18c356f9efb14b28524"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -3655,7 +3511,7 @@ dependencies = [
  "nom",
  "oid-registry",
  "rusticata-macros",
- "thiserror 2.0.20",
+ "thiserror 2.0.21",
  "time",
 ]
 
@@ -3700,18 +3556,18 @@ dependencies = [
 
 [[package]]
 name = "zerocopy"
-version = "0.8.57"
+version = "0.8.58"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d35102a9f36d089ccae9e4c6802bc118be4487b80aaffc0ab4e0cf5ce92d2873"
+checksum = "c17e8fafad82b542ff3717217ecdc736231b59e387768c9630123b4ce4d2db44"
 dependencies = [
  "zerocopy-derive",
 ]
 
 [[package]]
 name = "zerocopy-derive"
-version = "0.8.57"
+version = "0.8.58"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "146c01f5ab44258da43cf276c74a2763db2ff3969c9c652c3f2de07041d0b2bc"
+checksum = "595f56e044df4f46a0c9a626f65c3d99eb8488f7e8a8baa12dd76326d9710bf2"
 dependencies = [
  "proc-macro2",
  "quote",

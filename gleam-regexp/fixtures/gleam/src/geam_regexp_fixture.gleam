@@ -23,6 +23,9 @@ pub fn main() {
   let assert Ok(parts) = regexp.from_string(",\\s*")
   assert regexp.split(parts, "a, b,c") == ["a", "b", "c"]
 
+  let assert Ok(sign) = regexp.from_string("([+-])")
+  assert regexp.split(sign, "-01:00") == ["", "-", "01:00"]
+
   let assert Ok(names) = regexp.from_string("(\\w+)-(\\d+)")
   assert regexp.replace(names, "foo-12 bar-3", "$2:$1") == "12:foo 3:bar"
   assert regexp.match_map(words, "hi, joe", fn(found) {
