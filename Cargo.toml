@@ -1,5 +1,5 @@
 [workspace]
-members = ["filepath", "gleam-regexp", "gleam-otp", "houdini", "gzlib", "gleam-crypto", "simplifile", "platform", "logging"]
+members = ["filepath", "gleam-regexp", "gleam-otp", "houdini", "gzlib", "gleam-crypto", "simplifile", "platform", "logging", "term-size"]
 resolver = "3"
 
 [workspace.package]
@@ -18,3 +18,4 @@ md-5 = "0.10"
 getrandom = "0.4"
 miniz_oxide = "0.9"
 crc32fast = "1.5"
+terminal_size = "=0.4.4"

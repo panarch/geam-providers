@@ -1,0 +1,9 @@
+name = "geam_term_size_fixture"
+version = "0.1.0"
+target = "erlang"
+description = "Unmodified term_size 1.0.1 provider fixture"
+licences = ["Apache-2.0"]
+
+[dependencies]
+term_size = ">= 1.0.1 and < 1.0.2"
+gleam_stdlib = ">= 1.0.3 and < 1.0.4"

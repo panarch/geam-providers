@@ -3,7 +3,7 @@
 This document defines the test roles and verification baseline for Geam
 Providers. The current production packages are `geam-filepath`,
 `geam-regexp`, `geam-otp`, `geam-houdini`, `geam-gzlib`, `geam-crypto`,
-`geam-simplifile`, `geam-platform`, and `geam-logging`.
+`geam-simplifile`, `geam-platform`, `geam-logging`, and `geam-term-size`.
 This document must remain the source of truth for the checks actually run.
 
 For acceptance rules, see [review-policy.md](review-policy.md). For practical
@@ -56,12 +56,12 @@ The Rust workspace, fixture consumers, and report service example use Geam
 uses the public `geam-core` byte-slice helper from that commit. The Gleam
 projects resolve the unmodified `filepath` 1.1.2, `gleam_regexp` 1.1.1,
 `gleam_otp` 1.3.0, `houdini` 1.2.0, `gzlib` 2.0.0, `gleam_crypto` 1.6.0,
-`simplifile` 2.7.0, `platform` 1.0.0, and `logging` 1.5.0 packages from Hex.
-The crypto, simplifile, and logging fixtures pin `gleam_stdlib` 1.0.3 for
-compatibility with this Geam commit; the simplifile fixtures also select
-`geam-filepath`. Resolving crypto with stdlib 1.0.5 failed at the
-`gleam/bit_array.pad_to_bytes` linkage check. From the repository root,
-download fixture dependencies before running source-backed Rust tests:
+`simplifile` 2.7.0, `platform` 1.0.0, `logging` 1.5.0, and `term_size` 1.0.1
+packages from Hex. The crypto, simplifile, logging, and term_size fixtures pin
+`gleam_stdlib` 1.0.3 for compatibility with this Geam commit; the simplifile
+fixtures also select `geam-filepath`. Resolving crypto with stdlib 1.0.5
+failed at the `gleam/bit_array.pad_to_bytes` linkage check. From the repository
+root, download fixture dependencies before running source-backed Rust tests:
 
 ```sh
 (cd filepath/fixtures/gleam && gleam deps download)
@@ -83,6 +83,8 @@ download fixture dependencies before running source-backed Rust tests:
 (cd platform/fixtures/embedding/gleam && gleam deps download)
 (cd logging/fixtures/gleam && gleam deps download)
 (cd logging/fixtures/embedding/gleam && gleam deps download)
+(cd term-size/fixtures/gleam && gleam deps download)
+(cd term-size/fixtures/embedding/gleam && gleam deps download)
 (cd filepath/fixtures/gleam && gleam format --check && gleam check)
 (cd filepath/fixtures/embedding/gleam && gleam format --check && gleam check)
 (cd gleam-regexp/fixtures/gleam && gleam format --check && gleam check)
@@ -107,6 +109,9 @@ download fixture dependencies before running source-backed Rust tests:
 (cd logging/fixtures/gleam && gleam format --check && gleam check)
 (cd logging/fixtures/embedding/gleam && gleam format --check && gleam check)
 (cd logging/fixtures/gleam/build/packages/logging && shasum -a 256 -c ../../../../upstream.sha256)
+(cd term-size/fixtures/gleam/build/packages/term_size && shasum -a 256 -c ../../../../upstream.sha256)
+(cd term-size/fixtures/gleam && gleam format --check && gleam check)
+(cd term-size/fixtures/embedding/gleam && gleam format --check && gleam check)
 ```
 
 The Houdini and platform standalone Gleam fixtures can also run on Erlang with
@@ -194,6 +199,12 @@ root workspace members. Check and run each separately:
 (cd logging/fixtures/embedding && cargo run --locked)
 (cd logging/fixtures/embedding && cargo clippy --all-targets --locked -- -D warnings)
 (cd logging/fixtures/embedding && RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --locked)
+(cd term-size/fixtures/embedding && cargo fmt --all --check)
+(cd term-size/fixtures/embedding && "$GEAM_BIN" embedding check)
+(cd term-size/fixtures/embedding && cargo test --locked)
+(cd term-size/fixtures/embedding && cargo run --locked)
+(cd term-size/fixtures/embedding && cargo clippy --all-targets --locked -- -D warnings)
+(cd term-size/fixtures/embedding && RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --locked)
 ```
 
 Each standalone fixture has its own Cargo lockfile too. Run `prepare`, `run`,
@@ -257,6 +268,12 @@ FIXTURE="$PWD/logging/fixtures/gleam"
 (cd "$FIXTURE" && "$GEAM_BIN" run)
 (cd "$FIXTURE" && "$GEAM_BIN" build)
 (cd /tmp && "$FIXTURE/build/geam/target/debug/geam_logging_fixture")
+
+FIXTURE="$PWD/term-size/fixtures/gleam"
+(cd "$FIXTURE" && "$GEAM_BIN" prepare)
+(cd "$FIXTURE" && "$GEAM_BIN" run)
+(cd "$FIXTURE" && "$GEAM_BIN" build)
+(cd /tmp && "$FIXTURE/build/geam/target/debug/geam_term_size_fixture")
 ```
 
 Inspect all production packages' published-file views:
@@ -271,6 +288,7 @@ cargo package --list --package geam-gzlib --locked
 cargo package --list --package geam-simplifile --locked
 cargo package --list --package geam-platform --locked
 cargo package --list --package geam-logging --locked
+cargo package --list --package geam-term-size --locked
 ```
 
 Confirm that each list contains `LICENSE` along with the manifest, README, and
@@ -369,6 +387,14 @@ job also runs the original Erlang fixture with `gleam run`; local validation
 checks macOS ARM64. Windows OS and word-size mapping have owner tests, but no
 native Windows Geam execution is claimed.
 
+The `term_size` provider uses the Ubuntu runner by default. Its source-backed
+contract tests spawn children with all standard streams piped, and with
+controlled PTYs on stdout, stderr, or stdin. They check the selection order,
+rows-before-columns result, `Error(Nil)` without a TTY, and a size change within
+one process. The ordinary standalone and embedding runs only smoke-test linkage
+because an unconstrained runner may or may not have a TTY. The controlled tests
+run in the mandatory workspace test and provider coverage steps.
+
 The workflow needs only read access to the repository. It does not publish a
 crate or assume that a Git-pinned provider can already be uploaded to crates.io.
 After the repository is pushed, the hosted job results must be checked
@@ -435,6 +461,11 @@ cargo llvm-cov --package geam-logging --locked \
   --json --summary-only --output-path target/logging-coverage.json \
   --fail-under-lines 100 \
   --fail-under-regions 100
+cargo llvm-cov clean --workspace
+cargo llvm-cov --package geam-term-size --locked \
+  --json --summary-only --output-path target/term-size-coverage.json \
+  --fail-under-lines 100 \
+  --fail-under-regions 100
 ```
 
 Read each package file entry in its JSON report to confirm line and region counts
@@ -444,8 +475,9 @@ an independent closure for each one. A consumer may execute another crate's
 code, but its coverage must not compensate for missing owner coverage. Run the
 same closure on every declared OS so conditional source paths are included.
 
-For Houdini and gzlib, confirm the `houdini/src/lib.rs` and `gzlib/src/lib.rs`
-file counts directly.
+For Houdini, gzlib, platform, and term_size, confirm the `houdini/src/lib.rs`,
+`gzlib/src/lib.rs`, `platform/src/lib.rs`, and `term-size/src/lib.rs` file counts
+directly.
 
 When a gap is unclear, inspect region and monomorph detail for the affected
 package:
@@ -458,8 +490,8 @@ cargo llvm-cov report --package geam-regexp \
 ```
 
 Substitute `geam-filepath`, `geam-otp`, `geam-houdini`, `geam-gzlib`,
-`geam-crypto`, `geam-simplifile`, `geam-platform`, or `geam-logging` when
-inspecting those crates.
+`geam-crypto`, `geam-simplifile`, `geam-platform`, `geam-logging`, or
+`geam-term-size` when inspecting those crates.
 
 Generate a package-scoped HTML report from the same profile when source context
 is easier to inspect visually:

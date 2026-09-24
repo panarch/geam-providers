@@ -1,0 +1,28 @@
+[package]
+name = "geam-term-size"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Geam Rust provider for the original term_size package"
+repository = "https://github.com/panarch/geam-providers"
+readme = "README.md"
+exclude = ["fixtures/", "tests/"]
+keywords = ["geam", "gleam", "terminal", "provider"]
+categories = ["command-line-interface"]
+
+[package.metadata.geam.provider]
+schema = 1
+gleam-package = "term_size"
+gleam-version = ">= 1.0.1 and < 1.0.2"
+
+[dependencies]
+geam.workspace = true
+terminal_size.workspace = true
+
+[dev-dependencies]
+geam = { workspace = true, features = ["embedding", "tokio", "geam-builtin"] }
+tokio = { version = "1.53.1", default-features = false, features = ["rt"] }
+
+[target.'cfg(unix)'.dev-dependencies]
+nix = { version = "0.30", default-features = false, features = ["term"] }
