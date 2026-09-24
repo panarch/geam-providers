@@ -10,6 +10,7 @@ This repository implements native functions for existing Gleam packages through 
 | [`houdini`](https://hex.pm/packages/houdini) | [`geam-houdini`](houdini/README.md) | 1.2.0 |
 | [`gzlib`](https://hex.pm/packages/gzlib) | [`geam-gzlib`](gzlib/README.md) | 2.0.0 |
 | [`gleam_crypto`](https://hex.pm/packages/gleam_crypto) | [`geam-crypto`](gleam-crypto/README.md) | 1.6.0 |
+| [`simplifile`](https://hex.pm/packages/simplifile) | [`geam-simplifile`](simplifile/README.md) | 2.7.0 |
 
 The Geam dependencies are pinned to `main` commit `76c4ab7c6a2c0c35975bdd97e5de7c6284f895e7` rather than a released version or local path. The Gleam packages come from Hex without changes to their upstream source. Publishing provider crates and testing consumption of published packages are separate steps after the required Geam features are released.
 

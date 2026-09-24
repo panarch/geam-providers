@@ -6,6 +6,13 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      coverage_provider:
+        description: "Provider crate for a focused coverage run; leave blank for full CI"
+        type: string
+      coverage_runner:
+        description: "Declared runner for focused coverage; leave blank for full CI"
+        type: string
 
 permissions:
   contents: read
@@ -25,6 +32,8 @@ jobs:
     timeout-minutes: 10
     outputs:
       matrix: ${{ steps.matrix.outputs.providers }}
+      targets: ${{ steps.matrix.outputs.targets }}
+      coverage_only: ${{ steps.matrix.outputs.coverage_only }}
 
     steps:
       - name: Checkout
@@ -40,12 +49,15 @@ jobs:
       - name: Build provider matrix from Cargo metadata
         id: matrix
         shell: bash
+        env:
+          COVERAGE_PROVIDER: ${{ inputs.coverage_provider }}
+          COVERAGE_RUNNER: ${{ inputs.coverage_runner }}
         run: |
-          providers="$(
+          provider_rows="$(
             cargo metadata --no-deps --format-version 1 --locked |
               jq -ce --arg root "$GITHUB_WORKSPACE/" '
                 .workspace_members as $members
-                | {include: [
+                | [
                     .packages[]
                     | select(.id as $id | $members | index($id))
                     | select(.metadata.geam.provider != null)
@@ -54,17 +66,37 @@ jobs:
                         dir: (.manifest_path | sub("/Cargo.toml$"; "") | ltrimstr($root)),
                         gleam_package: .metadata.geam.provider."gleam-package",
                         fixture_bin: (.metadata.geam.ci."fixture-bin" // (.name | gsub("-"; "_") + "_fixture")),
-                        example_dir: (.metadata.geam.ci."example-dir" // "")
+                        example_dir: (.metadata.geam.ci."example-dir" // ""),
+                        runners: (.metadata.geam.ci.runners // ["ubuntu-24.04"])
                       }
-                  ]}
-                | select(.include | length > 0)
+                  ]
+                | select(length > 0 and all(.[]; .runners | length > 0))
               '
           )"
-          echo "providers=$providers" >> "$GITHUB_OUTPUT"
+          targets="$(jq -c '{include: [.[] | . as $provider | .runners[] | $provider + {runner: .} | del(.runners)]}' <<< "$provider_rows")"
+          if [[ -n "$COVERAGE_PROVIDER" || -n "$COVERAGE_RUNNER" ]]; then
+            if [[ -z "$COVERAGE_PROVIDER" || -z "$COVERAGE_RUNNER" ]]; then
+              echo "::error::Set both coverage_provider and coverage_runner for a focused run" >&2
+              exit 1
+            fi
+            targets="$(jq -ce --arg crate "$COVERAGE_PROVIDER" --arg runner "$COVERAGE_RUNNER" '
+              {include: [.include[] | select(.crate == $crate and .runner == $runner)]}
+              | select(.include | length == 1)
+            ' <<< "$targets")" || {
+              echo "::error::No declared coverage target for $COVERAGE_PROVIDER on $COVERAGE_RUNNER" >&2
+              exit 1
+            }
+            echo "coverage_only=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "coverage_only=false" >> "$GITHUB_OUTPUT"
+          fi
+          echo "providers=$(jq -c '{include: map(del(.runners))}' <<< "$provider_rows")" >> "$GITHUB_OUTPUT"
+          echo "targets=$targets" >> "$GITHUB_OUTPUT"
 
   quality:
     name: Workspace quality
     needs: providers
+    if: needs.providers.outputs.coverage_only != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -137,17 +169,23 @@ jobs:
           RUSTDOCFLAGS: -D warnings
         run: cargo doc --workspace --no-deps --locked
 
-  coverage:
-    name: Coverage (${{ matrix.crate }})
+  validate:
+    name: Validate (${{ matrix.crate }}, ${{ matrix.runner }})
     needs: providers
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: bash
     strategy:
       fail-fast: false
-      matrix: ${{ fromJSON(needs.providers.outputs.matrix) }}
+      matrix: ${{ fromJSON(needs.providers.outputs.targets) }}
     env:
       PROVIDER_CRATE: ${{ matrix.crate }}
       PROVIDER_DIR: ${{ matrix.dir }}
+      FIXTURE_BIN: ${{ matrix.fixture_bin }}
+      EXAMPLE_DIR: ${{ matrix.example_dir }}
+      COVERAGE_ONLY: ${{ needs.providers.outputs.coverage_only }}
 
     steps:
       - name: Checkout
@@ -164,14 +202,16 @@ jobs:
         uses: actions-rust-lang/setup-rust-toolchain@v1
         with:
           toolchain: "1.96"
-          components: llvm-tools-preview
+          components: rustfmt, clippy, llvm-tools-preview
           cache: false
           rustflags: ""
 
       - name: Cache Rust builds
         uses: Swatinem/rust-cache@v2
         with:
-          workspaces: ". -> target"
+          workspaces: |
+            . -> target
+            ${{ matrix.dir }}/fixtures/embedding -> target
 
       - name: Install cargo-llvm-cov
         uses: taiki-e/install-action@v2
@@ -190,56 +230,21 @@ jobs:
       - name: Require full provider coverage
         run: |
           cargo llvm-cov --package "$PROVIDER_CRATE" --locked \
-            --json --summary-only --output-path "$RUNNER_TEMP/provider-coverage.json" \
-            --fail-under-lines 100 --fail-under-regions 100
-          jq -e --arg prefix "/$PROVIDER_DIR/src/" '
-            [.data[].files[] | select(.filename | contains($prefix))] as $files
+            --json --summary-only --output-path target/provider-coverage.json
+          jq -r '
+            .data[].files[]
+            | "\(.filename): lines \(.summary.lines.covered)/\(.summary.lines.count), regions \(.summary.regions.covered)/\(.summary.regions.count)"
+          ' target/provider-coverage.json
+          jq -e --arg prefix "$PROVIDER_DIR/src/" '
+            [.data[].files[]
+              | select(.filename | gsub("\\\\"; "/") | contains($prefix))] as $files
             | ($files | length > 0)
               and ($files | all(.summary.lines.covered == .summary.lines.count
                 and .summary.regions.covered == .summary.regions.count))
-          ' "$RUNNER_TEMP/provider-coverage.json"
-
-  integration:
-    name: Integration (${{ matrix.crate }})
-    needs: providers
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    strategy:
-      fail-fast: false
-      matrix: ${{ fromJSON(needs.providers.outputs.matrix) }}
-    env:
-      PROVIDER_CRATE: ${{ matrix.crate }}
-      PROVIDER_DIR: ${{ matrix.dir }}
-      FIXTURE_BIN: ${{ matrix.fixture_bin }}
-      EXAMPLE_DIR: ${{ matrix.example_dir }}
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7
-
-      - name: Install Gleam toolchain
-        uses: erlef/setup-beam@v1
-        with:
-          otp-version: "29"
-          gleam-version: "1.18.1"
-          rebar3-version: "3"
-
-      - name: Install Rust toolchain
-        uses: actions-rust-lang/setup-rust-toolchain@v1
-        with:
-          toolchain: "1.96"
-          components: rustfmt, clippy
-          cache: false
-          rustflags: ""
-
-      - name: Cache Rust builds
-        uses: Swatinem/rust-cache@v2
-        with:
-          workspaces: |
-            . -> target
-            ${{ matrix.dir }}/fixtures/embedding -> target
+          ' target/provider-coverage.json
 
       - name: Check Geam revision in fixtures
+        if: env.COVERAGE_ONLY != 'true'
         shell: bash
         run: |
           for manifest in \
@@ -269,33 +274,32 @@ jobs:
             }
           fi
 
-      - name: Download original Gleam packages
-        run: |
-          for fixture in gleam embedding/gleam; do
-            (cd "$PROVIDER_DIR/fixtures/$fixture" && gleam deps download)
-          done
-
       - name: Check Gleam source
+        if: env.COVERAGE_ONLY != 'true'
         run: |
           for fixture in gleam embedding/gleam; do
             (cd "$PROVIDER_DIR/fixtures/$fixture" && gleam format --check && gleam check)
           done
 
       - name: Check embedding Rust formatting
+        if: env.COVERAGE_ONLY != 'true'
         working-directory: ${{ matrix.dir }}/fixtures/embedding
         run: cargo fmt --all --check
 
       - name: Lint embedding consumer
+        if: env.COVERAGE_ONLY != 'true'
         working-directory: ${{ matrix.dir }}/fixtures/embedding
         run: cargo clippy --all-targets --locked -- -D warnings
 
       - name: Build embedding Rust documentation
+        if: env.COVERAGE_ONLY != 'true'
         working-directory: ${{ matrix.dir }}/fixtures/embedding
         env:
           RUSTDOCFLAGS: -D warnings
         run: cargo doc --no-deps --locked
 
       - name: Check package file list
+        if: env.COVERAGE_ONLY != 'true'
         shell: bash
         run: |
           files=$(cargo package --list --package "$PROVIDER_CRATE" --locked)
@@ -309,55 +313,77 @@ jobs:
           fi
 
       - name: Check example Gleam source
-        if: matrix.example_dir != ''
+        if: env.COVERAGE_ONLY != 'true' && matrix.example_dir != ''
         run: |
           (cd "$PROVIDER_DIR/$EXAMPLE_DIR" && gleam deps download && gleam format --check && gleam check)
 
       - name: Install pinned Geam CLI
+        if: env.COVERAGE_ONLY != 'true'
         env:
           CARGO_TARGET_DIR: ${{ github.workspace }}/target/geam-cli-build
         run: |
           cargo install --git https://github.com/panarch/geam.git \
             --rev "$GEAM_REV" --locked \
             --root "$RUNNER_TEMP/geam-cli" --bin geam geam
+          if [[ "$RUNNER_OS" == Windows ]]; then
+            echo "GEAM_BIN=$(cygpath -u "$RUNNER_TEMP")/geam-cli/bin/geam.exe" >> "$GITHUB_ENV"
+          else
+            echo "GEAM_BIN=$RUNNER_TEMP/geam-cli/bin/geam" >> "$GITHUB_ENV"
+          fi
 
       - name: Check generated embedding bindings
+        if: env.COVERAGE_ONLY != 'true'
         working-directory: ${{ matrix.dir }}/fixtures/embedding
         run: |
-          "$RUNNER_TEMP/geam-cli/bin/geam" embedding check
+          "$GEAM_BIN" embedding check
 
       - name: Test Rust embedding consumer
+        if: env.COVERAGE_ONLY != 'true'
         working-directory: ${{ matrix.dir }}/fixtures/embedding
         run: cargo test --locked
 
       - name: Run Rust embedding consumer
+        if: env.COVERAGE_ONLY != 'true'
         working-directory: ${{ matrix.dir }}/fixtures/embedding
         run: cargo run --locked
 
       - name: Prepare standalone consumer
+        if: env.COVERAGE_ONLY != 'true'
         working-directory: ${{ matrix.dir }}/fixtures/gleam
         run: |
-          "$RUNNER_TEMP/geam-cli/bin/geam" prepare
+          "$GEAM_BIN" prepare
 
       - name: Run standalone consumer
+        if: env.COVERAGE_ONLY != 'true'
         working-directory: ${{ matrix.dir }}/fixtures/gleam
         run: |
-          "$RUNNER_TEMP/geam-cli/bin/geam" run
+          "$GEAM_BIN" run
 
       - name: Build standalone executable
+        if: env.COVERAGE_ONLY != 'true'
         working-directory: ${{ matrix.dir }}/fixtures/gleam
         run: |
-          "$RUNNER_TEMP/geam-cli/bin/geam" build
+          "$GEAM_BIN" build
 
       - name: Run executable outside its fixture
+        if: env.COVERAGE_ONLY != 'true'
         run: |
-          cd "$RUNNER_TEMP"
-          "$GITHUB_WORKSPACE/$PROVIDER_DIR/fixtures/gleam/build/geam/target/debug/$FIXTURE_BIN"
+          if [[ "$RUNNER_OS" == Windows ]]; then
+            workspace="$(cygpath -u "$GITHUB_WORKSPACE")"
+            temp="$(cygpath -u "$RUNNER_TEMP")"
+            executable="$FIXTURE_BIN.exe"
+          else
+            workspace="$GITHUB_WORKSPACE"
+            temp="$RUNNER_TEMP"
+            executable="$FIXTURE_BIN"
+          fi
+          cd "$temp"
+          "$workspace/$PROVIDER_DIR/fixtures/gleam/build/geam/target/debug/$executable"
 
       - name: Run provider example
-        if: matrix.example_dir != ''
+        if: env.COVERAGE_ONLY != 'true' && matrix.example_dir != ''
         run: |
           cd "$PROVIDER_DIR/$EXAMPLE_DIR"
-          "$RUNNER_TEMP/geam-cli/bin/geam" prepare
-          output=$("$RUNNER_TEMP/geam-cli/bin/geam" run)
+          "$GEAM_BIN" prepare
+          output=$("$GEAM_BIN" run)
           diff -u expected-output.txt <(printf '%s\n' "$output")

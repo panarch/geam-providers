@@ -988,7 +988,6 @@ source = "git+https://github.com/panarch/geam.git?rev=76c4ab7c6a2c0c35975bdd97e5
 dependencies = [
  "geam-builtin",
  "geam-core",
- "geam-erlang",
  "geam-macros",
  "geam-stdlib",
 ]
@@ -1026,39 +1025,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "geam-crypto"
-version = "0.1.0"
-dependencies = [
- "geam",
- "getrandom 0.4.3",
- "md-5",
- "sha1",
- "sha2 0.10.9",
- "tokio",
-]
-
-[[package]]
-name = "geam-erlang"
-version = "0.2.3"
-source = "git+https://github.com/panarch/geam.git?rev=76c4ab7c6a2c0c35975bdd97e5de7c6284f895e7#76c4ab7c6a2c0c35975bdd97e5de7c6284f895e7"
-dependencies = [
- "ecow",
- "futures-channel",
- "futures-util",
- "geam-core",
- "geam-stdlib",
- "im",
- "num-bigint",
- "num-traits",
- "priority-queue",
-]
-
-[[package]]
 name = "geam-filepath"
 version = "0.1.0"
 dependencies = [
  "geam",
- "tokio",
 ]
 
 [[package]]
@@ -1181,25 +1151,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "geam-gzlib"
-version = "0.1.0"
-dependencies = [
- "crc32fast",
- "geam",
- "miniz_oxide",
- "tokio",
-]
-
-[[package]]
-name = "geam-houdini"
-version = "0.1.0"
-dependencies = [
- "geam",
- "geam-core",
- "tokio",
-]
-
-[[package]]
 name = "geam-macros"
 version = "0.2.3"
 source = "git+https://github.com/panarch/geam.git?rev=76c4ab7c6a2c0c35975bdd97e5de7c6284f895e7#76c4ab7c6a2c0c35975bdd97e5de7c6284f895e7"
@@ -1211,30 +1162,19 @@ dependencies = [
 ]
 
 [[package]]
-name = "geam-otp"
-version = "0.1.0"
-dependencies = [
- "camino",
- "geam",
- "sha2 0.10.9",
-]
-
-[[package]]
-name = "geam-regexp"
-version = "0.1.0"
-dependencies = [
- "geam",
- "regex",
- "regex-syntax",
- "tokio",
-]
-
-[[package]]
 name = "geam-simplifile"
 version = "0.1.0"
 dependencies = [
  "geam",
+]
+
+[[package]]
+name = "geam-simplifile-embedding"
+version = "0.1.0"
+dependencies = [
+ "geam",
  "geam-filepath",
+ "geam-simplifile",
  "tempfile",
  "tokio",
 ]
@@ -1768,16 +1708,6 @@ dependencies = [
  "serde",
  "serde_derive",
  "serde_json",
-]
-
-[[package]]
-name = "md-5"
-version = "0.10.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d89e7ee0cfbedfc4da3340218492196241d89eefb6dab27de5df917a6d2e78cf"
-dependencies = [
- "cfg-if",
- "digest 0.10.7",
 ]
 
 [[package]]
@@ -2624,17 +2554,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6662b5879511e06e8999a8a235d848113e942c9124f211511b16466ee2995f26"
 dependencies = [
  "serde_core",
-]
-
-[[package]]
-name = "sha1"
-version = "0.10.7"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a978451301f4db1d02937a4ab3ccce137717b81826e79b7d49ffe3244a13c3b8"
-dependencies = [
- "cfg-if",
- "cpufeatures 0.2.17",
- "digest 0.10.7",
 ]
 
 [[package]]

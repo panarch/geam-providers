@@ -2,7 +2,8 @@
 
 This document defines the test roles and verification baseline for Geam
 Providers. The current production packages are `geam-filepath`,
-`geam-regexp`, `geam-otp`, `geam-houdini`, `geam-gzlib`, and `geam-crypto`.
+`geam-regexp`, `geam-otp`, `geam-houdini`, `geam-gzlib`, `geam-crypto`, and
+`geam-simplifile`.
 This document must remain the source of truth for the checks actually run.
 
 For acceptance rules, see [review-policy.md](review-policy.md). For practical
@@ -54,11 +55,11 @@ The Rust workspace, fixture consumers, and report service example use Geam
 `main` commit `76c4ab7c6a2c0c35975bdd97e5de7c6284f895e7`. Houdini also
 uses the public `geam-core` byte-slice helper from that commit. The Gleam
 projects resolve the unmodified `filepath` 1.1.2, `gleam_regexp` 1.1.1,
-`gleam_otp` 1.3.0, `houdini` 1.2.0, `gzlib` 2.0.0, and `gleam_crypto` 1.6.0
-packages from Hex. The crypto fixtures select `gleam_stdlib` 1.0.3, within the
-upstream crypto dependency range, because that version matches the pinned Geam
-stdlib declarations. Resolving 1.0.5 with the pinned Geam commit failed at the
-`gleam/bit_array.pad_to_bytes` linkage check. From the repository root,
+`gleam_otp` 1.3.0, `houdini` 1.2.0, `gzlib` 2.0.0, `gleam_crypto` 1.6.0, and
+`simplifile` 2.7.0 packages from Hex. The crypto and simplifile fixtures pin
+`gleam_stdlib` 1.0.3 for compatibility with this Geam commit; the simplifile
+fixtures also select `geam-filepath`. Resolving crypto with stdlib 1.0.5 failed
+at the `gleam/bit_array.pad_to_bytes` linkage check. From the repository root,
 download fixture dependencies before running source-backed Rust tests:
 
 ```sh
@@ -75,6 +76,8 @@ download fixture dependencies before running source-backed Rust tests:
 (cd houdini/fixtures/embedding/gleam && gleam deps download)
 (cd gzlib/fixtures/gleam && gleam deps download)
 (cd gzlib/fixtures/embedding/gleam && gleam deps download)
+(cd simplifile/fixtures/gleam && gleam deps download)
+(cd simplifile/fixtures/embedding/gleam && gleam deps download)
 (cd filepath/fixtures/gleam && gleam format --check && gleam check)
 (cd filepath/fixtures/embedding/gleam && gleam format --check && gleam check)
 (cd gleam-regexp/fixtures/gleam && gleam format --check && gleam check)
@@ -91,6 +94,8 @@ download fixture dependencies before running source-backed Rust tests:
 (cd gzlib/fixtures/gleam/build/packages/gzlib && shasum -a 256 -c ../../../../upstream.sha256)
 (cd gzlib/fixtures/gleam && gleam format --check && gleam check)
 (cd gzlib/fixtures/embedding/gleam && gleam format --check && gleam check)
+(cd simplifile/fixtures/gleam && gleam format --check && gleam check)
+(cd simplifile/fixtures/embedding/gleam && gleam format --check && gleam check)
 ```
 
 The Houdini standalone Gleam fixture can also run on Erlang with `gleam run`
@@ -155,6 +160,12 @@ root workspace members. Check and run each separately:
 (cd gzlib/fixtures/embedding && cargo run --locked)
 (cd gzlib/fixtures/embedding && cargo clippy --all-targets --locked -- -D warnings)
 (cd gzlib/fixtures/embedding && RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --locked)
+(cd simplifile/fixtures/embedding && cargo fmt --all --check)
+(cd simplifile/fixtures/embedding && "$GEAM_BIN" embedding check)
+(cd simplifile/fixtures/embedding && cargo test --locked)
+(cd simplifile/fixtures/embedding && cargo run --locked)
+(cd simplifile/fixtures/embedding && cargo clippy --all-targets --locked -- -D warnings)
+(cd simplifile/fixtures/embedding && RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --locked)
 ```
 
 Each standalone fixture has its own Cargo lockfile too. Run `prepare`, `run`,
@@ -200,6 +211,12 @@ FIXTURE="$PWD/gzlib/fixtures/gleam"
 (cd "$FIXTURE" && "$GEAM_BIN" run)
 (cd "$FIXTURE" && "$GEAM_BIN" build)
 (cd /tmp && "$FIXTURE/build/geam/target/debug/geam_gzlib_fixture")
+
+FIXTURE="$PWD/simplifile/fixtures/gleam"
+(cd "$FIXTURE" && "$GEAM_BIN" prepare)
+(cd "$FIXTURE" && "$GEAM_BIN" run)
+(cd "$FIXTURE" && "$GEAM_BIN" build)
+(cd /tmp && "$FIXTURE/build/geam/target/debug/geam_simplifile_fixture")
 ```
 
 Inspect all production packages' published-file views:
@@ -211,6 +228,7 @@ cargo package --list --package geam-otp --locked
 cargo package --list --package geam-houdini --locked
 cargo package --list --package geam-crypto --locked
 cargo package --list --package geam-gzlib --locked
+cargo package --list --package geam-simplifile --locked
 ```
 
 Confirm that each list contains `LICENSE` along with the manifest, README, and
@@ -241,11 +259,11 @@ underscores, followed by `_fixture`. A provider can override that name with
   fixture projects per provider, verifies any `fixtures/upstream.sha256`
   against the original Hex source, and checks workspace Rust formatting,
   tests, Clippy, and documentation once.
-- `coverage` runs independently for each provider. Every matrix job downloads
-  both fixture projects, starts with a clean profile, and requires 100% line
-  and full-scope region coverage for that production crate and every file
-  reported under its `src/` directory.
-- `integration` runs independently for each provider. Every matrix job checks
+- `validate` runs once for each provider and declared operating system. It
+  downloads both fixture projects, starts with a clean profile, and first
+  requires 100% line and full-scope region coverage for that production crate
+  and every file reported under its `src/` directory. If coverage fails, the
+  job stops before integration. After coverage passes, the same job checks
   fixture Geam revisions, Gleam source and embedding Rust formatting, the
   embedding consumer's Clippy and Rust documentation, and the package file
   list. It installs the pinned Geam CLI, checks generated bindings, tests and
@@ -258,12 +276,33 @@ To register another provider in CI, add its crate to the Cargo workspace,
 declare its Gleam package in `[package.metadata.geam.provider]`, and provide
 both standard fixtures. The workflow does not need another package-specific
 entry. If its fixture executable differs from the default or it has a runnable
-example, declare those paths in `[package.metadata.geam.ci]`. Local Markdown
-links are not checked by this workflow.
+example, declare those paths in `[package.metadata.geam.ci]`. Its optional
+`runners` list declares operating systems; without it, the provider runs on
+`ubuntu-24.04`. The discovery job builds provider-by-runner rows. Currently
+`geam-simplifile` declares `ubuntu-24.04`, `macos-15`, and `windows-2025`;
+the other providers keep the Ubuntu default. `quality` runs once on Ubuntu,
+while `validate` runs for every row. Local Markdown links are not checked by
+this workflow.
 
-The hosted workflow runs on Ubuntu. The `filepath` fixtures check the active
-host's `split` branch and both explicit split functions; native Windows Geam
-execution has not been verified by this workflow.
+A manual run with empty `coverage_provider` and `coverage_runner` inputs uses
+the full CI matrix. Set both inputs to run only coverage for one declared
+provider-and-runner pair; the discovery job rejects missing or undeclared
+pairs. For example, select `geam-simplifile` and `windows-2025` in the Actions
+"Run workflow" form, or run:
+
+```sh
+gh workflow run ci.yml --ref your-branch \
+  -f coverage_provider=geam-simplifile \
+  -f coverage_runner=windows-2025
+```
+
+The focused run skips workspace quality and integration. It still applies the
+same 100% line and region coverage gate as a full PR run.
+
+The `filepath` fixtures check the active host's `split` branch and both
+explicit split functions. A `simplifile` Windows row also exercises its
+`filepath` dependency. Declaring a runner does not establish a passing CI
+result; inspect the hosted jobs before claiming platform verification.
 
 The workflow needs only read access to the repository. It does not publish a
 crate or assume that a Git-pinned provider can already be uploaded to crates.io.
@@ -307,6 +346,11 @@ cargo llvm-cov --package geam-houdini --locked \
   --fail-under-lines 100 \
   --fail-under-regions 100
 cargo llvm-cov clean --workspace
+cargo llvm-cov --package geam-simplifile --locked \
+  --json --summary-only --output-path target/simplifile-coverage.json \
+  --fail-under-lines 100 \
+  --fail-under-regions 100
+cargo llvm-cov clean --workspace
 cargo llvm-cov --package geam-crypto --locked \
   --json --summary-only --output-path target/gleam-crypto-coverage.json \
   --fail-under-lines 100 \
@@ -322,7 +366,8 @@ Read each package file entry in its JSON report to confirm line and region count
 for every reported file under that provider's `src/` directory, including
 test-only support when present. As the repository gains production crates, add
 an independent closure for each one. A consumer may execute another crate's
-code, but its coverage must not compensate for missing owner coverage.
+code, but its coverage must not compensate for missing owner coverage. Run the
+same closure on every declared OS so conditional source paths are included.
 
 For Houdini and gzlib, confirm the `houdini/src/lib.rs` and `gzlib/src/lib.rs`
 file counts directly.
@@ -337,8 +382,8 @@ cargo llvm-cov report --package geam-regexp \
   --show-missing-lines
 ```
 
-Substitute `geam-filepath`, `geam-otp`, `geam-houdini`, `geam-gzlib`, or
-`geam-crypto` when inspecting those crates.
+Substitute `geam-filepath`, `geam-otp`, `geam-houdini`, `geam-gzlib`,
+`geam-crypto`, or `geam-simplifile` when inspecting those crates.
 
 Generate a package-scoped HTML report from the same profile when source context
 is easier to inspect visually:
