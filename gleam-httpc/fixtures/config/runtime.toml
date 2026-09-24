@@ -1,0 +1,2 @@
+[providers]
+gleam_httpc = "provider.toml"

@@ -1,0 +1,36 @@
+[package]
+name = "geam-httpc"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Geam Rust provider for the original gleam_httpc package"
+repository = "https://github.com/panarch/geam-providers"
+readme = "README.md"
+exclude = ["fixtures/", "tests/"]
+keywords = ["geam", "gleam", "http", "provider"]
+categories = ["web-programming::http-client", "development-tools"]
+
+[package.metadata.geam.provider]
+schema = 2
+gleam-package = "gleam_httpc"
+gleam-version = ">= 5.0.0 and < 5.0.1"
+component = "profile"
+execution-service = false
+requires-services = ["gleam_erlang"]
+
+[package.metadata.geam.ci]
+fixture-bin = "geam_httpc_fixture"
+integration-case = "httpc"
+runners = ["ubuntu-24.04", "macos-15", "windows-2025"]
+
+[dependencies]
+geam = { workspace = true, features = ["gleam-erlang"] }
+reqwest.workspace = true
+rustls = "0.23.45"
+
+[dev-dependencies]
+geam = { workspace = true, features = ["embedding", "gleam-stdlib", "tokio", "geam-builtin"] }
+rcgen = "0.14.10"
+tokio = { version = "1.53.1", features = ["rt", "time", "net", "io-util", "sync", "macros"] }
+tokio-rustls = "0.26.5"

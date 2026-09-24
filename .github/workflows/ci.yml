@@ -23,7 +23,7 @@ concurrency:
 
 env:
   CARGO_TERM_COLOR: always
-  GEAM_REV: 76c4ab7c6a2c0c35975bdd97e5de7c6284f895e7
+  GEAM_REV: bd95b872c578df88f76ed5c4175fb1ea55ee8607
 
 jobs:
   providers:
@@ -73,11 +73,14 @@ jobs:
                         dir: (.manifest_path | sub("/Cargo.toml$"; "") | ltrimstr($root)),
                         gleam_package: .metadata.geam.provider."gleam-package",
                         fixture_bin: (.metadata.geam.ci."fixture-bin" // (.name | gsub("-"; "_") + "_fixture")),
+                        integration_case: (.metadata.geam.ci."integration-case" // "standard"),
                         example_dir: (.metadata.geam.ci."example-dir" // ""),
                         runners: (.metadata.geam.ci.runners // ["ubuntu-24.04"])
                       }
                   ]
-                | select(length > 0 and all(.[]; .runners | length > 0))
+                | select(length > 0 and all(.[];
+                    (.runners | length > 0)
+                    and (.integration_case == "standard" or .integration_case == "httpc")))
               '
           )"
           targets="$(jq -c '{include: [.[] | . as $provider | .runners[] | $provider + {runner: .} | del(.runners)]}' <<< "$provider_rows")"
@@ -250,7 +253,8 @@ jobs:
           ' target/provider-coverage.json
           jq -e --arg prefix "$PROVIDER_DIR/src/" '
             [.data[].files[]
-              | select(.filename | gsub("\\\\"; "/") | contains($prefix))] as $files
+              | select(.filename | gsub("\\\\"; "/")
+                  | contains($prefix) and (contains("/../") | not))] as $files
             | ($files | length > 0)
               and ($files | all(.summary.lines.covered == .summary.lines.count
                 and .summary.regions.covered == .summary.regions.count))
@@ -371,11 +375,20 @@ jobs:
         run: |
           "$GEAM_BIN" prepare
 
-      - name: Run standalone consumer
-        if: env.COVERAGE_ONLY != 'true'
+      - name: Run standard standalone consumer
+        if: env.COVERAGE_ONLY != 'true' && matrix.integration_case == 'standard'
         working-directory: ${{ matrix.dir }}/fixtures/gleam
         run: |
           "$GEAM_BIN" run
+
+      - name: Run gleam_httpc standalone scenarios
+        if: env.COVERAGE_ONLY != 'true' && matrix.integration_case == 'httpc'
+        working-directory: ${{ matrix.dir }}/fixtures/gleam
+        run: |
+          for module in geam_httpc_fixture httpc_redirect httpc_binary httpc_tls; do
+            python3 ../server.py "$GEAM_BIN" run --module "$module" \
+              --provider-config gleam_httpc=../config/provider.toml
+          done
 
       - name: Build standalone executable
         if: env.COVERAGE_ONLY != 'true'
@@ -383,7 +396,7 @@ jobs:
         run: |
           "$GEAM_BIN" build
 
-      - name: Run executable outside its fixture
+      - name: Locate standalone executable
         if: env.COVERAGE_ONLY != 'true'
         run: |
           if [[ "$RUNNER_OS" == Windows ]]; then
@@ -395,8 +408,26 @@ jobs:
             temp="$RUNNER_TEMP"
             executable="$FIXTURE_BIN"
           fi
-          cd "$temp"
-          "$workspace/$PROVIDER_DIR/fixtures/gleam/build/geam/target/debug/$executable"
+          echo "FIXTURE_WORKSPACE=$workspace" >> "$GITHUB_ENV"
+          echo "FIXTURE_RUN_DIR=$temp" >> "$GITHUB_ENV"
+          echo "FIXTURE_BINARY=$workspace/$PROVIDER_DIR/fixtures/gleam/build/geam/target/debug/$executable" >> "$GITHUB_ENV"
+
+      - name: Run standard executable outside its fixture
+        if: env.COVERAGE_ONLY != 'true' && matrix.integration_case == 'standard'
+        run: |
+          cd "$FIXTURE_RUN_DIR"
+          "$FIXTURE_BINARY"
+
+      - name: Run gleam_httpc executable outside its fixture
+        if: env.COVERAGE_ONLY != 'true' && matrix.integration_case == 'httpc'
+        run: |
+          cd "$FIXTURE_RUN_DIR"
+          if [[ "$RUNNER_OS" == Windows ]]; then
+            export GEAM_CONFIG="$(cygpath -w "$FIXTURE_WORKSPACE/$PROVIDER_DIR/fixtures/config/runtime.toml")"
+          else
+            export GEAM_CONFIG="$FIXTURE_WORKSPACE/$PROVIDER_DIR/fixtures/config/runtime.toml"
+          fi
+          python3 "$FIXTURE_WORKSPACE/$PROVIDER_DIR/fixtures/server.py" "$FIXTURE_BINARY"
 
       - name: Run provider example
         if: env.COVERAGE_ONLY != 'true' && matrix.example_dir != ''
