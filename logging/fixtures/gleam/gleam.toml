@@ -1,0 +1,9 @@
+name = "geam_logging_fixture"
+version = "0.1.0"
+target = "erlang"
+description = "Unmodified logging 1.5.0 provider fixture"
+licences = ["Apache-2.0"]
+
+[dependencies]
+logging = ">= 1.5.0 and < 1.5.1"
+gleam_stdlib = ">= 1.0.3 and < 1.0.4"

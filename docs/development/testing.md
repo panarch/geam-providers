@@ -3,7 +3,7 @@
 This document defines the test roles and verification baseline for Geam
 Providers. The current production packages are `geam-filepath`,
 `geam-regexp`, `geam-otp`, `geam-houdini`, `geam-gzlib`, `geam-crypto`,
-`geam-simplifile`, `geam-platform`, and `geam-term-size`.
+`geam-simplifile`, `geam-platform`, `geam-logging`, and `geam-term-size`.
 This document must remain the source of truth for the checks actually run.
 
 For acceptance rules, see [review-policy.md](review-policy.md). For practical
@@ -56,12 +56,12 @@ The Rust workspace, fixture consumers, and report service example use Geam
 uses the public `geam-core` byte-slice helper from that commit. The Gleam
 projects resolve the unmodified `filepath` 1.1.2, `gleam_regexp` 1.1.1,
 `gleam_otp` 1.3.0, `houdini` 1.2.0, `gzlib` 2.0.0, `gleam_crypto` 1.6.0,
-`simplifile` 2.7.0, `platform` 1.0.0, and `term_size` 1.0.1 packages from Hex.
-The crypto, simplifile, and term_size fixtures pin `gleam_stdlib` 1.0.3 for
-compatibility with this Geam commit; the simplifile fixtures also select
-`geam-filepath`. Resolving crypto with stdlib 1.0.5 failed at the
-`gleam/bit_array.pad_to_bytes` linkage check. From the repository root,
-download fixture dependencies before running source-backed Rust tests:
+`simplifile` 2.7.0, `platform` 1.0.0, `logging` 1.5.0, and `term_size` 1.0.1
+packages from Hex. The crypto, simplifile, logging, and term_size fixtures pin
+`gleam_stdlib` 1.0.3 for compatibility with this Geam commit; the simplifile
+fixtures also select `geam-filepath`. Resolving crypto with stdlib 1.0.5
+failed at the `gleam/bit_array.pad_to_bytes` linkage check. From the repository
+root, download fixture dependencies before running source-backed Rust tests:
 
 ```sh
 (cd filepath/fixtures/gleam && gleam deps download)
@@ -81,6 +81,8 @@ download fixture dependencies before running source-backed Rust tests:
 (cd simplifile/fixtures/embedding/gleam && gleam deps download)
 (cd platform/fixtures/gleam && gleam deps download)
 (cd platform/fixtures/embedding/gleam && gleam deps download)
+(cd logging/fixtures/gleam && gleam deps download)
+(cd logging/fixtures/embedding/gleam && gleam deps download)
 (cd term-size/fixtures/gleam && gleam deps download)
 (cd term-size/fixtures/embedding/gleam && gleam deps download)
 (cd filepath/fixtures/gleam && gleam format --check && gleam check)
@@ -104,6 +106,9 @@ download fixture dependencies before running source-backed Rust tests:
 (cd platform/fixtures/gleam && gleam format --check && gleam check)
 (cd platform/fixtures/embedding/gleam && gleam format --check && gleam check)
 (cd platform/fixtures/gleam/build/packages/platform && shasum -a 256 -c ../../../../upstream.sha256)
+(cd logging/fixtures/gleam && gleam format --check && gleam check)
+(cd logging/fixtures/embedding/gleam && gleam format --check && gleam check)
+(cd logging/fixtures/gleam/build/packages/logging && shasum -a 256 -c ../../../../upstream.sha256)
 (cd term-size/fixtures/gleam/build/packages/term_size && shasum -a 256 -c ../../../../upstream.sha256)
 (cd term-size/fixtures/gleam && gleam format --check && gleam check)
 (cd term-size/fixtures/embedding/gleam && gleam format --check && gleam check)
@@ -188,6 +193,12 @@ root workspace members. Check and run each separately:
 (cd platform/fixtures/embedding && cargo run --locked)
 (cd platform/fixtures/embedding && cargo clippy --all-targets --locked -- -D warnings)
 (cd platform/fixtures/embedding && RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --locked)
+(cd logging/fixtures/embedding && cargo fmt --all --check)
+(cd logging/fixtures/embedding && "$GEAM_BIN" embedding check)
+(cd logging/fixtures/embedding && cargo test --locked)
+(cd logging/fixtures/embedding && cargo run --locked)
+(cd logging/fixtures/embedding && cargo clippy --all-targets --locked -- -D warnings)
+(cd logging/fixtures/embedding && RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --locked)
 (cd term-size/fixtures/embedding && cargo fmt --all --check)
 (cd term-size/fixtures/embedding && "$GEAM_BIN" embedding check)
 (cd term-size/fixtures/embedding && cargo test --locked)
@@ -252,6 +263,12 @@ FIXTURE="$PWD/platform/fixtures/gleam"
 (cd "$FIXTURE" && "$GEAM_BIN" build)
 (cd /tmp && "$FIXTURE/build/geam/target/debug/geam_platform_fixture")
 
+FIXTURE="$PWD/logging/fixtures/gleam"
+(cd "$FIXTURE" && "$GEAM_BIN" prepare)
+(cd "$FIXTURE" && "$GEAM_BIN" run)
+(cd "$FIXTURE" && "$GEAM_BIN" build)
+(cd /tmp && "$FIXTURE/build/geam/target/debug/geam_logging_fixture")
+
 FIXTURE="$PWD/term-size/fixtures/gleam"
 (cd "$FIXTURE" && "$GEAM_BIN" prepare)
 (cd "$FIXTURE" && "$GEAM_BIN" run)
@@ -270,6 +287,7 @@ cargo package --list --package geam-crypto --locked
 cargo package --list --package geam-gzlib --locked
 cargo package --list --package geam-simplifile --locked
 cargo package --list --package geam-platform --locked
+cargo package --list --package geam-logging --locked
 cargo package --list --package geam-term-size --locked
 ```
 
@@ -439,6 +457,11 @@ cargo llvm-cov --package geam-platform --locked \
   --fail-under-lines 100 \
   --fail-under-regions 100
 cargo llvm-cov clean --workspace
+cargo llvm-cov --package geam-logging --locked \
+  --json --summary-only --output-path target/logging-coverage.json \
+  --fail-under-lines 100 \
+  --fail-under-regions 100
+cargo llvm-cov clean --workspace
 cargo llvm-cov --package geam-term-size --locked \
   --json --summary-only --output-path target/term-size-coverage.json \
   --fail-under-lines 100 \
@@ -467,8 +490,8 @@ cargo llvm-cov report --package geam-regexp \
 ```
 
 Substitute `geam-filepath`, `geam-otp`, `geam-houdini`, `geam-gzlib`,
-`geam-crypto`, `geam-simplifile`, `geam-platform`, or `geam-term-size` when
-inspecting those crates.
+`geam-crypto`, `geam-simplifile`, `geam-platform`, `geam-logging`, or
+`geam-term-size` when inspecting those crates.
 
 Generate a package-scoped HTML report from the same profile when source context
 is easier to inspect visually:
