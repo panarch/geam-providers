@@ -360,7 +360,12 @@ jobs:
         if: env.COVERAGE_ONLY != 'true'
         working-directory: ${{ matrix.dir }}/fixtures/embedding
         run: |
-          "$GEAM_BIN" embedding check
+          if ! "$GEAM_BIN" embedding check; then
+            "$GEAM_BIN" embedding sync
+            git diff --numstat -- src/geam_bindings/program.rs
+            git diff --unified=1 -- src/geam_bindings/program.rs | sed -n '1,120p'
+            exit 1
+          fi
 
       - name: Test Rust embedding consumer
         if: env.COVERAGE_ONLY != 'true'
