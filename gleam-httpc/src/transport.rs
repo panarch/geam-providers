@@ -241,13 +241,10 @@ fn connection_code(error: &(dyn Error + 'static)) -> &'static str {
         }
     }
     if let Some(io) = error.downcast_ref::<std::io::Error>() {
-        let code = posix_code(Some(io.kind()));
-        if code != "eio" {
+        if let Some(code) = io.raw_os_error().and_then(windows_socket_code) {
             return code;
         }
-        if let Some(raw) = io.raw_os_error() {
-            return windows_socket_code(raw).unwrap_or("eio");
-        }
+        return posix_code(Some(io.kind()));
     }
     "eio"
 }
@@ -337,6 +334,10 @@ mod tests {
         assert_eq!(
             connection_code(&std::io::Error::from_raw_os_error(10061)),
             "econnrefused"
+        );
+        assert_eq!(
+            connection_code(&std::io::Error::from_raw_os_error(123456)),
+            "eio"
         );
         assert!(find_error::<std::io::Error>(&nested).is_some());
     }

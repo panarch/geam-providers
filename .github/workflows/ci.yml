@@ -251,14 +251,17 @@ jobs:
             .data[].files[]
             | "\(.filename): lines \(.summary.lines.covered)/\(.summary.lines.count), regions \(.summary.regions.covered)/\(.summary.regions.count)"
           ' target/provider-coverage.json
-          jq -e --arg prefix "$PROVIDER_DIR/src/" '
+          if ! jq -e --arg prefix "$PROVIDER_DIR/src/" '
             [.data[].files[]
               | select(.filename | gsub("\\\\"; "/")
                   | contains($prefix) and (contains("/../") | not))] as $files
             | ($files | length > 0)
               and ($files | all(.summary.lines.covered == .summary.lines.count
                 and .summary.regions.covered == .summary.regions.count))
-          ' target/provider-coverage.json
+          ' target/provider-coverage.json; then
+            cargo llvm-cov report --package "$PROVIDER_CRATE" --text --show-missing-lines | tail -n 40
+            exit 1
+          fi
 
       - name: Check Geam revision in fixtures
         if: env.COVERAGE_ONLY != 'true'
