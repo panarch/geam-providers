@@ -259,11 +259,11 @@ underscores, followed by `_fixture`. A provider can override that name with
   fixture projects per provider, verifies any `fixtures/upstream.sha256`
   against the original Hex source, and checks workspace Rust formatting,
   tests, Clippy, and documentation once.
-- `coverage` runs independently for each provider. Every matrix job downloads
-  both fixture projects, starts with a clean profile, and requires 100% line
-  and full-scope region coverage for that production crate and every file
-  reported under its `src/` directory on each declared operating system.
-- `integration` runs independently for each provider. Every matrix job checks
+- `validate` runs once for each provider and declared operating system. It
+  downloads both fixture projects, starts with a clean profile, and first
+  requires 100% line and full-scope region coverage for that production crate
+  and every file reported under its `src/` directory. If coverage fails, the
+  job stops before integration. After coverage passes, the same job checks
   fixture Geam revisions, Gleam source and embedding Rust formatting, the
   embedding consumer's Clippy and Rust documentation, and the package file
   list. It installs the pinned Geam CLI, checks generated bindings, tests and
@@ -281,8 +281,23 @@ example, declare those paths in `[package.metadata.geam.ci]`. Its optional
 `ubuntu-24.04`. The discovery job builds provider-by-runner rows. Currently
 `geam-simplifile` declares `ubuntu-24.04`, `macos-15`, and `windows-2025`;
 the other providers keep the Ubuntu default. `quality` runs once on Ubuntu,
-while `coverage` and `integration` run for every row. Local Markdown links are
-not checked by this workflow.
+while `validate` runs for every row. Local Markdown links are not checked by
+this workflow.
+
+A manual run with empty `coverage_provider` and `coverage_runner` inputs uses
+the full CI matrix. Set both inputs to run only coverage for one declared
+provider-and-runner pair; the discovery job rejects missing or undeclared
+pairs. For example, select `geam-simplifile` and `windows-2025` in the Actions
+"Run workflow" form, or run:
+
+```sh
+gh workflow run ci.yml --ref your-branch \
+  -f coverage_provider=geam-simplifile \
+  -f coverage_runner=windows-2025
+```
+
+The focused run skips workspace quality and integration. It still applies the
+same 100% line and region coverage gate as a full PR run.
 
 The `filepath` fixtures check the active host's `split` branch and both
 explicit split functions. A `simplifile` Windows row also exercises its
