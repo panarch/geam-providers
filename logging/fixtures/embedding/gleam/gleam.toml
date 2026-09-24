@@ -1,0 +1,8 @@
+name = "geam_logging_embedding"
+version = "0.1.0"
+target = "erlang"
+
+[dependencies]
+geam_logging_fixture = { path = "../../gleam" }
+logging = ">= 1.5.0 and < 1.5.1"
+gleam_stdlib = ">= 1.0.3 and < 1.0.4"
