@@ -1,0 +1,14 @@
+[package]
+name = "geam-argv-embedding"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.96"
+publish = false
+
+[dependencies]
+geam = { git = "https://github.com/panarch/geam.git", rev = "b23d82a23d31c77eca749d18f67e73f0d9d952c7", default-features = false, features = ["embedding", "tokio", "geam-builtin"] }
+geam-argv = { path = "../.." }
+tokio = { version = "1.53.1", default-features = false, features = ["rt"] }
+
+[workspace]
+resolver = "3"

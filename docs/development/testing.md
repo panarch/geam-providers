@@ -4,7 +4,7 @@ This document defines the test roles and verification baseline for Geam
 Providers. The current production packages are `geam-filepath`,
 `geam-regexp`, `geam-otp`, `geam-houdini`, `geam-gzlib`, `geam-crypto`,
 `geam-simplifile`, `geam-platform`, `geam-logging`, `geam-term-size`,
-`geam-birl`, `geam-httpc`, and `geam-global-value`. This document must remain
+`geam-birl`, `geam-httpc`, `geam-global-value`, and `geam-argv`. This document must remain
 the source of truth for the checks actually run.
 
 For acceptance rules, see [review-policy.md](review-policy.md). For practical
@@ -53,12 +53,13 @@ rate limits, and remote data must not decide the mandatory owner suite.
 ## Dependency Preparation
 
 The Rust workspace, fixture consumers, and report service example use Geam
-`main` commit `bd95b872c578df88f76ed5c4175fb1ea55ee8607`. Houdini also
+`main` commit `b23d82a23d31c77eca749d18f67e73f0d9d952c7`. Houdini also
 uses the public `geam-core` byte-slice helper from that commit. The Gleam
 projects resolve the unmodified `filepath` 1.1.2, `gleam_regexp` 1.1.1,
 `gleam_otp` 1.3.0, `houdini` 1.2.0, `gzlib` 2.0.0, `gleam_crypto` 1.6.0,
 `simplifile` 2.7.0, `platform` 1.0.0, `logging` 1.5.0, `term_size` 1.0.1,
-`birl` 2.0.0, `gleam_httpc` 5.0.0, and `global_value` 1.0.0 packages from Hex.
+`birl` 2.0.0, `gleam_httpc` 5.0.0, `global_value` 1.0.0, and `argv` 1.1.0
+packages from Hex.
 The crypto, simplifile, logging, term_size, birl, and global_value fixtures
 pin `gleam_stdlib` 1.0.3 for compatibility with this Geam commit; the
 simplifile fixtures also select `geam-filepath`. Resolving crypto with stdlib
@@ -94,6 +95,8 @@ Rust tests:
 (cd global-value/fixtures/embedding/gleam && gleam deps download)
 (cd gleam-httpc/fixtures/gleam && gleam deps download)
 (cd gleam-httpc/fixtures/embedding/gleam && gleam deps download)
+(cd argv/fixtures/gleam && gleam deps download)
+(cd argv/fixtures/embedding/gleam && gleam deps download)
 (cd filepath/fixtures/gleam && gleam format --check && gleam check)
 (cd filepath/fixtures/embedding/gleam && gleam format --check && gleam check)
 (cd gleam-regexp/fixtures/gleam && gleam format --check && gleam check)
@@ -129,6 +132,9 @@ Rust tests:
 (cd global-value/fixtures/embedding/gleam && gleam format --check && gleam check)
 (cd gleam-httpc/fixtures/gleam && gleam format --check && gleam check)
 (cd gleam-httpc/fixtures/embedding/gleam && gleam format --check && gleam check)
+(cd argv/fixtures/gleam && gleam format --check && gleam check)
+(cd argv/fixtures/embedding/gleam && gleam format --check && gleam check)
+(cd argv/fixtures/gleam/build/packages/argv && shasum -a 256 -c ../../../../upstream.sha256)
 (cd gleam-httpc/fixtures/gleam/build/packages/gleam_httpc && shasum -a 256 -c ../../../../upstream.sha256)
 ```
 
@@ -147,7 +153,7 @@ checks. For a local, repository-scoped installation:
 
 ```sh
 cargo install --git https://github.com/panarch/geam.git \
-  --rev bd95b872c578df88f76ed5c4175fb1ea55ee8607 \
+  --rev b23d82a23d31c77eca749d18f67e73f0d9d952c7 \
   --locked --root "$PWD/target/geam-cli" --bin geam geam
 GEAM_BIN="$PWD/target/geam-cli/bin/geam"
 ```
@@ -243,6 +249,12 @@ root workspace members. Check and run each separately:
 (cd gleam-httpc/fixtures/embedding && cargo run --locked)
 (cd gleam-httpc/fixtures/embedding && cargo clippy --all-targets --locked -- -D warnings)
 (cd gleam-httpc/fixtures/embedding && RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --locked)
+(cd argv/fixtures/embedding && cargo fmt --all --check)
+(cd argv/fixtures/embedding && "$GEAM_BIN" embedding check)
+(cd argv/fixtures/embedding && cargo test --locked)
+(cd argv/fixtures/embedding && cargo run --locked)
+(cd argv/fixtures/embedding && cargo clippy --all-targets --locked -- -D warnings)
+(cd argv/fixtures/embedding && RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --locked)
 ```
 
 Each standalone fixture has its own Cargo lockfile too. Run `prepare`, `run`,
@@ -335,6 +347,16 @@ done)
 (cd /tmp && GEAM_CONFIG="$FIXTURE/../config/runtime.toml" \
   python3 "$FIXTURE/../server.py" \
   "$FIXTURE/build/geam/target/debug/geam_httpc_fixture")
+
+FIXTURE="$PWD/argv/fixtures/gleam"
+(cd "$FIXTURE" && "$GEAM_BIN" prepare)
+(cd "$FIXTURE" && "$GEAM_BIN" run)
+(cd "$FIXTURE" && "$GEAM_BIN" run --)
+(cd "$FIXTURE" && "$GEAM_BIN" run -- --flag '' key=value 한글)
+(cd "$FIXTURE" && gleam run && gleam run -- --flag '' key=value 한글)
+(cd "$FIXTURE" && "$GEAM_BIN" build)
+(cd /tmp && "$FIXTURE/build/geam/target/debug/geam_argv_fixture")
+(cd /tmp && "$FIXTURE/build/geam/target/debug/geam_argv_fixture" --flag '' key=value 한글)
 ```
 
 The `gleam-httpc` local server script binds only loopback, starts HTTP and
@@ -359,6 +381,7 @@ cargo package --list --package geam-term-size --locked
 cargo package --list --package geam-birl --locked
 cargo package --list --package geam-global-value --locked
 cargo package --list --package geam-httpc --locked
+cargo package --list --package geam-argv --locked
 ```
 
 Confirm that each list contains `LICENSE` along with the manifest, README, and
@@ -410,7 +433,9 @@ Discovery rejects other values before building the provider matrix.
   fixture. If `example-dir` is set, it checks the example's Geam revision and
   Gleam source, then compares its output with `expected-output.txt`. The
   platform and birl jobs also run their original Erlang fixtures with
-  `gleam run` before running the Geam consumer.
+  `gleam run` before running the Geam consumer. The argv jobs additionally
+  run original Erlang, `geam run --`, and the built executable with empty and
+  nonempty application arguments, including an empty value and Unicode.
 
 To register another provider in CI, add its crate to the Cargo workspace,
 declare its Gleam package in `[package.metadata.geam.provider]`, and provide
@@ -421,7 +446,7 @@ case steps to the workflow. If its fixture executable differs from the default
 or it has a runnable example, declare those paths in the same metadata. Its
 optional `runners` list declares operating systems; without it, the provider
 runs on `ubuntu-24.04`. The discovery job builds provider-by-runner rows. Currently
-`geam-simplifile`, `geam-birl`, and `geam-httpc` declare `ubuntu-24.04`,
+`geam-simplifile`, `geam-birl`, `geam-httpc`, and `geam-argv` declare `ubuntu-24.04`,
 `macos-15`, and `windows-2025`; the other providers keep the Ubuntu default.
 `quality` runs once on Ubuntu for the entire workspace, while `validate` runs
 for each selected row. Local Markdown links are not checked by this workflow.
@@ -484,6 +509,12 @@ different names from the same host; compare fixed weekday/offset behavior and
 document any host-specific visible difference instead of comparing live clock
 values. `birl` also depends on the captured-group `split` contract of
 `geam-regexp`, so changes to that provider must revalidate `birl`.
+
+The `argv` provider runs on Ubuntu, macOS, and Windows. The standalone fixture
+checks that `geam run --` passes only application arguments and that a built
+executable receives the same values when started outside its project. The
+embedding fixture supplies an explicit host snapshot without changing process
+arguments. Non-Unicode conversion is covered by OS-specific owner tests.
 
 The `global_value` provider uses the Ubuntu runner by default. Its source-backed
 contract tests compile the original Gleam body and check generic retained
@@ -579,6 +610,11 @@ cargo llvm-cov --package geam-httpc --locked \
   --json --summary-only --output-path target/gleam-httpc-coverage.json \
   --fail-under-lines 100 \
   --fail-under-regions 100
+cargo llvm-cov clean --workspace
+cargo llvm-cov --package geam-argv --locked \
+  --json --summary-only --output-path target/argv-coverage.json \
+  --fail-under-lines 100 \
+  --fail-under-regions 100
 ```
 
 Read each package file entry in its JSON report to confirm line and region counts
@@ -588,9 +624,10 @@ an independent closure for each one. A consumer may execute another crate's
 code, but its coverage must not compensate for missing owner coverage. Run the
 same closure on every declared OS so conditional source paths are included.
 
-For Houdini, gzlib, platform, term_size, birl, and global_value, confirm the
+For Houdini, gzlib, platform, term_size, birl, global_value, and argv, confirm the
 `houdini/src/lib.rs`, `gzlib/src/lib.rs`, `platform/src/lib.rs`,
-`term-size/src/lib.rs`, `birl/src/lib.rs`, and `global-value/src/lib.rs` file counts directly.
+`term-size/src/lib.rs`, `birl/src/lib.rs`, `global-value/src/lib.rs`, and
+`argv/src/lib.rs` file counts directly.
 
 When a gap is unclear, inspect region and monomorph detail for the affected
 package:
@@ -604,7 +641,7 @@ cargo llvm-cov report --package geam-regexp \
 
 Substitute `geam-filepath`, `geam-otp`, `geam-houdini`, `geam-gzlib`,
 `geam-crypto`, `geam-simplifile`, `geam-platform`, `geam-logging`,
-`geam-term-size`, `geam-birl`, `geam-httpc`, or `geam-global-value` when
+`geam-term-size`, `geam-birl`, `geam-httpc`, `geam-global-value`, or `geam-argv` when
 inspecting those crates.
 
 Generate a package-scoped HTML report from the same profile when source context

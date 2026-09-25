@@ -1,0 +1,8 @@
+name = "geam_argv_fixture"
+version = "0.1.0"
+target = "erlang"
+description = "Unmodified argv 1.1.0 provider fixture"
+licences = ["Apache-2.0"]
+
+[dependencies]
+argv = ">= 1.1.0 and < 1.1.1"
