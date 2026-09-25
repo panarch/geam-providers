@@ -4,8 +4,9 @@ This document defines the test roles and verification baseline for Geam
 Providers. The current production packages are `geam-filepath`,
 `geam-regexp`, `geam-otp`, `geam-houdini`, `geam-gzlib`, `geam-crypto`,
 `geam-simplifile`, `geam-platform`, `geam-logging`, `geam-term-size`,
-`geam-birl`, `geam-httpc`, `geam-global-value`, and `geam-argv`. This document must remain
-the source of truth for the checks actually run.
+`geam-birl`, `geam-httpc`, `geam-global-value`, `geam-argv`, and
+`geam-splitter`. This document must remain the source of truth for the checks
+actually run.
 
 For acceptance rules, see [review-policy.md](review-policy.md). For practical
 test construction and difficult coverage work, see
@@ -58,10 +59,10 @@ uses the public `geam-core` byte-slice helper from that commit. The Gleam
 projects resolve the unmodified `filepath` 1.1.2, `gleam_regexp` 1.1.1,
 `gleam_otp` 1.3.0, `houdini` 1.2.0, `gzlib` 2.0.0, `gleam_crypto` 1.6.0,
 `simplifile` 2.7.0, `platform` 1.0.0, `logging` 1.5.0, `term_size` 1.0.1,
-`birl` 2.0.0, `gleam_httpc` 5.0.0, `global_value` 1.0.0, and `argv` 1.1.0
-packages from Hex.
-The crypto, simplifile, logging, term_size, birl, and global_value fixtures
-pin `gleam_stdlib` 1.0.3 for compatibility with this Geam commit; the
+`birl` 2.0.0, `gleam_httpc` 5.0.0, `global_value` 1.0.0, `argv` 1.1.0,
+and `splitter` 1.3.0 packages from Hex.
+The crypto, simplifile, logging, term_size, birl, global_value, and splitter
+fixtures pin `gleam_stdlib` 1.0.3 for compatibility with this Geam commit; the
 simplifile fixtures also select `geam-filepath`. Resolving crypto with stdlib
 1.0.5 failed at the `gleam/bit_array.pad_to_bytes` linkage check. From the
 repository root, download fixture dependencies before running source-backed
@@ -97,6 +98,8 @@ Rust tests:
 (cd gleam-httpc/fixtures/embedding/gleam && gleam deps download)
 (cd argv/fixtures/gleam && gleam deps download)
 (cd argv/fixtures/embedding/gleam && gleam deps download)
+(cd splitter/fixtures/gleam && gleam deps download)
+(cd splitter/fixtures/embedding/gleam && gleam deps download)
 (cd filepath/fixtures/gleam && gleam format --check && gleam check)
 (cd filepath/fixtures/embedding/gleam && gleam format --check && gleam check)
 (cd gleam-regexp/fixtures/gleam && gleam format --check && gleam check)
@@ -135,17 +138,22 @@ Rust tests:
 (cd argv/fixtures/gleam && gleam format --check && gleam check)
 (cd argv/fixtures/embedding/gleam && gleam format --check && gleam check)
 (cd argv/fixtures/gleam/build/packages/argv && shasum -a 256 -c ../../../../upstream.sha256)
+(cd splitter/fixtures/gleam && gleam format --check && gleam check)
+(cd splitter/fixtures/embedding/gleam && gleam format --check && gleam check)
+(cd splitter/fixtures/gleam/build/packages/splitter && shasum -a 256 -c ../../../../upstream.sha256)
 (cd gleam-httpc/fixtures/gleam/build/packages/gleam_httpc && shasum -a 256 -c ../../../../upstream.sha256)
 ```
 
-The platform and birl standalone Gleam fixtures can also run on Erlang with
-`gleam run` to check the original FFI as an independent behavioral reference.
+The platform, birl, and splitter standalone Gleam fixtures can also run on
+Erlang with `gleam run` to check the original FFI as an independent behavioral
+reference.
 The platform fixture asserts the macOS ARM64 or Linux x86_64 public result;
 the birl fixture checks portable date calculations and live clock calls:
 
 ```sh
 (cd platform/fixtures/gleam && gleam run)
 (cd birl/fixtures/gleam && gleam run)
+(cd splitter/fixtures/gleam && gleam run)
 ```
 
 Use a `geam` CLI built from the same Git commit for the standalone and embedding
@@ -255,6 +263,12 @@ root workspace members. Check and run each separately:
 (cd argv/fixtures/embedding && cargo run --locked)
 (cd argv/fixtures/embedding && cargo clippy --all-targets --locked -- -D warnings)
 (cd argv/fixtures/embedding && RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --locked)
+(cd splitter/fixtures/embedding && cargo fmt --all --check)
+(cd splitter/fixtures/embedding && "$GEAM_BIN" embedding check)
+(cd splitter/fixtures/embedding && cargo test --locked)
+(cd splitter/fixtures/embedding && cargo run --locked)
+(cd splitter/fixtures/embedding && cargo clippy --all-targets --locked -- -D warnings)
+(cd splitter/fixtures/embedding && RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --locked)
 ```
 
 Each standalone fixture has its own Cargo lockfile too. Run `prepare`, `run`,
@@ -357,6 +371,12 @@ FIXTURE="$PWD/argv/fixtures/gleam"
 (cd "$FIXTURE" && "$GEAM_BIN" build)
 (cd /tmp && "$FIXTURE/build/geam/target/debug/geam_argv_fixture")
 (cd /tmp && "$FIXTURE/build/geam/target/debug/geam_argv_fixture" --flag '' key=value 한글)
+
+FIXTURE="$PWD/splitter/fixtures/gleam"
+(cd "$FIXTURE" && "$GEAM_BIN" prepare)
+(cd "$FIXTURE" && "$GEAM_BIN" run)
+(cd "$FIXTURE" && "$GEAM_BIN" build)
+(cd /tmp && "$FIXTURE/build/geam/target/debug/geam_splitter_fixture")
 ```
 
 The `gleam-httpc` local server script binds only loopback, starts HTTP and
@@ -382,6 +402,7 @@ cargo package --list --package geam-birl --locked
 cargo package --list --package geam-global-value --locked
 cargo package --list --package geam-httpc --locked
 cargo package --list --package geam-argv --locked
+cargo package --list --package geam-splitter --locked
 ```
 
 Confirm that each list contains `LICENSE` along with the manifest, README, and
@@ -524,6 +545,13 @@ a controlled clock. The standalone fixture checks installation-shaped linkage;
 the embedding fixture checks repeated calls and fresh values in a second
 execution domain. Each domain owns its cache and releases it on close.
 
+The `splitter` provider uses the Ubuntu runner by default. The original Erlang
+fixture fixes the observed first-match and longest-delimiter behavior, including
+overlaps, Unicode, no match, and the empty-splitter results. The standard Geam
+standalone and embedding consumers verify the same original Gleam API through
+the provider. The Erlang reference run is a local independent check; the
+mandatory CI path runs the source-backed Rust tests and both Geam consumers.
+
 The workflow needs only read access to the repository. It does not publish a
 crate or assume that a Git-pinned provider can already be uploaded to crates.io.
 After the repository is pushed, the hosted job results must be checked
@@ -615,6 +643,11 @@ cargo llvm-cov --package geam-argv --locked \
   --json --summary-only --output-path target/argv-coverage.json \
   --fail-under-lines 100 \
   --fail-under-regions 100
+cargo llvm-cov clean --workspace
+cargo llvm-cov --package geam-splitter --locked \
+  --json --summary-only --output-path target/splitter-coverage.json \
+  --fail-under-lines 100 \
+  --fail-under-regions 100
 ```
 
 Read each package file entry in its JSON report to confirm line and region counts
@@ -624,10 +657,10 @@ an independent closure for each one. A consumer may execute another crate's
 code, but its coverage must not compensate for missing owner coverage. Run the
 same closure on every declared OS so conditional source paths are included.
 
-For Houdini, gzlib, platform, term_size, birl, global_value, and argv, confirm the
-`houdini/src/lib.rs`, `gzlib/src/lib.rs`, `platform/src/lib.rs`,
-`term-size/src/lib.rs`, `birl/src/lib.rs`, `global-value/src/lib.rs`, and
-`argv/src/lib.rs` file counts directly.
+For Houdini, gzlib, platform, term_size, birl, global_value, argv, and splitter,
+confirm the `houdini/src/lib.rs`, `gzlib/src/lib.rs`, `platform/src/lib.rs`,
+`term-size/src/lib.rs`, `birl/src/lib.rs`, `global-value/src/lib.rs`,
+`argv/src/lib.rs`, and `splitter/src/lib.rs` file counts directly.
 
 When a gap is unclear, inspect region and monomorph detail for the affected
 package:
@@ -641,8 +674,8 @@ cargo llvm-cov report --package geam-regexp \
 
 Substitute `geam-filepath`, `geam-otp`, `geam-houdini`, `geam-gzlib`,
 `geam-crypto`, `geam-simplifile`, `geam-platform`, `geam-logging`,
-`geam-term-size`, `geam-birl`, `geam-httpc`, `geam-global-value`, or `geam-argv` when
-inspecting those crates.
+`geam-term-size`, `geam-birl`, `geam-httpc`, `geam-global-value`, `geam-argv`,
+or `geam-splitter` when inspecting those crates.
 
 Generate a package-scoped HTML report from the same profile when source context
 is easier to inspect visually:
