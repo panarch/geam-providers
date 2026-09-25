@@ -23,7 +23,7 @@ concurrency:
 
 env:
   CARGO_TERM_COLOR: always
-  GEAM_REV: bd95b872c578df88f76ed5c4175fb1ea55ee8607
+  GEAM_REV: b23d82a23d31c77eca749d18f67e73f0d9d952c7
 
 jobs:
   providers:
@@ -306,6 +306,13 @@ jobs:
         working-directory: ${{ matrix.dir }}/fixtures/gleam
         run: gleam run
 
+      - name: Run original argv Erlang fixture
+        if: env.COVERAGE_ONLY != 'true' && matrix.gleam_package == 'argv'
+        working-directory: ${{ matrix.dir }}/fixtures/gleam
+        run: |
+          gleam run
+          gleam run -- --flag '' key=value 한글
+
       - name: Check embedding Rust formatting
         if: env.COVERAGE_ONLY != 'true'
         working-directory: ${{ matrix.dir }}/fixtures/embedding
@@ -389,6 +396,13 @@ jobs:
         run: |
           "$GEAM_BIN" run
 
+      - name: Run argv with forwarded application arguments
+        if: env.COVERAGE_ONLY != 'true' && matrix.gleam_package == 'argv'
+        working-directory: ${{ matrix.dir }}/fixtures/gleam
+        run: |
+          "$GEAM_BIN" run --
+          "$GEAM_BIN" run -- --flag '' key=value 한글
+
       - name: Run gleam_httpc standalone scenarios
         if: env.COVERAGE_ONLY != 'true' && matrix.integration_case == 'httpc'
         working-directory: ${{ matrix.dir }}/fixtures/gleam
@@ -425,6 +439,12 @@ jobs:
         run: |
           cd "$FIXTURE_RUN_DIR"
           "$FIXTURE_BINARY"
+
+      - name: Run argv executable with application arguments
+        if: env.COVERAGE_ONLY != 'true' && matrix.gleam_package == 'argv'
+        run: |
+          cd "$FIXTURE_RUN_DIR"
+          "$FIXTURE_BINARY" --flag '' key=value 한글
 
       - name: Run gleam_httpc executable outside its fixture
         if: env.COVERAGE_ONLY != 'true' && matrix.integration_case == 'httpc'

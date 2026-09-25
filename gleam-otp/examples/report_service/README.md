@@ -13,7 +13,7 @@ run the example:
 
 ```sh
 cargo install --git https://github.com/panarch/geam.git \
-  --rev bd95b872c578df88f76ed5c4175fb1ea55ee8607 \
+  --rev b23d82a23d31c77eca749d18f67e73f0d9d952c7 \
   --locked --root "$PWD/target/geam-cli" --bin geam geam
 (cd gleam-otp/examples/report_service && gleam deps download)
 (cd gleam-otp/examples/report_service && ../../../target/geam-cli/bin/geam prepare)
