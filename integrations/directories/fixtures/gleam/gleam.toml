@@ -1,0 +1,13 @@
+name = "geam_directories_fixture"
+version = "0.1.0"
+target = "erlang"
+description = "Unmodified directories 1.2.0 integration fixture"
+licences = ["Apache-2.0"]
+
+[dependencies]
+directories = ">= 1.2.0 and < 1.2.1"
+envoy = ">= 1.2.0 and < 1.2.1"
+filepath = ">= 1.1.2 and < 1.1.3"
+platform = ">= 1.0.0 and < 1.0.1"
+simplifile = ">= 2.7.0 and < 2.7.1"
+gleam_stdlib = ">= 1.0.3 and < 1.0.4"

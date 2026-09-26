@@ -56,6 +56,24 @@ class SelectionTests(unittest.TestCase):
         self.assertEqual(selected, ALL)
         self.assertEqual(reason, "no provider change")
 
+    def test_integration_only_change_skips_provider_matrix(self):
+        selected, reason = ci.affected_providers(
+            ["integrations/directories/fixtures/gleam/gleam.toml", "README.md"],
+            ROWS,
+            DEPENDENCIES,
+        )
+        self.assertEqual(selected, set())
+        self.assertEqual(reason, "integration-only change")
+
+    def test_integration_and_provider_change_keeps_affected_providers(self):
+        selected, reason = ci.affected_providers(
+            ["integrations/directories/README.md", "filepath/src/lib.rs"],
+            ROWS,
+            DEPENDENCIES,
+        )
+        self.assertEqual(selected, {"geam-filepath", "geam-simplifile"})
+        self.assertEqual(reason, "affected providers")
+
     def test_shared_and_unknown_paths_require_full_matrix(self):
         for path in (".github/workflows/ci.yml", ".github/scripts/select_providers.py", "LICENSE"):
             with self.subTest(path=path):
@@ -126,8 +144,51 @@ version = "0.1.0"
         self.assertFalse(ci.lock_additions_only(self.LOCK, added.replace('name = "geam"', 'name = "geam-core"')))
         self.assertFalse(ci.lock_additions_only(self.LOCK, self.LOCK.replace('version = "0.1.0"', 'version = "0.2.0"')))
 
+    def test_directories_runs_for_relevant_paths_only(self):
+        for path in (
+            "integrations/directories/fixtures/gleam/gleam.toml",
+            "envoy/src/lib.rs",
+            "filepath/Cargo.toml",
+            "platform/src/lib.rs",
+            "simplifile/src/lib.rs",
+            ".github/workflows/ci.yml",
+            ".github/scripts/select_providers.py",
+        ):
+            with self.subTest(path=path):
+                self.assertTrue(ci.run_directories_for_changes([path]))
+        for path in (
+            "integrations/another/fixtures/gleam/gleam.toml",
+            "logging/src/lib.rs",
+            "docs/development/testing.md",
+            "Cargo.lock",
+            "README.md",
+        ):
+            with self.subTest(path=path):
+                self.assertFalse(ci.run_directories_for_changes([path]))
+        self.assertTrue(ci.run_directories_for_changes(["logging/src/lib.rs", "envoy/src/lib.rs"]))
+        self.assertFalse(ci.run_directories_for_changes([]))
+
+    def test_directories_root_manifest_checks_only_relevant_workspace_inputs(self):
+        original = self.MANIFEST + 'reqwest = "0.13"\n'
+        another_member = original.replace('members = ["filepath"]', 'members = ["filepath", "logging"]')
+        another_dependency = original.replace('reqwest = "0.13"', 'reqwest = "0.14"')
+        comment_only = original.replace('reqwest = "0.13"', '# unrelated note\nreqwest = "0.13"')
+        changed_geam = original.replace('rev = "old"', 'rev = "new"')
+        for changed in (another_member, another_dependency, comment_only):
+            self.assertFalse(ci.run_directories_for_changes(
+                ["Cargo.toml"], original, changed, {"geam"}
+            ))
+        self.assertTrue(ci.run_directories_for_changes(
+            ["Cargo.toml"], original, changed_geam, {"geam"}
+        ))
+        with self.assertRaises(ValueError):
+            ci.run_directories_for_changes(["Cargo.toml"])
+
 
 class RepositoryTests(unittest.TestCase):
+    def test_directories_workspace_dependencies_include_geam(self):
+        self.assertEqual(ci.directories_workspace_dependencies(), {"geam"})
+
     def test_current_workspace_and_fixtures_expose_filepath_dependency(self):
         metadata = json.loads(
             subprocess.check_output(
