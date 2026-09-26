@@ -1,0 +1,4 @@
+e4f0a79e8ed684ccda3a50ab7acff00ab4029bf4288dcbed36f078c9b0c15c84  src/envoy.gleam
+0ac283d3aaa67cbb4e8c90517c41e3f215c9cc6498d8c3aeb0927465a239cbb9  src/envoy_ffi.erl
+78c9b33d29cd0dc27b90f061e756f01f63ccbda1839366d13b95bf307a904f2b  src/envoy_ffi.mjs
+0011b932fca0f651a438677a2a70bfdac2ddb1dc04dae77f4b256cc92705b343  gleam.toml

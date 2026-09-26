@@ -18,6 +18,7 @@ gleam-version = ">= 2.0.0 and < 2.0.1"
 
 [package.metadata.geam.ci]
 runners = ["ubuntu-24.04", "macos-15", "windows-2025"]
+erlang-oracle = true
 
 [dependencies]
 geam.workspace = true

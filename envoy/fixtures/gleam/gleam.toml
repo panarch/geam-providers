@@ -1,0 +1,9 @@
+name = "geam_envoy_fixture"
+version = "0.1.0"
+target = "erlang"
+description = "Unmodified envoy 1.2.0 standalone provider fixture"
+licences = ["Apache-2.0"]
+
+[dependencies]
+envoy = ">= 1.2.0 and < 1.2.1"
+gleam_stdlib = ">= 1.0.3 and < 1.0.4"

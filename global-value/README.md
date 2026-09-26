@@ -6,4 +6,4 @@ Within one Geam execution domain, processes share a value by name and concurrent
 
 The [standalone fixture](fixtures/gleam/) and [embedding fixture](fixtures/embedding/) use the original Hex package without editing its Gleam source. The source-backed tests also check `Result`, function and custom values, cancellation and failure, and concurrent Gleam processes. The fixtures pin `gleam_stdlib` 1.0.3 for compatibility with the Geam commit below. See the [testing guide](../docs/development/testing.md) for the verification commands.
 
-This crate depends on Geam's public typed provider API at commit `b23d82a23d31c77eca749d18f67e73f0d9d952c7`. The pinned Git dependency currently means `cargo package --list` checks the package contents but does not establish crates.io publication readiness.
+This crate depends on Geam's public typed provider API at commit `cf5fb100c9220d9e30ff60a11d5bfbeb77f1ebef`. The pinned Git dependency currently means `cargo package --list` checks the package contents but does not establish crates.io publication readiness.

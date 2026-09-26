@@ -23,7 +23,7 @@ concurrency:
 
 env:
   CARGO_TERM_COLOR: always
-  GEAM_REV: b23d82a23d31c77eca749d18f67e73f0d9d952c7
+  GEAM_REV: cf5fb100c9220d9e30ff60a11d5bfbeb77f1ebef
 
 jobs:
   providers:
@@ -75,6 +75,7 @@ jobs:
                         fixture_bin: (.metadata.geam.ci."fixture-bin" // (.name | gsub("-"; "_") + "_fixture")),
                         integration_case: (.metadata.geam.ci."integration-case" // "standard"),
                         example_dir: (.metadata.geam.ci."example-dir" // ""),
+                        erlang_oracle: (.metadata.geam.ci."erlang-oracle" // false),
                         runners: (.metadata.geam.ci.runners // ["ubuntu-24.04"])
                       }
                   ]
@@ -301,8 +302,8 @@ jobs:
             (cd "$PROVIDER_DIR/fixtures/$fixture" && gleam format --check && gleam check)
           done
 
-      - name: Run original OS-sensitive Erlang fixture
-        if: env.COVERAGE_ONLY != 'true' && (matrix.gleam_package == 'platform' || matrix.gleam_package == 'birl')
+      - name: Run original Erlang fixture
+        if: env.COVERAGE_ONLY != 'true' && matrix.erlang_oracle
         working-directory: ${{ matrix.dir }}/fixtures/gleam
         run: gleam run
 
