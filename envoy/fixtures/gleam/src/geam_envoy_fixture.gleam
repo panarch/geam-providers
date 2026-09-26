@@ -8,10 +8,10 @@ pub fn main() {
   let before = envoy.all()
   let assert Error(Nil) = dict.get(before, name)
 
-  envoy.set(name, "한국어=🙂")
-  let assert Ok("한국어=🙂") = envoy.get(name)
+  envoy.set(name, "fixture-value")
+  let assert Ok("fixture-value") = envoy.get(name)
   let after = envoy.all()
-  let assert Ok("한국어=🙂") = dict.get(after, name)
+  let assert Ok("fixture-value") = dict.get(after, name)
   let assert Error(Nil) = dict.get(before, name)
 
   envoy.set(name, "")

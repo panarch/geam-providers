@@ -350,18 +350,22 @@ jobs:
         run: |
           (cd "$PROVIDER_DIR/$EXAMPLE_DIR" && gleam deps download && gleam format --check && gleam check)
 
-      - name: Install pinned Geam CLI
+      - name: Build pinned Geam CLI
         if: env.COVERAGE_ONLY != 'true'
         env:
           CARGO_TARGET_DIR: ${{ github.workspace }}/target/geam-cli-build
         run: |
-          cargo install --git https://github.com/panarch/geam.git \
-            --rev "$GEAM_REV" --locked \
-            --root "$RUNNER_TEMP/geam-cli" --bin geam geam
+          geam_source="$RUNNER_TEMP/geam-source"
+          git init -q "$geam_source"
+          git -C "$geam_source" fetch --depth=1 https://github.com/panarch/geam.git "$GEAM_REV"
+          git -C "$geam_source" checkout --detach -q FETCH_HEAD
+          test "$(git -C "$geam_source" rev-parse HEAD)" = "$GEAM_REV"
+          cargo build --manifest-path "$geam_source/Cargo.toml" \
+            --locked --release --bin geam
           if [[ "$RUNNER_OS" == Windows ]]; then
-            echo "GEAM_BIN=$(cygpath -u "$RUNNER_TEMP")/geam-cli/bin/geam.exe" >> "$GITHUB_ENV"
+            echo "GEAM_BIN=$(cygpath -u "$CARGO_TARGET_DIR")/release/geam.exe" >> "$GITHUB_ENV"
           else
-            echo "GEAM_BIN=$RUNNER_TEMP/geam-cli/bin/geam" >> "$GITHUB_ENV"
+            echo "GEAM_BIN=$CARGO_TARGET_DIR/release/geam" >> "$GITHUB_ENV"
           fi
 
       - name: Check generated embedding bindings

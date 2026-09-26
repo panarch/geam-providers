@@ -151,7 +151,8 @@ Rust tests:
 
 The platform, birl, splitter, and envoy standalone Gleam fixtures can also run on
 Erlang with `gleam run` to check the original FFI as an independent behavioral
-reference.
+reference. The envoy Erlang fixture uses an ASCII value; its embedding
+fixture separately checks Unicode values through Geam.
 The platform fixture asserts the macOS ARM64 or Linux x86_64 public result;
 the birl fixture checks portable date calculations and live clock calls:
 
@@ -163,13 +164,17 @@ the birl fixture checks portable date calculations and live clock calls:
 ```
 
 Use a `geam` CLI built from the same Git commit for the standalone and embedding
-checks. For a local, repository-scoped installation:
+checks. Build it as a workspace so Geam and `geam-core` both come from that
+commit (a Git-package `cargo install` can resolve a published `geam-core`):
 
 ```sh
-cargo install --git https://github.com/panarch/geam.git \
-  --rev cf5fb100c9220d9e30ff60a11d5bfbeb77f1ebef \
-  --locked --root "$PWD/target/geam-cli" --bin geam geam
-GEAM_BIN="$PWD/target/geam-cli/bin/geam"
+git init -q target/geam-source
+git -C target/geam-source fetch --depth=1 https://github.com/panarch/geam.git cf5fb100c9220d9e30ff60a11d5bfbeb77f1ebef
+git -C target/geam-source checkout --detach -q FETCH_HEAD
+CARGO_TARGET_DIR="$PWD/target/geam-cli-build" \
+  cargo build --manifest-path "$PWD/target/geam-source/Cargo.toml" \
+  --locked --release --bin geam
+GEAM_BIN="$PWD/target/geam-cli-build/release/geam"
 ```
 
 ## Standard Verification
@@ -463,7 +468,7 @@ Discovery rejects other values before building the provider matrix.
   the job stops before integration. After coverage passes, the same job checks
   fixture Geam revisions, Gleam source and embedding Rust formatting, the
   embedding consumer's Clippy and Rust documentation, and the package file
-  list. It installs the pinned Geam CLI, checks generated bindings, tests and
+  list. It builds the pinned Geam CLI, checks generated bindings, tests and
   runs the embedding consumer, then verifies standalone `prepare`, the declared
   integration case, `build`, and execution outside the fixture. The standard
   case runs the default module and built executable directly. The `httpc` case
