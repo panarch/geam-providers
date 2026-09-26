@@ -11,6 +11,12 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 PATH_DEPENDENCY = re.compile(r'\bpath\s*=\s*"([^"]+)"')
+DIRECTORIES_PROVIDERS = ("envoy", "filepath", "platform", "simplifile")
+DIRECTORIES_CI_PATHS = {
+    ".github/workflows/ci.yml",
+    ".github/scripts/select_providers.py",
+    ".github/scripts/test_select_providers.py",
+}
 
 
 def git(*args, root=ROOT):
@@ -152,12 +158,16 @@ def affected_providers(paths, rows, dependencies, added_members=(), manifest_saf
 
     by_directory = {row["dir"]: row["crate"] for row in rows}
     direct = set()
+    integration_changed = False
     for member in added_members:
         if member not in by_directory:
             return all_crates, "new workspace member is not a discovered provider"
         direct.add(by_directory[member])
 
     for path in paths:
+        if path.startswith("integrations/"):
+            integration_changed = True
+            continue
         if path in ("Cargo.toml", "Cargo.lock", "README.md") or (
             path.startswith("docs/") and path.endswith(".md")
         ):
@@ -171,6 +181,8 @@ def affected_providers(paths, rows, dependencies, added_members=(), manifest_saf
         direct.add(owner)
 
     if not direct:
+        if integration_changed:
+            return set(), "integration-only change"
         return all_crates, "no provider change"
 
     affected = set(direct)
@@ -184,6 +196,64 @@ def affected_providers(paths, rows, dependencies, added_members=(), manifest_saf
     return affected, "affected providers"
 
 
+def directories_workspace_dependencies(root=ROOT):
+    names = set()
+    for directory in DIRECTORIES_PROVIDERS:
+        sections = manifest_sections((root / directory / "Cargo.toml").read_text())
+        for line in sections["dependencies"]:
+            if line.startswith("#") or "workspace" not in line:
+                continue
+            match = re.fullmatch(
+                r"([A-Za-z0-9_-]+)(?:\.workspace\s*=\s*true|\s*=\s*\{.*\bworkspace\s*=\s*true.*\})",
+                line,
+            )
+            if not match:
+                raise ValueError("Unsupported workspace dependency syntax")
+            names.add(match.group(1))
+    return names
+
+
+def relevant_workspace_manifest_change(before, after, dependency_names):
+    def relevant(content):
+        sections = manifest_sections(content)
+        if "workspace" not in sections or "workspace.dependencies" not in sections:
+            raise ValueError("Missing workspace manifest sections")
+        sections = {
+            section: [line for line in lines if not line.startswith("#")]
+            for section, lines in sections.items()
+        }
+        sections["workspace"] = [
+            line for line in sections["workspace"] if not line.startswith("members")
+        ]
+        sections["workspace.dependencies"] = [
+            line for line in sections["workspace.dependencies"]
+            if re.match(r"([A-Za-z0-9_-]+)\s*=", line)
+            and line.split("=", 1)[0].strip() in dependency_names
+        ]
+        return sections
+
+    return relevant(before) != relevant(after)
+
+
+def run_directories_for_changes(
+    paths, root_manifest_before=None, root_manifest_after=None, workspace_dependencies=()
+):
+    if any(
+        path.startswith("integrations/directories/")
+        or any(path.startswith(directory + "/") for directory in DIRECTORIES_PROVIDERS)
+        or path in DIRECTORIES_CI_PATHS
+        for path in paths
+    ):
+        return True
+    if "Cargo.toml" not in paths:
+        return False
+    if root_manifest_before is None or root_manifest_after is None:
+        raise ValueError("Missing root Cargo manifest for change analysis")
+    return relevant_workspace_manifest_change(
+        root_manifest_before, root_manifest_after, workspace_dependencies
+    )
+
+
 def main():
     rows = json.loads(os.environ["PROVIDER_ROWS"])
     all_crates = {row["crate"] for row in rows}
@@ -194,10 +264,14 @@ def main():
         added_members = set()
         manifest_safe = True
         lock_safe = True
+        root_manifest_before = None
+        root_manifest_after = None
         if "Cargo.toml" in paths:
+            root_manifest_before = git("show", base + ":Cargo.toml").decode()
+            root_manifest_after = (ROOT / "Cargo.toml").read_text()
             added_members = manifest_additions(
-                git("show", base + ":Cargo.toml").decode(),
-                (ROOT / "Cargo.toml").read_text(),
+                root_manifest_before,
+                root_manifest_after,
             )
             manifest_safe = added_members is not None
         if "Cargo.lock" in paths:
@@ -215,10 +289,17 @@ def main():
         selected, reason = affected_providers(
             paths, rows, dependencies, added_members or (), manifest_safe, lock_safe
         )
+        run_directories = run_directories_for_changes(
+            paths,
+            root_manifest_before,
+            root_manifest_after,
+            directories_workspace_dependencies(),
+        )
     except (KeyError, OSError, subprocess.CalledProcessError, TypeError, UnicodeError, ValueError):
         selected, reason = all_crates, "change analysis unavailable"
+        run_directories = True
     print("CI selection: {}".format(reason), file=sys.stderr)
-    print(json.dumps(sorted(selected)))
+    print(json.dumps({"providers": sorted(selected), "run_directories": run_directories}))
 
 
 if __name__ == "__main__":

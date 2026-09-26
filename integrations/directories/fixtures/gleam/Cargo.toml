@@ -1,0 +1,29 @@
+# Managed by Geam. Use `geam provider` commands to change providers.
+
+[package]
+name = "geam_directories_fixture-geam-runner"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[package.metadata.geam.runner]
+schema = 1
+
+[[bin]]
+name = "geam-runner"
+path = "build/geam/runner.rs"
+
+[[bin]]
+name = "geam_directories_fixture"
+path = "build/geam/application.rs"
+
+[dependencies]
+geam = { version = "=0.2.3", default-features = false, features = ["standalone"] }
+tokio = { version = "1.53.1", default-features = false, features = ["rt-multi-thread", "net", "time"] }
+geam_provider_envoy = { package = "geam-envoy", path = "../../../../envoy" }
+geam_provider_filepath = { package = "geam-filepath", path = "../../../../filepath" }
+geam_provider_platform = { package = "geam-platform", path = "../../../../platform" }
+geam_provider_simplifile = { package = "geam-simplifile", path = "../../../../simplifile" }
+
+[workspace]
+resolver = "3"

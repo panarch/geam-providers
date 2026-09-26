@@ -51,6 +51,18 @@ Keep network-backed live tests separate from deterministic acceptance tests.
 Live services may provide compatibility evidence, but credentials, availability,
 rate limits, and remote data must not decide the mandatory owner suite.
 
+### Cross-Provider Package Integrations
+
+An integration under [`integrations/`](../../integrations/) executes one
+unchanged Gleam package that composes existing providers. It is not a provider
+workspace member or a substitute for the providers' owner and source-backed
+contract tests. The [`directories` 1.2.0 case](../../integrations/directories/README.md)
+selects `geam-envoy`, `geam-platform`, `geam-simplifile`, and `geam-filepath`.
+Its common Gleam scenario runs on original Erlang and Geam standalone, while
+the Rust embedding consumer also checks isolated initialization and state.
+The package's 11 public functions are checked against exact OS-specific
+expectations, including expected errors and representative fallback paths.
+
 ## Dependency Preparation
 
 The Rust workspace, fixture consumers, and report service example use Geam
@@ -459,6 +471,30 @@ registry-only package resolution. Archive creation, registry publication, and
 consumption of a published crate are a separate gate after Geam publishes the
 required API and features. Do not treat `--list` as proof of registry readiness.
 
+## Package Integration Verification
+
+The `directories` integration has independent Gleam and Rust lockfiles under
+[`integrations/directories/fixtures/`](../../integrations/directories/fixtures/).
+After building the pinned CLI above, run the original Erlang reference and both
+Geam consumers from the repository root:
+
+```sh
+(cd integrations/directories/fixtures/gleam && gleam deps download && gleam format --check && gleam check)
+(cd integrations/directories/fixtures/embedding/gleam && gleam deps download && gleam format --check && gleam check)
+(cd integrations/directories/fixtures/gleam/build/packages/directories && if command -v sha256sum >/dev/null; then sha256sum --check ../../../../upstream.sha256; else shasum -a 256 -c ../../../../upstream.sha256; fi)
+(cd integrations/directories/fixtures/gleam && gleam run && "$GEAM_BIN" prepare && "$GEAM_BIN" run && "$GEAM_BIN" build)
+(cd integrations/directories/fixtures/embedding && cargo fmt --all --check && "$GEAM_BIN" embedding check && cargo test --locked && cargo run --locked)
+(cd integrations/directories/fixtures/embedding && cargo clippy --all-targets --locked -- -D warnings)
+(cd integrations/directories/fixtures/embedding && RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --locked)
+```
+
+Also execute `integrations/directories/fixtures/gleam/build/geam/target/debug/geam_directories_fixture`
+from outside that fixture. Use `.exe` on Windows. The standalone and Erlang
+executions create and delete a directory tree beneath the caller's working
+directory; the embedding consumer uses a Rust temporary directory. The
+original Erlang run is an independent behavioral reference, not a Geam
+execution mode.
+
 ## GitHub Actions
 
 The [CI workflow](../../.github/workflows/ci.yml) runs on pushes and pull
@@ -532,8 +568,10 @@ members and lockfile packages can be scoped, including accompanying root README
 and Markdown documentation changes. Documentation-only changes, changes to
 existing workspace or lockfile records, shared or unrecognized paths, and
 unavailable change analysis run the full matrix. Ordinary manual runs also
-use the full matrix. Every selected row keeps its 100% line and region coverage
-gate and fixture integration checks. To check the selector locally, run:
+use the full matrix. Changes only under `integrations/` select no provider
+rows; `quality` and the relevant package integration job still run. Every
+selected provider row keeps its 100% line and region coverage gate and fixture
+integration checks. To check the selector locally, run:
 
 ```sh
 python3 -m unittest discover -s .github/scripts -p 'test_*.py'
@@ -553,6 +591,21 @@ gh workflow run ci.yml --ref your-branch \
 
 The focused run skips workspace quality and integration. It still applies the
 same 100% line and region coverage gate as a full PR run.
+
+The `integrations` job is separate from the provider matrix. It uses one job
+per OS (`ubuntu-24.04`, `macos-15`, `windows-2025`), building the pinned Geam
+CLI once per runner before running the original Erlang reference, standalone,
+and embedding checks in sequence. The discovery job enables the `directories`
+case for changes under `integrations/directories/` or in `envoy/`, `platform/`,
+`simplifile/`, or `filepath/`, for relevant shared Cargo inputs, or for the CI
+workflow/selector. Unrelated provider and documentation changes do not start
+these OS jobs. Unavailable change analysis runs the case rather than risk
+missing it. Job-level selection keeps the main workflow active without a
+workflow-wide path filter. Ordinary manual runs omit integration; set the
+`run_integrations` workflow input to run it explicitly. A focused coverage run
+always omits integration, even if that input is also set. New package cases
+can be run sequentially in these OS jobs without multiplying jobs by the
+number of packages.
 
 The `filepath` fixtures check the active host's `split` branch and both
 explicit split functions. A `simplifile` Windows row also exercises its
