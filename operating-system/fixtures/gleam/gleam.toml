@@ -1,0 +1,9 @@
+name = "geam_operating_system_fixture"
+version = "0.1.0"
+target = "erlang"
+description = "Unmodified operating_system 1.0.1 standalone provider fixture"
+licences = ["Apache-2.0"]
+
+[dependencies]
+operating_system = ">= 1.0.1 and < 1.0.2"
+gleam_stdlib = ">= 1.0.3 and < 1.0.4"

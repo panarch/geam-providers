@@ -1,0 +1,6 @@
+name = "geam_operating_system_embedding"
+version = "0.1.0"
+target = "erlang"
+
+[dependencies]
+operating_system = ">= 1.0.1 and < 1.0.2"

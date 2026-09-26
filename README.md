@@ -20,6 +20,7 @@ This repository implements native functions for existing Gleam packages through 
 | [`argv`](https://hex.pm/packages/argv) | [`geam-argv`](argv/README.md) | 1.1.0 |
 | [`splitter`](https://hex.pm/packages/splitter) | [`geam-splitter`](splitter/README.md) | 1.3.0 |
 | [`envoy`](https://hex.pm/packages/envoy) | [`geam-envoy`](envoy/README.md) | 1.2.0 |
+| [`operating_system`](https://hex.pm/packages/operating_system) | [`geam-operating-system`](operating-system/README.md) | 1.0.1 |
 
 The Geam dependencies are pinned to `main` commit `cf5fb100c9220d9e30ff60a11d5bfbeb77f1ebef` rather than a released version or local path. The Gleam packages come from Hex without changes to their upstream source. Publishing provider crates and testing consumption of published packages are separate steps after the required Geam features are released.
 
