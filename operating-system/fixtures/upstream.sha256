@@ -1,0 +1,3 @@
+254599c48814eb8ed02e394cd88eb803b29671990a96c3f6ee676f630178db5d  src/operating_system.gleam
+da47a5367b03bd9c5e90cc45d2b8af45c1fe7151c1cf5e0c846956531952e55e  src/operating_system_ffi.erl
+96cb4d14eccd21021257bd654247ef26b2a59d603241eff43ac07f57a389bbe8  gleam.toml
