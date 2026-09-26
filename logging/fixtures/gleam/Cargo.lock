@@ -1034,7 +1034,7 @@ dependencies = [
 [[package]]
 name = "geam"
 version = "0.2.3"
-source = "git+https://github.com/panarch/geam.git?rev=b23d82a23d31c77eca749d18f67e73f0d9d952c7#b23d82a23d31c77eca749d18f67e73f0d9d952c7"
+source = "git+https://github.com/panarch/geam.git?rev=cf5fb100c9220d9e30ff60a11d5bfbeb77f1ebef#cf5fb100c9220d9e30ff60a11d5bfbeb77f1ebef"
 dependencies = [
  "geam-builtin",
  "geam-core",
@@ -1050,7 +1050,7 @@ dependencies = [
 [[package]]
 name = "geam-builtin"
 version = "0.2.3"
-source = "git+https://github.com/panarch/geam.git?rev=b23d82a23d31c77eca749d18f67e73f0d9d952c7#b23d82a23d31c77eca749d18f67e73f0d9d952c7"
+source = "git+https://github.com/panarch/geam.git?rev=cf5fb100c9220d9e30ff60a11d5bfbeb77f1ebef#cf5fb100c9220d9e30ff60a11d5bfbeb77f1ebef"
 dependencies = [
  "ecow",
  "geam-core",
@@ -1059,7 +1059,7 @@ dependencies = [
 [[package]]
 name = "geam-core"
 version = "0.2.3"
-source = "git+https://github.com/panarch/geam.git?rev=b23d82a23d31c77eca749d18f67e73f0d9d952c7#b23d82a23d31c77eca749d18f67e73f0d9d952c7"
+source = "git+https://github.com/panarch/geam.git?rev=cf5fb100c9220d9e30ff60a11d5bfbeb77f1ebef#cf5fb100c9220d9e30ff60a11d5bfbeb77f1ebef"
 dependencies = [
  "bitvec",
  "camino",
@@ -1081,7 +1081,7 @@ dependencies = [
 [[package]]
 name = "geam-erlang"
 version = "0.2.3"
-source = "git+https://github.com/panarch/geam.git?rev=b23d82a23d31c77eca749d18f67e73f0d9d952c7#b23d82a23d31c77eca749d18f67e73f0d9d952c7"
+source = "git+https://github.com/panarch/geam.git?rev=cf5fb100c9220d9e30ff60a11d5bfbeb77f1ebef#cf5fb100c9220d9e30ff60a11d5bfbeb77f1ebef"
 dependencies = [
  "ecow",
  "futures-channel",
@@ -1216,7 +1216,7 @@ dependencies = [
 [[package]]
 name = "geam-json"
 version = "0.2.3"
-source = "git+https://github.com/panarch/geam.git?rev=b23d82a23d31c77eca749d18f67e73f0d9d952c7#b23d82a23d31c77eca749d18f67e73f0d9d952c7"
+source = "git+https://github.com/panarch/geam.git?rev=cf5fb100c9220d9e30ff60a11d5bfbeb77f1ebef#cf5fb100c9220d9e30ff60a11d5bfbeb77f1ebef"
 dependencies = [
  "ecow",
  "geam-core",
@@ -1237,7 +1237,7 @@ dependencies = [
 [[package]]
 name = "geam-macros"
 version = "0.2.3"
-source = "git+https://github.com/panarch/geam.git?rev=b23d82a23d31c77eca749d18f67e73f0d9d952c7#b23d82a23d31c77eca749d18f67e73f0d9d952c7"
+source = "git+https://github.com/panarch/geam.git?rev=cf5fb100c9220d9e30ff60a11d5bfbeb77f1ebef#cf5fb100c9220d9e30ff60a11d5bfbeb77f1ebef"
 dependencies = [
  "proc-macro-crate",
  "proc-macro2",
@@ -1248,7 +1248,7 @@ dependencies = [
 [[package]]
 name = "geam-stdlib"
 version = "0.2.3"
-source = "git+https://github.com/panarch/geam.git?rev=b23d82a23d31c77eca749d18f67e73f0d9d952c7#b23d82a23d31c77eca749d18f67e73f0d9d952c7"
+source = "git+https://github.com/panarch/geam.git?rev=cf5fb100c9220d9e30ff60a11d5bfbeb77f1ebef#cf5fb100c9220d9e30ff60a11d5bfbeb77f1ebef"
 dependencies = [
  "base64 0.22.1",
  "bitvec",
@@ -1267,7 +1267,7 @@ dependencies = [
 [[package]]
 name = "geam-time"
 version = "0.2.3"
-source = "git+https://github.com/panarch/geam.git?rev=b23d82a23d31c77eca749d18f67e73f0d9d952c7#b23d82a23d31c77eca749d18f67e73f0d9d952c7"
+source = "git+https://github.com/panarch/geam.git?rev=cf5fb100c9220d9e30ff60a11d5bfbeb77f1ebef#cf5fb100c9220d9e30ff60a11d5bfbeb77f1ebef"
 dependencies = [
  "geam-core",
  "geam-macros",

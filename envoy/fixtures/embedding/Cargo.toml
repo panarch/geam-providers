@@ -1,0 +1,14 @@
+[package]
+name = "geam-envoy-embedding"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.96"
+publish = false
+
+[dependencies]
+geam = { git = "https://github.com/panarch/geam.git", rev = "cf5fb100c9220d9e30ff60a11d5bfbeb77f1ebef", default-features = false, features = ["embedding", "tokio", "geam-builtin", "gleam-stdlib"] }
+geam-envoy = { path = "../.." }
+tokio = { version = "1.53.1", default-features = false, features = ["rt"] }
+
+[workspace]
+resolver = "3"

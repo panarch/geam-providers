@@ -8,16 +8,19 @@ The example exposes `start`, `submit`, `worker_count`, and `shutdown` around
 that process tree. `restart_factory` simulates a failure for the demonstration.
 Its `Cargo.toml` explicitly selects the local `geam-otp` crate for `gleam_otp`.
 
-From the repository root, install a Geam CLI built from the pinned commit and
+From the repository root, build a Geam CLI workspace from the pinned commit and
 run the example:
 
 ```sh
-cargo install --git https://github.com/panarch/geam.git \
-  --rev b23d82a23d31c77eca749d18f67e73f0d9d952c7 \
-  --locked --root "$PWD/target/geam-cli" --bin geam geam
+git init -q target/geam-source
+git -C target/geam-source fetch --depth=1 https://github.com/panarch/geam.git cf5fb100c9220d9e30ff60a11d5bfbeb77f1ebef
+git -C target/geam-source checkout --detach -q FETCH_HEAD
+CARGO_TARGET_DIR="$PWD/target/geam-cli-build" \
+  cargo build --manifest-path "$PWD/target/geam-source/Cargo.toml" \
+  --locked --release --bin geam
 (cd gleam-otp/examples/report_service && gleam deps download)
-(cd gleam-otp/examples/report_service && ../../../target/geam-cli/bin/geam prepare)
-(cd gleam-otp/examples/report_service && ../../../target/geam-cli/bin/geam run)
+(cd gleam-otp/examples/report_service && ../../../target/geam-cli-build/release/geam prepare)
+(cd gleam-otp/examples/report_service && ../../../target/geam-cli-build/release/geam run)
 ```
 
 The output must match [expected-output.txt](expected-output.txt): two successful

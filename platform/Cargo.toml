@@ -16,6 +16,9 @@ schema = 1
 gleam-package = "platform"
 gleam-version = ">= 1.0.0 and < 1.0.1"
 
+[package.metadata.geam.ci]
+erlang-oracle = true
+
 [dependencies]
 geam.workspace = true
 

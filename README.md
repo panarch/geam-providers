@@ -19,7 +19,8 @@ This repository implements native functions for existing Gleam packages through 
 | [`global_value`](https://hex.pm/packages/global_value) | [`geam-global-value`](global-value/README.md) | 1.0.0 |
 | [`argv`](https://hex.pm/packages/argv) | [`geam-argv`](argv/README.md) | 1.1.0 |
 | [`splitter`](https://hex.pm/packages/splitter) | [`geam-splitter`](splitter/README.md) | 1.3.0 |
+| [`envoy`](https://hex.pm/packages/envoy) | [`geam-envoy`](envoy/README.md) | 1.2.0 |
 
-The Geam dependencies are pinned to `main` commit `b23d82a23d31c77eca749d18f67e73f0d9d952c7` rather than a released version or local path. The Gleam packages come from Hex without changes to their upstream source. Publishing provider crates and testing consumption of published packages are separate steps after the required Geam features are released.
+The Geam dependencies are pinned to `main` commit `cf5fb100c9220d9e30ff60a11d5bfbeb77f1ebef` rather than a released version or local path. The Gleam packages come from Hex without changes to their upstream source. Publishing provider crates and testing consumption of published packages are separate steps after the required Geam features are released.
 
 See [provider compatibility](docs/design/provider-compatibility.md) for the design boundary, the [testing guide](docs/development/testing.md) for verification steps and coverage requirements, and the [review policy](docs/development/review-policy.md) for code review criteria.
