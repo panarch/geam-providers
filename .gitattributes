@@ -1,4 +1,5 @@
 *.gleam text eol=lf
 geam_bindings.rs text eol=lf
+upstream.sha256 text eol=lf
 **/fixtures/embedding/src/geam_bindings/program.rs text eol=lf
 **/fixtures/gleam/Cargo.toml text eol=lf
