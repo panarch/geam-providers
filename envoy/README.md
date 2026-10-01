@@ -25,7 +25,7 @@ case-insensitively; on Unix names are case-sensitive. Dict iteration order is
 unspecified.
 
 Geam is pinned to `main` commit
-`cf5fb100c9220d9e30ff60a11d5bfbeb77f1ebef`. The
+`5adbf4e654c6e4ca518e60babe19c3dc88532d4d`. The
 [standalone fixture](fixtures/gleam/) and
 [embedding fixture](fixtures/embedding/) resolve the original Hex package
 without editing it. [Source checksums](fixtures/upstream.sha256) cover its

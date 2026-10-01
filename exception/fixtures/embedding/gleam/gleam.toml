@@ -1,0 +1,7 @@
+name = "geam_exception_embedding"
+version = "0.1.0"
+target = "erlang"
+
+[dependencies]
+exception = ">= 2.1.1 and < 2.1.2"
+gleam_stdlib = ">= 1.0.3 and < 1.0.4"

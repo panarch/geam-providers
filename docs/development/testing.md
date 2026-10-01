@@ -5,8 +5,8 @@ Providers. The current production packages are `geam-filepath`,
 `geam-regexp`, `geam-otp`, `geam-houdini`, `geam-gzlib`, `geam-crypto`,
 `geam-simplifile`, `geam-platform`, `geam-logging`, `geam-term-size`,
 `geam-birl`, `geam-httpc`, `geam-global-value`, `geam-argv`, `geam-splitter`,
-`geam-envoy`, and `geam-operating-system`. This document must remain the source
-of truth for the checks actually run.
+`geam-envoy`, `geam-operating-system`, and `geam-exception`. This document must
+remain the source of truth for the checks actually run.
 
 For acceptance rules, see [review-policy.md](review-policy.md). For practical
 test construction and difficult coverage work, see
@@ -66,15 +66,16 @@ expectations, including expected errors and representative fallback paths.
 ## Dependency Preparation
 
 The Rust workspace, fixture consumers, and report service example use Geam
-`main` commit `cf5fb100c9220d9e30ff60a11d5bfbeb77f1ebef`. Houdini also
+`main` commit `5adbf4e654c6e4ca518e60babe19c3dc88532d4d`. Houdini also
 uses the public `geam-core` byte-slice helper from that commit. The Gleam
 projects resolve the unmodified `filepath` 1.1.2, `gleam_regexp` 1.1.1,
 `gleam_otp` 1.3.0, `houdini` 1.2.0, `gzlib` 2.0.0, `gleam_crypto` 1.6.0,
 `simplifile` 2.7.0, `platform` 1.0.0, `logging` 1.5.0, `term_size` 1.0.1,
 `birl` 2.0.0, `gleam_httpc` 5.0.0, `global_value` 1.0.0, `argv` 1.1.0,
-`splitter` 1.3.0, `envoy` 1.2.0, and `operating_system` 1.0.1 packages from Hex.
-The crypto, simplifile, logging, term_size, birl, global_value, splitter, and
-envoy fixtures and the `operating_system` standalone fixture pin
+`splitter` 1.3.0, `envoy` 1.2.0, `operating_system` 1.0.1, and `exception`
+2.1.1 packages from Hex.
+The crypto, simplifile, logging, term_size, birl, global_value, splitter,
+envoy, and exception fixtures and the `operating_system` standalone fixture pin
 `gleam_stdlib` 1.0.3 for compatibility with this Geam commit; the simplifile
 fixtures also select `geam-filepath`. Resolving crypto with stdlib 1.0.5 failed
 at the `gleam/bit_array.pad_to_bytes` linkage check. From the
@@ -117,6 +118,8 @@ Rust tests:
 (cd envoy/fixtures/embedding/gleam && gleam deps download)
 (cd operating-system/fixtures/gleam && gleam deps download)
 (cd operating-system/fixtures/embedding/gleam && gleam deps download)
+(cd exception/fixtures/gleam && gleam deps download)
+(cd exception/fixtures/embedding/gleam && gleam deps download)
 (cd filepath/fixtures/gleam && gleam format --check && gleam check)
 (cd filepath/fixtures/embedding/gleam && gleam format --check && gleam check)
 (cd gleam-regexp/fixtures/gleam && gleam format --check && gleam check)
@@ -165,12 +168,16 @@ Rust tests:
 (cd operating-system/fixtures/gleam/build/packages/operating_system && shasum -a 256 -c ../../../../upstream.sha256)
 (cd operating-system/fixtures/gleam && gleam format --check && gleam check)
 (cd operating-system/fixtures/embedding/gleam && gleam format --check && gleam check)
+(cd exception/fixtures/gleam/build/packages/exception && shasum -a 256 -c ../../../../upstream.sha256)
+(cd exception/fixtures/gleam && gleam format --check && gleam check)
+(cd exception/fixtures/embedding/gleam && gleam format --check && gleam check)
 ```
 
-The platform, birl, splitter, envoy, and `operating_system` standalone Gleam
-fixtures can also run on Erlang with `gleam run` to check the original FFI as an
-independent behavioral reference. The envoy Erlang fixture uses an ASCII value;
-its embedding fixture separately checks Unicode values through Geam.
+The platform, birl, splitter, envoy, `operating_system`, and exception
+standalone Gleam fixtures can also run on Erlang with `gleam run` to check the
+original FFI as an independent behavioral reference. The envoy Erlang fixture
+uses an ASCII value; its embedding fixture separately checks Unicode values
+through Geam.
 The platform fixture asserts the macOS ARM64 or Linux x86_64 public result;
 the birl fixture checks portable date calculations and live clock calls:
 
@@ -180,6 +187,7 @@ the birl fixture checks portable date calculations and live clock calls:
 (cd splitter/fixtures/gleam && gleam run)
 (cd envoy/fixtures/gleam && gleam run)
 (cd operating-system/fixtures/gleam && gleam run)
+(cd exception/fixtures/gleam && gleam run)
 ```
 
 Use a `geam` CLI built from the same Git commit for the standalone and embedding
@@ -188,7 +196,7 @@ commit (a Git-package `cargo install` can resolve a published `geam-core`):
 
 ```sh
 git init -q target/geam-source
-git -C target/geam-source fetch --depth=1 https://github.com/panarch/geam.git cf5fb100c9220d9e30ff60a11d5bfbeb77f1ebef
+git -C target/geam-source fetch --depth=1 https://github.com/panarch/geam.git 5adbf4e654c6e4ca518e60babe19c3dc88532d4d
 git -C target/geam-source checkout --detach -q FETCH_HEAD
 CARGO_TARGET_DIR="$PWD/target/geam-cli-build" \
   cargo build --manifest-path "$PWD/target/geam-source/Cargo.toml" \
@@ -311,6 +319,12 @@ root workspace members. Check and run each separately:
 (cd operating-system/fixtures/embedding && cargo run --locked)
 (cd operating-system/fixtures/embedding && cargo clippy --all-targets --locked -- -D warnings)
 (cd operating-system/fixtures/embedding && RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --locked)
+(cd exception/fixtures/embedding && cargo fmt --all --check)
+(cd exception/fixtures/embedding && "$GEAM_BIN" embedding check)
+(cd exception/fixtures/embedding && cargo test --locked)
+(cd exception/fixtures/embedding && cargo run --locked)
+(cd exception/fixtures/embedding && cargo clippy --all-targets --locked -- -D warnings)
+(cd exception/fixtures/embedding && RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --locked)
 ```
 
 Each standalone fixture has its own Cargo lockfile too. Run `prepare`, `run`,
@@ -431,6 +445,12 @@ FIXTURE="$PWD/operating-system/fixtures/gleam"
 (cd "$FIXTURE" && "$GEAM_BIN" run)
 (cd "$FIXTURE" && "$GEAM_BIN" build)
 (cd /tmp && "$FIXTURE/build/geam/target/debug/geam_operating_system_fixture")
+
+FIXTURE="$PWD/exception/fixtures/gleam"
+(cd "$FIXTURE" && "$GEAM_BIN" prepare)
+(cd "$FIXTURE" && "$GEAM_BIN" run)
+(cd "$FIXTURE" && "$GEAM_BIN" build)
+(cd /tmp && "$FIXTURE/build/geam/target/debug/geam_exception_fixture")
 ```
 
 The `gleam-httpc` local server script binds only loopback, starts HTTP and
@@ -459,6 +479,7 @@ cargo package --list --package geam-argv --locked
 cargo package --list --package geam-splitter --locked
 cargo package --list --package geam-envoy --locked
 cargo package --list --package geam-operating-system --locked
+cargo package --list --package geam-exception --locked
 ```
 
 Confirm that each list contains `LICENSE` along with the manifest, README, and
@@ -667,6 +688,17 @@ source-backed Rust contract test compares the unmodified Gleam package's
 standalone fixture prints the original public `name()` result, and the
 embedding consumer checks the native target's expected source string.
 
+The `exception` provider declares Ubuntu for CI. Its Erlang oracle and Geam fixtures
+exercise the original Hex 2.1.1 declarations, failure recovery, cleanup order,
+and cleanup failure precedence. The embedding contract also catches a native
+stdlib failure and inspects its `Errored` diagnostic. Both consumers match
+`rescue` and rebuild a generic `Result`, including a panic-only callback and
+retained scalar, container, custom, codepoint, callable, and opaque `Dynamic`
+values through all three functions. They also check discarded cleanup return
+values. The Rust contract suite injects cancellation through a resumable
+callback and checks cleanup failure precedence after cancellation. See
+[exception/README.md](../../exception/README.md) for the exact boundary.
+
 The workflow needs only read access to the repository. It does not publish a
 crate or assume that a Git-pinned provider can already be uploaded to crates.io.
 After the repository is pushed, the hosted job results must be checked
@@ -773,6 +805,11 @@ cargo llvm-cov --package geam-operating-system --locked \
   --json --summary-only --output-path target/operating-system-coverage.json \
   --fail-under-lines 100 \
   --fail-under-regions 100
+cargo llvm-cov clean --workspace
+cargo llvm-cov --package geam-exception --locked \
+  --json --summary-only --output-path target/exception-coverage.json \
+  --fail-under-lines 100 \
+  --fail-under-regions 100
 ```
 
 Read each package file entry in its JSON report to confirm line and region counts
@@ -783,11 +820,12 @@ code, but its coverage must not compensate for missing owner coverage. Run the
 same closure on every declared OS so conditional source paths are included.
 
 For Houdini, gzlib, platform, term_size, birl, global_value, argv, splitter,
-envoy, and operating_system, confirm the `houdini/src/lib.rs`, `gzlib/src/lib.rs`,
-`platform/src/lib.rs`, `term-size/src/lib.rs`, `birl/src/lib.rs`,
+envoy, operating_system, and exception, confirm the `houdini/src/lib.rs`,
+`gzlib/src/lib.rs`, `platform/src/lib.rs`, `term-size/src/lib.rs`,
+`birl/src/lib.rs`,
 `global-value/src/lib.rs`, `argv/src/lib.rs`, `splitter/src/lib.rs`,
-`envoy/src/lib.rs`, `envoy/src/state.rs`, and `operating-system/src/lib.rs` file
-counts directly.
+`envoy/src/lib.rs`, `envoy/src/state.rs`, `operating-system/src/lib.rs`, and
+`exception/src/lib.rs` file counts directly.
 
 When a gap is unclear, inspect region and monomorph detail for the affected
 package:

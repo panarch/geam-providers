@@ -1,0 +1,14 @@
+[package]
+name = "geam-exception-embedding"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.96"
+publish = false
+
+[dependencies]
+geam = { git = "https://github.com/panarch/geam.git", rev = "5adbf4e654c6e4ca518e60babe19c3dc88532d4d", default-features = false, features = ["embedding", "gleam-stdlib", "tokio", "geam-builtin"] }
+geam-exception = { path = "../.." }
+tokio = { version = "1.53.1", default-features = false, features = ["rt"] }
+
+[workspace]
+resolver = "3"
