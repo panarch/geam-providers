@@ -20,7 +20,7 @@ The initial CI target is Ubuntu. Other operating systems are not claimed as
 verified until their provider and fixture checks run there.
 
 Geam is pinned to `main` commit
-`cf5fb100c9220d9e30ff60a11d5bfbeb77f1ebef`. The
+`5adbf4e654c6e4ca518e60babe19c3dc88532d4d`. The
 [standalone fixture](fixtures/gleam/) selects this provider, and the
 [embedding fixture](fixtures/embedding/) directly depends on the crate. Both
 use the original package from Hex. The [source contract](fixtures/CONTRACTS.md)

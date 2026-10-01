@@ -27,7 +27,7 @@ concurrency:
 
 env:
   CARGO_TERM_COLOR: always
-  GEAM_REV: cf5fb100c9220d9e30ff60a11d5bfbeb77f1ebef
+  GEAM_REV: 5adbf4e654c6e4ca518e60babe19c3dc88532d4d
 
 jobs:
   providers:
