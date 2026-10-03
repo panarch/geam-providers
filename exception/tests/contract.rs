@@ -71,7 +71,9 @@ fn original_exception_source_preserves_results_and_cleanup_order() {
                 );
             }),
         )
-        .expect("host execution completes");
+        .expect("host execution completes")
+        .try_into_value()
+        .expect("source execution returns normally");
 
     let output = state
         .stdlib()
@@ -186,7 +188,9 @@ fn callback_cancellation_keeps_its_execution_domain_and_cleanup_boundary() {
                     scope.call(function, ()).await
                 }),
             )
-            .unwrap();
+            .unwrap()
+            .try_into_value()
+            .expect("source execution returns normally");
         assert_eq!(result, expected_result);
         let output = state
             .stdlib()

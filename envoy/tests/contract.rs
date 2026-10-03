@@ -95,7 +95,9 @@ fn unchanged_gleam_source_observes_result_and_dict_after_mutations() {
                     .expect("source set");
             }),
         )
-        .expect("first execution completes");
+        .expect("first execution completes")
+        .try_into_value()
+        .expect("source execution returns normally");
     executor
         .block_on(
             module.with_execution(&host, &mut state, &mut echo, async |scope| {
@@ -113,7 +115,9 @@ fn unchanged_gleam_source_observes_result_and_dict_after_mutations() {
                 );
             }),
         )
-        .expect("reused state completes");
+        .expect("reused state completes")
+        .try_into_value()
+        .expect("source execution returns normally");
     executor
         .block_on(
             module.with_execution(&host, &mut state, &mut echo, async |scope| {
@@ -155,6 +159,8 @@ fn unchanged_gleam_source_observes_result_and_dict_after_mutations() {
                 );
             }),
         )
-        .expect("invalid inputs are reported at the host boundary");
+        .expect("invalid inputs are reported at the host boundary")
+        .try_into_value()
+        .expect("source execution returns normally");
     assert!(echo.is_empty());
 }

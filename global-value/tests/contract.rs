@@ -364,7 +364,7 @@ fn original_source_initializes_once_across_concurrent_processes() {
     let result = host.poll(driver.as_mut());
     assert_eq!(
         result.map(Result::unwrap),
-        std::task::Poll::Ready(geam::Value::Bool(true))
+        std::task::Poll::Ready(geam::ExecutionOutcome::Returned(geam::Value::Bool(true)))
     );
 }
 
@@ -385,7 +385,7 @@ fn cancelled_initialiser_releases_name_for_another_process() {
     let result = host.poll(driver.as_mut());
     assert_eq!(
         result.map(|result| result.expect("cancelled name can be reinitialised")),
-        std::task::Poll::Ready(geam::Value::Bool(true))
+        std::task::Poll::Ready(geam::ExecutionOutcome::Returned(geam::Value::Bool(true)))
     );
 }
 
@@ -406,6 +406,6 @@ fn failed_initialiser_releases_name_for_another_process() {
     let result = host.poll(driver.as_mut());
     assert_eq!(
         result.map(|result| result.expect("failed name can be reinitialised")),
-        std::task::Poll::Ready(geam::Value::Bool(true))
+        std::task::Poll::Ready(geam::ExecutionOutcome::Returned(geam::Value::Bool(true)))
     );
 }

@@ -177,7 +177,9 @@ mod terminal_contract {
                     }
                 }),
             )
-            .expect("host execution completes");
+            .expect("host execution completes")
+            .try_into_value()
+            .expect("source execution returns normally");
         assert!(echo.is_empty());
     }
 

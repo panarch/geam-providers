@@ -17,60 +17,63 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     .initialize()?;
     let mut echo = Vec::new();
 
-    executor.block_on(
-        module.with_execution(&host, &mut state, &mut echo, async |scope| {
-            assert!(
-                scope
-                    .call(&functions.verify, ())
+    executor
+        .block_on(
+            module.with_execution(&host, &mut state, &mut echo, async |scope| {
+                assert!(
+                    scope
+                        .call(&functions.verify, ())
+                        .await
+                        .expect("source contract")
+                );
+                assert_eq!(
+                    scope
+                        .call(&functions.random_four, ())
+                        .await
+                        .expect("OS entropy")
+                        .bytes()
+                        .len(),
+                    4,
+                );
+                let failure = scope
+                    .call(&functions.random_negative, ())
                     .await
-                    .expect("source contract")
-            );
-            assert_eq!(
-                scope
-                    .call(&functions.random_four, ())
+                    .expect_err("negative byte count fails");
+                assert!(
+                    failure
+                        .to_string()
+                        .contains("random byte count must be nonnegative")
+                );
+                let failure = scope
+                    .call(&functions.partial_hash, ())
                     .await
-                    .expect("OS entropy")
-                    .bytes()
-                    .len(),
-                4,
-            );
-            let failure = scope
-                .call(&functions.random_negative, ())
-                .await
-                .expect_err("negative byte count fails");
-            assert!(
-                failure
-                    .to_string()
-                    .contains("random byte count must be nonnegative")
-            );
-            let failure = scope
-                .call(&functions.partial_hash, ())
-                .await
-                .expect_err("partial hash input fails");
-            assert!(
-                failure
-                    .to_string()
-                    .contains("crypto input must contain complete bytes")
-            );
-            let failure = scope
-                .call(&functions.partial_hmac_data, ())
-                .await
-                .expect_err("partial HMAC data fails");
-            assert!(
-                failure
-                    .to_string()
-                    .contains("crypto input must contain complete bytes")
-            );
-            let failure = scope
-                .call(&functions.partial_hmac_key, ())
-                .await
-                .expect_err("partial HMAC key fails");
-            assert!(
-                failure
-                    .to_string()
-                    .contains("crypto input must contain complete bytes")
-            );
-        }),
-    )?;
+                    .expect_err("partial hash input fails");
+                assert!(
+                    failure
+                        .to_string()
+                        .contains("crypto input must contain complete bytes")
+                );
+                let failure = scope
+                    .call(&functions.partial_hmac_data, ())
+                    .await
+                    .expect_err("partial HMAC data fails");
+                assert!(
+                    failure
+                        .to_string()
+                        .contains("crypto input must contain complete bytes")
+                );
+                let failure = scope
+                    .call(&functions.partial_hmac_key, ())
+                    .await
+                    .expect_err("partial HMAC key fails");
+                assert!(
+                    failure
+                        .to_string()
+                        .contains("crypto input must contain complete bytes")
+                );
+            }),
+        )?
+        .try_into_value()
+        .map_err(|status| format!("unexpected application exit {status}"))?;
     Ok(())
 }

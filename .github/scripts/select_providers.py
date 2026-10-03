@@ -12,7 +12,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 PATH_DEPENDENCY = re.compile(r'\bpath\s*=\s*"([^"]+)"')
 DIRECTORIES_PROVIDERS = ("envoy", "filepath", "platform", "simplifile")
-DIRECTORIES_CI_PATHS = {
+CLIP_PROVIDERS = ("argv", "filepath", "gleam-regexp", "simplifile")
+INTEGRATION_CI_PATHS = {
     ".github/workflows/ci.yml",
     ".github/scripts/select_providers.py",
     ".github/scripts/test_select_providers.py",
@@ -196,9 +197,9 @@ def affected_providers(paths, rows, dependencies, added_members=(), manifest_saf
     return affected, "affected providers"
 
 
-def directories_workspace_dependencies(root=ROOT):
+def integration_workspace_dependencies(providers, root=ROOT):
     names = set()
-    for directory in DIRECTORIES_PROVIDERS:
+    for directory in providers:
         sections = manifest_sections((root / directory / "Cargo.toml").read_text())
         for line in sections["dependencies"]:
             if line.startswith("#") or "workspace" not in line:
@@ -213,6 +214,14 @@ def directories_workspace_dependencies(root=ROOT):
     return names
 
 
+def directories_workspace_dependencies(root=ROOT):
+    return integration_workspace_dependencies(DIRECTORIES_PROVIDERS, root)
+
+
+def clip_workspace_dependencies(root=ROOT):
+    return integration_workspace_dependencies(CLIP_PROVIDERS, root)
+
+
 def relevant_workspace_manifest_change(before, after, dependency_names):
     def relevant(content):
         sections = manifest_sections(content)
@@ -225,23 +234,27 @@ def relevant_workspace_manifest_change(before, after, dependency_names):
         sections["workspace"] = [
             line for line in sections["workspace"] if not line.startswith("members")
         ]
-        sections["workspace.dependencies"] = [
-            line for line in sections["workspace.dependencies"]
-            if re.match(r"([A-Za-z0-9_-]+)\s*=", line)
-            and line.split("=", 1)[0].strip() in dependency_names
-        ]
+        dependencies = []
+        for line in sections["workspace.dependencies"]:
+            match = re.fullmatch(r"([A-Za-z0-9_-]+)\s*=\s*(.+)", line)
+            if not match:
+                raise ValueError("Unsupported workspace dependency format")
+            if match.group(1) in dependency_names:
+                dependencies.append(line)
+        sections["workspace.dependencies"] = dependencies
         return sections
 
     return relevant(before) != relevant(after)
 
 
-def run_directories_for_changes(
-    paths, root_manifest_before=None, root_manifest_after=None, workspace_dependencies=()
+def run_integration_for_changes(
+    paths, integration, providers, root_manifest_before, root_manifest_after,
+    workspace_dependencies,
 ):
     if any(
-        path.startswith("integrations/directories/")
-        or any(path.startswith(directory + "/") for directory in DIRECTORIES_PROVIDERS)
-        or path in DIRECTORIES_CI_PATHS
+        path.startswith("integrations/" + integration + "/")
+        or any(path.startswith(directory + "/") for directory in providers)
+        or path in INTEGRATION_CI_PATHS
         for path in paths
     ):
         return True
@@ -251,6 +264,24 @@ def run_directories_for_changes(
         raise ValueError("Missing root Cargo manifest for change analysis")
     return relevant_workspace_manifest_change(
         root_manifest_before, root_manifest_after, workspace_dependencies
+    )
+
+
+def run_directories_for_changes(
+    paths, root_manifest_before=None, root_manifest_after=None, workspace_dependencies=()
+):
+    return run_integration_for_changes(
+        paths, "directories", DIRECTORIES_PROVIDERS,
+        root_manifest_before, root_manifest_after, workspace_dependencies,
+    )
+
+
+def run_clip_for_changes(
+    paths, root_manifest_before=None, root_manifest_after=None, workspace_dependencies=()
+):
+    return run_integration_for_changes(
+        paths, "clip", CLIP_PROVIDERS,
+        root_manifest_before, root_manifest_after, workspace_dependencies,
     )
 
 
@@ -295,11 +326,22 @@ def main():
             root_manifest_after,
             directories_workspace_dependencies(),
         )
+        run_clip = run_clip_for_changes(
+            paths,
+            root_manifest_before,
+            root_manifest_after,
+            clip_workspace_dependencies(),
+        )
     except (KeyError, OSError, subprocess.CalledProcessError, TypeError, UnicodeError, ValueError):
         selected, reason = all_crates, "change analysis unavailable"
         run_directories = True
+        run_clip = True
     print("CI selection: {}".format(reason), file=sys.stderr)
-    print(json.dumps({"providers": sorted(selected), "run_directories": run_directories}))
+    print(json.dumps({
+        "providers": sorted(selected),
+        "run_directories": run_directories,
+        "run_clip": run_clip,
+    }))
 
 
 if __name__ == "__main__":

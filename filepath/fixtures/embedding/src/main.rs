@@ -18,15 +18,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     .initialize()?;
     let mut echo = Vec::new();
 
-    executor.block_on(
-        module.with_execution(&host, &mut state, &mut echo, async |scope| {
-            assert!(
-                scope
-                    .call(&functions.verify, (cfg!(windows),))
-                    .await
-                    .expect("original filepath contract")
-            );
-        }),
-    )?;
+    executor
+        .block_on(
+            module.with_execution(&host, &mut state, &mut echo, async |scope| {
+                assert!(
+                    scope
+                        .call(&functions.verify, (cfg!(windows),))
+                        .await
+                        .expect("original filepath contract")
+                );
+            }),
+        )?
+        .try_into_value()
+        .map_err(|status| format!("unexpected application exit {status}"))?;
     Ok(())
 }

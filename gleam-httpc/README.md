@@ -7,7 +7,7 @@ Geam. The original Gleam code still owns `send`, `dispatch`, `send_bits`, and
 and native error conversion. It uses Geam's `gleam_erlang` service for the
 package's `Charlist` values. The supported Gleam range is exactly 5.0.0, and
 the Geam dependency is pinned to `main` commit
-`5adbf4e654c6e4ca518e60babe19c3dc88532d4d`.
+`e5e1f5f772c6f48369050bdf3ee35c7a324277e2`.
 
 Add `gleam_httpc` to the Gleam project, then select this crate for that package
 with Geam's `provider add --path` command. Embedding applications depend on

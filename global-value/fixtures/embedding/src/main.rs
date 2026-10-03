@@ -17,25 +17,28 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut echo = Vec::new();
 
     for initial_value in [41, 99] {
-        executor.block_on(
-            module.with_execution(&host, &mut state, &mut echo, async |scope| {
-                assert_eq!(
-                    scope
-                        .call(&functions.first, (initial_value.into(),))
-                        .await
-                        .expect("first"),
-                    initial_value.into(),
-                );
-                assert_eq!(
-                    scope.call(&functions.second, ()).await.expect("second"),
-                    initial_value.into(),
-                );
-                assert_eq!(
-                    scope.call(&functions.other, ()).await.expect("other"),
-                    7.into()
-                );
-            }),
-        )?;
+        executor
+            .block_on(
+                module.with_execution(&host, &mut state, &mut echo, async |scope| {
+                    assert_eq!(
+                        scope
+                            .call(&functions.first, (initial_value.into(),))
+                            .await
+                            .expect("first"),
+                        initial_value.into(),
+                    );
+                    assert_eq!(
+                        scope.call(&functions.second, ()).await.expect("second"),
+                        initial_value.into(),
+                    );
+                    assert_eq!(
+                        scope.call(&functions.other, ()).await.expect("other"),
+                        7.into()
+                    );
+                }),
+            )?
+            .try_into_value()
+            .map_err(|status| format!("unexpected application exit {status}"))?;
     }
     Ok(())
 }

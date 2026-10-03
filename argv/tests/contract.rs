@@ -58,7 +58,9 @@ fn original_argv_load_uses_the_host_snapshot_and_repeats_it() {
                 );
             }),
         )
-        .expect("source execution succeeds");
+        .expect("source execution succeeds")
+        .try_into_value()
+        .expect("source execution returns normally");
 }
 
 #[test]
@@ -96,5 +98,7 @@ fn original_argv_load_accepts_an_empty_argument_list() {
                 );
             }),
         )
-        .expect("source execution succeeds");
+        .expect("source execution succeeds")
+        .try_into_value()
+        .expect("source execution returns normally");
 }

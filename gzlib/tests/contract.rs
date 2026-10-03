@@ -77,7 +77,9 @@ fn original_gleam_contract_and_erlang_zlib_interoperability() {
                     .expect("public compress call")
             }),
         )
-        .expect("host execution completes");
+        .expect("host execution completes")
+        .try_into_value()
+        .expect("source execution returns normally");
     assert!(echo.is_empty());
 
     let bytes = compressed

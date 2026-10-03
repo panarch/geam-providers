@@ -27,7 +27,7 @@ concurrency:
 
 env:
   CARGO_TERM_COLOR: always
-  GEAM_REV: 5adbf4e654c6e4ca518e60babe19c3dc88532d4d
+  GEAM_REV: e5e1f5f772c6f48369050bdf3ee35c7a324277e2
 
 jobs:
   providers:
@@ -40,6 +40,7 @@ jobs:
       has_targets: ${{ steps.matrix.outputs.has_targets }}
       coverage_only: ${{ steps.matrix.outputs.coverage_only }}
       run_directories: ${{ steps.matrix.outputs.run_directories }}
+      run_clip: ${{ steps.matrix.outputs.run_clip }}
 
     steps:
       - name: Checkout
@@ -106,6 +107,7 @@ jobs:
             }
             echo "coverage_only=true" >> "$GITHUB_OUTPUT"
             echo "run_directories=false" >> "$GITHUB_OUTPUT"
+            echo "run_clip=false" >> "$GITHUB_OUTPUT"
           else
             if [[ "$CI_EVENT" == push || "$CI_EVENT" == pull_request ]]; then
               selected="$(PROVIDER_ROWS="$provider_rows" python3 .github/scripts/select_providers.py)"
@@ -113,13 +115,17 @@ jobs:
                 {include: [.include[] | select(.crate as $crate | $selected.providers | index($crate) != null)]}
               ' <<< "$targets")"
               run_directories="$(jq -r '.run_directories' <<< "$selected")"
+              run_clip="$(jq -r '.run_clip' <<< "$selected")"
             elif [[ "$RUN_INTEGRATIONS" == true ]]; then
               run_directories=true
+              run_clip=true
             else
               run_directories=false
+              run_clip=false
             fi
             echo "coverage_only=false" >> "$GITHUB_OUTPUT"
             echo "run_directories=$run_directories" >> "$GITHUB_OUTPUT"
+            echo "run_clip=$run_clip" >> "$GITHUB_OUTPUT"
           fi
           echo "providers=$(jq -c '{include: map(del(.runners))}' <<< "$provider_rows")" >> "$GITHUB_OUTPUT"
           echo "targets=$targets" >> "$GITHUB_OUTPUT"
@@ -489,7 +495,7 @@ jobs:
   integrations:
     name: Validate integrations (${{ matrix.runner }})
     needs: providers
-    if: needs.providers.outputs.coverage_only != 'true' && needs.providers.outputs.run_directories == 'true'
+    if: needs.providers.outputs.coverage_only != 'true' && (needs.providers.outputs.run_directories == 'true' || needs.providers.outputs.run_clip == 'true')
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 60
     defaults:
@@ -526,8 +532,12 @@ jobs:
             . -> target/geam-cli-build
             integrations/directories/fixtures/gleam -> build/geam/target
             integrations/directories/fixtures/embedding -> target
+            integrations/clip/fixtures/gleam -> build/geam/target
+            integrations/clip/fixtures/cli -> build/geam/target
+            integrations/clip/fixtures/embedding -> target
 
-      - name: Check Geam revision in integration fixtures
+      - name: Check Geam revision in directories fixtures
+        if: needs.providers.outputs.run_directories == 'true'
         run: |
           for manifest in \
             integrations/directories/fixtures/embedding/Cargo.toml \
@@ -547,12 +557,14 @@ jobs:
           done
 
       - name: Download original directories dependencies
+        if: needs.providers.outputs.run_directories == 'true'
         run: |
           for fixture in gleam embedding/gleam; do
             (cd "integrations/directories/fixtures/$fixture" && gleam deps download)
           done
 
       - name: Check original directories package
+        if: needs.providers.outputs.run_directories == 'true'
         working-directory: integrations/directories/fixtures/gleam/build/packages/directories
         run: |
           if command -v sha256sum >/dev/null; then
@@ -562,24 +574,29 @@ jobs:
           fi
 
       - name: Check directories Gleam source
+        if: needs.providers.outputs.run_directories == 'true'
         run: |
           for fixture in gleam embedding/gleam; do
             (cd "integrations/directories/fixtures/$fixture" && gleam format --check && gleam check)
           done
 
       - name: Run directories Erlang reference
+        if: needs.providers.outputs.run_directories == 'true'
         working-directory: integrations/directories/fixtures/gleam
         run: gleam run
 
       - name: Check directories embedding Rust formatting
+        if: needs.providers.outputs.run_directories == 'true'
         working-directory: integrations/directories/fixtures/embedding
         run: cargo fmt --all --check
 
       - name: Lint directories embedding consumer
+        if: needs.providers.outputs.run_directories == 'true'
         working-directory: integrations/directories/fixtures/embedding
         run: cargo clippy --all-targets --locked -- -D warnings
 
       - name: Build directories embedding documentation
+        if: needs.providers.outputs.run_directories == 'true'
         working-directory: integrations/directories/fixtures/embedding
         env:
           RUSTDOCFLAGS: -D warnings
@@ -603,6 +620,7 @@ jobs:
           fi
 
       - name: Check directories generated embedding bindings
+        if: needs.providers.outputs.run_directories == 'true'
         working-directory: integrations/directories/fixtures/embedding
         run: |
           if ! "$GEAM_BIN" embedding check; then
@@ -612,26 +630,32 @@ jobs:
           fi
 
       - name: Test directories embedding consumer
+        if: needs.providers.outputs.run_directories == 'true'
         working-directory: integrations/directories/fixtures/embedding
         run: cargo test --locked
 
       - name: Run directories embedding consumer
+        if: needs.providers.outputs.run_directories == 'true'
         working-directory: integrations/directories/fixtures/embedding
         run: cargo run --locked
 
       - name: Prepare directories standalone consumer
+        if: needs.providers.outputs.run_directories == 'true'
         working-directory: integrations/directories/fixtures/gleam
         run: '"$GEAM_BIN" prepare'
 
       - name: Run directories standalone consumer
+        if: needs.providers.outputs.run_directories == 'true'
         working-directory: integrations/directories/fixtures/gleam
         run: '"$GEAM_BIN" run'
 
       - name: Build directories standalone executable
+        if: needs.providers.outputs.run_directories == 'true'
         working-directory: integrations/directories/fixtures/gleam
         run: '"$GEAM_BIN" build'
 
       - name: Run directories executable outside its fixture
+        if: needs.providers.outputs.run_directories == 'true'
         run: |
           if [[ "$RUNNER_OS" == Windows ]]; then
             workspace="$(cygpath -u "$GITHUB_WORKSPACE")"
@@ -644,3 +668,173 @@ jobs:
           fi
           cd "$temp"
           "$workspace/integrations/directories/fixtures/gleam/build/geam/target/debug/$executable"
+
+      - name: Check Geam revision in clip fixtures
+        if: needs.providers.outputs.run_clip == 'true'
+        run: |
+          for manifest in \
+            integrations/clip/fixtures/embedding/Cargo.toml \
+            integrations/clip/fixtures/native/Cargo.toml \
+            integrations/clip/fixtures/gleam/.cargo/config.toml \
+            integrations/clip/fixtures/cli/.cargo/config.toml; do
+            grep -Fq "rev = \"$GEAM_REV\"" "$manifest" || {
+              echo "::error file=$manifest::Geam revision differs from CI"
+              exit 1
+            }
+          done
+          for lock in \
+            integrations/clip/fixtures/embedding/Cargo.lock \
+            integrations/clip/fixtures/native/Cargo.lock \
+            integrations/clip/fixtures/gleam/Cargo.lock \
+            integrations/clip/fixtures/cli/Cargo.lock; do
+            grep -Fq "$GEAM_REV#$GEAM_REV" "$lock" || {
+              echo "::error file=$lock::Geam revision is absent from lockfile"
+              exit 1
+            }
+          done
+
+      - name: Download original clip dependencies
+        if: needs.providers.outputs.run_clip == 'true'
+        run: |
+          for fixture in gleam cli embedding/gleam; do
+            (cd "integrations/clip/fixtures/$fixture" && gleam deps download)
+          done
+
+      - name: Check original clip package
+        if: needs.providers.outputs.run_clip == 'true'
+        run: |
+          checksum="$PWD/integrations/clip/fixtures/upstream.sha256"
+          for fixture in gleam cli embedding/gleam; do
+            (
+              cd "integrations/clip/fixtures/$fixture/build/packages/clip"
+              if command -v sha256sum >/dev/null; then
+                sha256sum --check "$checksum"
+              else
+                shasum -a 256 -c "$checksum"
+              fi
+            )
+          done
+
+      - name: Check clip Gleam source
+        if: needs.providers.outputs.run_clip == 'true'
+        run: |
+          for fixture in gleam cli embedding/gleam; do
+            (cd "integrations/clip/fixtures/$fixture" && gleam format --check && gleam check)
+          done
+
+      - name: Run clip Erlang references
+        if: needs.providers.outputs.run_clip == 'true'
+        run: |
+          (cd integrations/clip/fixtures/gleam && gleam run)
+          (cd integrations/clip/fixtures/cli && gleam run -- --help)
+          project="$PWD/integrations/clip/fixtures/cli"
+          contracts="$PWD/integrations/clip/fixtures/gleam"
+          if [[ "$RUNNER_OS" == Windows ]]; then
+            project="$(cygpath -w "$project")"
+            contracts="$(cygpath -w "$contracts")"
+          fi
+          python3 integrations/clip/fixtures/cli/check_cli.py --contracts --erlang-project "$contracts"
+          python3 integrations/clip/fixtures/cli/check_cli.py --erlang-project "$project"
+
+      - name: Check clip application native adapter
+        if: needs.providers.outputs.run_clip == 'true'
+        working-directory: integrations/clip/fixtures/native
+        env:
+          CARGO_TARGET_DIR: ../embedding/target
+          RUSTDOCFLAGS: -D warnings
+        run: |
+          cargo fmt --all --check
+          cargo clippy --all-targets --locked -- -D warnings
+          cargo doc --no-deps --locked
+
+      - name: Check clip embedding Rust formatting
+        if: needs.providers.outputs.run_clip == 'true'
+        working-directory: integrations/clip/fixtures/embedding
+        run: cargo fmt --all --check
+
+      - name: Lint clip embedding consumer
+        if: needs.providers.outputs.run_clip == 'true'
+        working-directory: integrations/clip/fixtures/embedding
+        run: cargo clippy --all-targets --locked -- -D warnings
+
+      - name: Build clip embedding documentation
+        if: needs.providers.outputs.run_clip == 'true'
+        working-directory: integrations/clip/fixtures/embedding
+        env:
+          RUSTDOCFLAGS: -D warnings
+        run: cargo doc --no-deps --locked
+
+      - name: Check clip generated embedding bindings
+        if: needs.providers.outputs.run_clip == 'true'
+        working-directory: integrations/clip/fixtures/embedding
+        run: |
+          if ! "$GEAM_BIN" embedding check; then
+            "$GEAM_BIN" embedding sync
+            git diff --unified=1 -- src/geam_bindings.rs | sed -n '1,120p'
+            exit 1
+          fi
+
+      - name: Test clip embedding consumer
+        if: needs.providers.outputs.run_clip == 'true'
+        working-directory: integrations/clip/fixtures/embedding
+        run: cargo test --locked
+
+      - name: Run clip embedding consumer
+        if: needs.providers.outputs.run_clip == 'true'
+        working-directory: integrations/clip/fixtures/embedding
+        run: cargo run --locked
+
+      - name: Prepare clip standalone consumers
+        if: needs.providers.outputs.run_clip == 'true'
+        run: |
+          for fixture in gleam cli; do
+            (cd "integrations/clip/fixtures/$fixture" && "$GEAM_BIN" prepare)
+          done
+
+      - name: Run clip standalone consumers
+        if: needs.providers.outputs.run_clip == 'true'
+        run: |
+          (cd integrations/clip/fixtures/gleam && "$GEAM_BIN" run)
+          cd integrations/clip/fixtures/cli
+          "$GEAM_BIN" run -m argv_contracts -- '' 'space value' -- -dash 한글
+          "$GEAM_BIN" run -- search -p Rust ../../README.md
+
+      - name: Build clip standalone executables
+        if: needs.providers.outputs.run_clip == 'true'
+        run: |
+          for fixture in gleam cli; do
+            (cd "integrations/clip/fixtures/$fixture" && "$GEAM_BIN" build)
+          done
+
+      - name: Check clip application exit status through Geam run
+        if: needs.providers.outputs.run_clip == 'true'
+        run: |
+          project="$PWD/integrations/clip/fixtures/cli"
+          geam="$GEAM_BIN"
+          if [[ "$RUNNER_OS" == Windows ]]; then
+            project="$(cygpath -w "$project")"
+            geam="$(cygpath -w "$geam")"
+          fi
+          python3 integrations/clip/fixtures/cli/check_cli.py --geam-project "$project" --geam-bin "$geam"
+
+      - name: Run clip executables outside their fixtures
+        if: needs.providers.outputs.run_clip == 'true'
+        run: |
+          if [[ "$RUNNER_OS" == Windows ]]; then
+            workspace="$(cygpath -u "$GITHUB_WORKSPACE")"
+            temp="$(cygpath -u "$RUNNER_TEMP")"
+            suffix=.exe
+          else
+            workspace="$GITHUB_WORKSPACE"
+            temp="$RUNNER_TEMP"
+            suffix=''
+          fi
+          cd "$temp"
+          contracts="$workspace/integrations/clip/fixtures/gleam/build/geam/target/debug/geam_clip_fixture$suffix"
+          executable="$workspace/integrations/clip/fixtures/cli/build/geam/target/debug/geam_clip_search$suffix"
+          if [[ "$RUNNER_OS" == Windows ]]; then
+            executable="$(cygpath -w "$executable")"
+            contracts="$(cygpath -w "$contracts")"
+          fi
+          python3 "$workspace/integrations/clip/fixtures/cli/check_cli.py" --contracts --executable "$contracts"
+          python3 "$workspace/integrations/clip/fixtures/cli/check_cli.py" --executable "$executable"

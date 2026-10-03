@@ -140,7 +140,9 @@ fn original_birl_uses_injected_wall_time_offset_timezone_and_monotonic_order() {
                 );
             }),
         )
-        .expect("source execution completes");
+        .expect("source execution completes")
+        .try_into_value()
+        .expect("source execution returns normally");
 
     for timezone in [Some("Not/AZone"), None] {
         let mut state = run_state(timezone);
@@ -156,6 +158,8 @@ fn original_birl_uses_injected_wall_time_offset_timezone_and_monotonic_order() {
                     );
                 }),
             )
-            .expect("timezone absence is a successful run");
+            .expect("timezone absence is a successful run")
+            .try_into_value()
+            .expect("source execution returns normally");
     }
 }

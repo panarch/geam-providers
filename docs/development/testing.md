@@ -62,11 +62,19 @@ Its common Gleam scenario runs on original Erlang and Geam standalone, while
 the Rust embedding consumer also checks isolated initialization and state.
 The package's 11 public functions are checked against exact OS-specific
 expectations, including expected errors and representative fallback paths.
+The [`clip` 1.2.2 case](../../integrations/clip/README.md) runs the complete
+package contract and a file-search CLI with `geam-argv`, `geam-simplifile`,
+`geam-filepath`, and `geam-regexp`. Its embedding host owns argument snapshots,
+IO and temporary files, and checks structured outcomes through typed Gleam
+projections, repeated execution, state isolation and recovery after errors.
+An unpublished, application-owned native fixture maps the CLI's exit request
+to Geam's public `Call::exit` API. The embedding host checks `Exited(1/2)`,
+output before exit, prevented continuation, and fresh scopes after exit.
 
 ## Dependency Preparation
 
 The Rust workspace, fixture consumers, and report service example use Geam
-`main` commit `5adbf4e654c6e4ca518e60babe19c3dc88532d4d`. Houdini also
+`main` commit `e5e1f5f772c6f48369050bdf3ee35c7a324277e2`. Houdini also
 uses the public `geam-core` byte-slice helper from that commit. The Gleam
 projects resolve the unmodified `filepath` 1.1.2, `gleam_regexp` 1.1.1,
 `gleam_otp` 1.3.0, `houdini` 1.2.0, `gzlib` 2.0.0, `gleam_crypto` 1.6.0,
@@ -173,6 +181,18 @@ Rust tests:
 (cd exception/fixtures/embedding/gleam && gleam format --check && gleam check)
 ```
 
+When updating the common Geam revision, rebuild the pinned CLI and synchronize
+the OTP and httpc prepared embedding data before running the Rust workspace
+checks. These generated programs target that commit's prepared representation:
+
+```sh
+(cd gleam-otp/fixtures/embedding && "$GEAM_BIN" embedding sync)
+(cd gleam-httpc/fixtures/embedding && "$GEAM_BIN" embedding sync)
+```
+
+Commit the generated changes together with the pin; use `embedding check` to
+verify that they match the fixed CLI, and never edit prepared data by hand.
+
 The platform, birl, splitter, envoy, `operating_system`, and exception
 standalone Gleam fixtures can also run on Erlang with `gleam run` to check the
 original FFI as an independent behavioral reference. The envoy Erlang fixture
@@ -196,7 +216,7 @@ commit (a Git-package `cargo install` can resolve a published `geam-core`):
 
 ```sh
 git init -q target/geam-source
-git -C target/geam-source fetch --depth=1 https://github.com/panarch/geam.git 5adbf4e654c6e4ca518e60babe19c3dc88532d4d
+git -C target/geam-source fetch --depth=1 https://github.com/panarch/geam.git e5e1f5f772c6f48369050bdf3ee35c7a324277e2
 git -C target/geam-source checkout --detach -q FETCH_HEAD
 CARGO_TARGET_DIR="$PWD/target/geam-cli-build" \
   cargo build --manifest-path "$PWD/target/geam-source/Cargo.toml" \
@@ -516,6 +536,47 @@ directory; the embedding consumer uses a Rust temporary directory. The
 original Erlang run is an independent behavioral reference, not a Geam
 execution mode.
 
+The `clip` case has separate package-contract, CLI, and embedding consumers:
+
+```sh
+for fixture in gleam cli embedding/gleam; do
+  (cd "integrations/clip/fixtures/$fixture" && gleam deps download && gleam format --check && gleam check)
+done
+clip_checksum="$PWD/integrations/clip/fixtures/upstream.sha256"
+for fixture in gleam cli embedding/gleam; do
+  (cd "integrations/clip/fixtures/$fixture/build/packages/clip" && if command -v sha256sum >/dev/null; then sha256sum --check "$clip_checksum"; else shasum -a 256 -c "$clip_checksum"; fi)
+done
+(cd integrations/clip/fixtures/gleam && gleam run && "$GEAM_BIN" prepare && "$GEAM_BIN" run && "$GEAM_BIN" build)
+python3 integrations/clip/fixtures/cli/check_cli.py --contracts --erlang-project integrations/clip/fixtures/gleam
+python3 integrations/clip/fixtures/cli/check_cli.py --contracts --executable integrations/clip/fixtures/gleam/build/geam/target/debug/geam_clip_fixture
+(cd integrations/clip/fixtures/cli && gleam run -- --help)
+python3 integrations/clip/fixtures/cli/check_cli.py --erlang-project integrations/clip/fixtures/cli
+(cd integrations/clip/fixtures/cli && "$GEAM_BIN" prepare && "$GEAM_BIN" run -m argv_contracts -- '' 'space value' -- -dash 한글 && "$GEAM_BIN" run -- search -p Rust ../../README.md && "$GEAM_BIN" build)
+python3 integrations/clip/fixtures/cli/check_cli.py --executable integrations/clip/fixtures/cli/build/geam/target/debug/geam_clip_search
+python3 integrations/clip/fixtures/cli/check_cli.py --geam-project integrations/clip/fixtures/cli --geam-bin "$GEAM_BIN"
+(cd integrations/clip/fixtures/native && cargo fmt --all --check && cargo clippy --all-targets --locked -- -D warnings)
+(cd integrations/clip/fixtures/native && RUSTDOCFLAGS='-D warnings' cargo doc --no-deps --locked)
+(cd integrations/clip/fixtures/embedding && cargo fmt --all --check && "$GEAM_BIN" embedding check && cargo test --locked && cargo run --locked)
+(cd integrations/clip/fixtures/embedding && cargo clippy --all-targets --locked -- -D warnings)
+(cd integrations/clip/fixtures/embedding && RUSTDOCFLAGS='-D warnings' cargo doc --no-deps --locked)
+```
+
+Execute `integrations/clip/fixtures/gleam/build/geam/target/debug/geam_clip_fixture`
+from outside the project as well. Use `.exe` on Windows; when invoking a native
+Windows Python from Bash, pass native paths (`cygpath -w`) for absolute project
+and executable arguments. The CLI harness creates and removes its own corpus
+outside the project and checks exact exit status and both streams. It runs 32
+portable cases and a native backslash-path case on Windows. Successful runs,
+no matches, and help exit with 0; file failures exit with 1; argument and
+pattern failures exit with 2. Ten additional `geam run` cases use absolute
+corpus paths because Geam launches from the project directory. They require
+the runner phase and successful Cargo build, then compare the complete app
+stderr, stdout and exact status; runner diagnostics after the build fail the
+check. Regexp behavior follows the
+`geam-regexp` backend contract. The four providers retain their independent
+100% line and full-scope region coverage gates; this integration has no new
+production crate and does not replace those owner suites.
+
 ## GitHub Actions
 
 The [CI workflow](../../.github/workflows/ci.yml) runs on pushes and pull
@@ -615,15 +676,21 @@ same 100% line and region coverage gate as a full PR run.
 
 The `integrations` job is separate from the provider matrix. It uses one job
 per OS (`ubuntu-24.04`, `macos-15`, `windows-2025`), building the pinned Geam
-CLI once per runner before running the original Erlang reference, standalone,
+CLI once per runner and runs selected original Erlang references, standalone,
 and embedding checks in sequence. The discovery job enables the `directories`
 case for changes under `integrations/directories/` or in `envoy/`, `platform/`,
 `simplifile/`, or `filepath/`, for relevant shared Cargo inputs, or for the CI
-workflow/selector. Unrelated provider and documentation changes do not start
-these OS jobs. Unavailable change analysis runs the case rather than risk
+workflow/selector. It independently enables `clip` for `integrations/clip/`,
+`argv/`, `gleam-regexp/`, `simplifile/`, `filepath/`, its workspace dependencies
+(`geam`, `regex`, `regex-syntax`), and shared CI changes. A filepath or simplifile
+change selects both cases; argv or regexp selects clip; envoy or platform
+selects directories. Adding an unrelated workspace member or changing an
+unused workspace dependency does not select either integration. Unrelated
+provider and documentation changes do not start these OS jobs. Unavailable
+change analysis runs both cases rather than risk
 missing it. Job-level selection keeps the main workflow active without a
 workflow-wide path filter. Ordinary manual runs omit integration; set the
-`run_integrations` workflow input to run it explicitly. A focused coverage run
+`run_integrations` workflow input to run both explicitly. A focused coverage run
 always omits integration, even if that input is also set. New package cases
 can be run sequentially in these OS jobs without multiplying jobs by the
 number of packages.
