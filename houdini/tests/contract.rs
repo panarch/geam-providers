@@ -80,12 +80,9 @@ fn original_houdini_runs_through_the_public_host_boundary() {
                 }
             }),
         )
-        .map(|outcome| {
-            outcome
-                .try_into_value()
-                .expect("fixture must return normally")
-        })
-        .expect("host execution completes");
+        .expect("host execution completes")
+        .try_into_value()
+        .expect("source execution returns normally");
 }
 
 #[test]
@@ -150,12 +147,9 @@ pub fn bad_slice() -> BitArray { slice(<<1, 2>>, -1, 1) }
                 (coerce_error, slice_error)
             }),
         )
-        .map(|outcome| {
-            outcome
-                .try_into_value()
-                .expect("fixture must return normally")
-        })
-        .expect("host execution completes");
+        .expect("host execution completes")
+        .try_into_value()
+        .expect("source execution returns normally");
     assert_eq!(
         coerce_error,
         "host function houdini::houdini/internal/escape_erl.coerce failed: houdini coerce: invalid conversion"

@@ -97,5 +97,10 @@ contains the mandatory commands and file-by-file 100% line/region coverage
 gate. CI declares Linux, macOS, and Windows; local execution is a separate
 result from hosted CI on those runners.
 
+The [fixture hook](fixtures/ci.sh) registers all four execution phases through
+the provider's Cargo metadata. Use the common
+[CI runner](../docs/development/ci.md#local-execution) for local execution;
+the shared workflow retains coverage, quality, binding, test, and package gates.
+
 The crate is intended for source-based use with the pinned Geam commit.
 Publication and consumption through released crates are separate steps.

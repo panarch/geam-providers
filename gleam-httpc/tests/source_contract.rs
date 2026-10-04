@@ -103,7 +103,7 @@ fn original_httpc_methods_options_binary_and_errors_use_typed_host_boundary() {
                     .await
                     .unwrap()
                     .try_into_value()
-                    .expect("fixture must return normally")
+                    .expect("source execution returns normally")
                     .unwrap();
                 assert!(result, "original gleam_httpc contract: {url}");
             }};

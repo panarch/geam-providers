@@ -363,11 +363,8 @@ fn original_source_initializes_once_across_concurrent_processes() {
     host.advance(std::time::Duration::from_millis(2));
     let result = host.poll(driver.as_mut());
     assert_eq!(
-        result.map(|result| result
-            .unwrap()
-            .try_into_value()
-            .expect("fixture must return normally")),
-        std::task::Poll::Ready(geam::Value::Bool(true))
+        result.map(Result::unwrap),
+        std::task::Poll::Ready(geam::ExecutionOutcome::Returned(geam::Value::Bool(true)))
     );
 }
 
@@ -387,11 +384,8 @@ fn cancelled_initialiser_releases_name_for_another_process() {
     let mut driver = Box::pin(execution.run_main(&host, &mut state, &mut echo));
     let result = host.poll(driver.as_mut());
     assert_eq!(
-        result.map(|result| result
-            .expect("cancelled name can be reinitialised")
-            .try_into_value()
-            .expect("fixture must return normally")),
-        std::task::Poll::Ready(geam::Value::Bool(true))
+        result.map(|result| result.expect("cancelled name can be reinitialised")),
+        std::task::Poll::Ready(geam::ExecutionOutcome::Returned(geam::Value::Bool(true)))
     );
 }
 
@@ -411,10 +405,7 @@ fn failed_initialiser_releases_name_for_another_process() {
     let mut driver = Box::pin(execution.run_main(&host, &mut state, &mut echo));
     let result = host.poll(driver.as_mut());
     assert_eq!(
-        result.map(|result| result
-            .expect("failed name can be reinitialised")
-            .try_into_value()
-            .expect("fixture must return normally")),
-        std::task::Poll::Ready(geam::Value::Bool(true))
+        result.map(|result| result.expect("failed name can be reinitialised")),
+        std::task::Poll::Ready(geam::ExecutionOutcome::Returned(geam::Value::Bool(true)))
     );
 }

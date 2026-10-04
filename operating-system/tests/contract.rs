@@ -53,10 +53,7 @@ fn original_gleam_name_matches_geam_hosted_name() {
                 assert_eq!(actual.as_str(), original_name);
             }),
         )
-        .map(|outcome| {
-            outcome
-                .try_into_value()
-                .expect("fixture must return normally")
-        })
-        .expect("host execution completes");
+        .expect("host execution completes")
+        .try_into_value()
+        .expect("source execution returns normally");
 }

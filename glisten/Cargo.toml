@@ -22,9 +22,10 @@ requires-services = ["gleam_erlang"]
 
 [package.metadata.geam.ci]
 fixture-bin = "geam_glisten_fixture"
-integration-case = "glisten"
 erlang-oracle = true
 runners = ["ubuntu-24.04", "macos-15", "windows-2025"]
+script = "fixtures/ci.sh"
+script-phases = ["erlang", "embedding", "standalone", "executable"]
 
 [dependencies]
 geam = { workspace = true, features = ["gleam-erlang"] }

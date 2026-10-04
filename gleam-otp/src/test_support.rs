@@ -142,7 +142,7 @@ pub(crate) fn run_observed_source(
         .map(|outcome| {
             outcome
                 .try_into_value()
-                .expect("fixture must return normally")
+                .expect("fixture entry returns normally")
         });
     assert!(echo.is_empty());
     let exits = state.observed.lock().unwrap().exits.clone();

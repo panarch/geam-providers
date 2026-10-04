@@ -33,7 +33,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }),
         )?
         .try_into_value()
-        .expect("fixture must return normally");
+        .map_err(|status| format!("unexpected application exit {status}"))?;
     assert!(echo.is_empty());
     Ok(())
 }

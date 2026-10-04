@@ -39,7 +39,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }),
         )?
         .try_into_value()
-        .expect("fixture must return normally")?;
+        .map_err(|status| format!("unexpected application exit {status}"))??;
     executor
         .block_on(
             module.with_execution(&host, &mut state, &mut echo, async |scope| {
@@ -48,7 +48,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }),
         )?
         .try_into_value()
-        .expect("fixture must return normally")?;
+        .map_err(|status| format!("unexpected application exit {status}"))??;
 
     let fresh_root = temp.path().join("fresh");
     let fresh_root = fresh_root.to_str().ok_or("temporary path is not Unicode")?;
@@ -72,7 +72,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }),
         )?
         .try_into_value()
-        .expect("fixture must return normally")?;
+        .map_err(|status| format!("unexpected application exit {status}"))??;
     assert!(echo.is_empty());
     Ok(())
 }

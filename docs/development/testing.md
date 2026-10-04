@@ -5,8 +5,8 @@ Providers. The current production packages are `geam-filepath`,
 `geam-regexp`, `geam-otp`, `geam-houdini`, `geam-gzlib`, `geam-crypto`,
 `geam-simplifile`, `geam-platform`, `geam-logging`, `geam-term-size`,
 `geam-birl`, `geam-httpc`, `geam-global-value`, `geam-argv`, `geam-splitter`,
-`geam-envoy`, `geam-operating-system`, `geam-exception`, and `geam-glisten`. This document must
-remain the source of truth for the checks actually run.
+`geam-envoy`, `geam-operating-system`, `geam-exception`, and `geam-glisten`.
+This document must remain the source of truth for the checks actually run.
 
 For acceptance rules, see [review-policy.md](review-policy.md). For practical
 test construction and difficult coverage work, see
@@ -62,6 +62,14 @@ Its common Gleam scenario runs on original Erlang and Geam standalone, while
 the Rust embedding consumer also checks isolated initialization and state.
 The package's 11 public functions are checked against exact OS-specific
 expectations, including expected errors and representative fallback paths.
+The [`clip` 1.2.2 case](../../integrations/clip/README.md) runs the complete
+package contract and a file-search CLI with `geam-argv`, `geam-simplifile`,
+`geam-filepath`, and `geam-regexp`. Its embedding host owns argument snapshots,
+IO and temporary files, and checks structured outcomes through typed Gleam
+projections, repeated execution, state isolation and recovery after errors.
+An unpublished, application-owned native fixture maps the CLI's exit request
+to Geam's public `Call::exit` API. The embedding host checks `Exited(1/2)`,
+output before exit, prevented continuation, and fresh scopes after exit.
 
 ## Dependency Preparation
 
@@ -72,8 +80,8 @@ projects resolve the unmodified `filepath` 1.1.2, `gleam_regexp` 1.1.1,
 `gleam_otp` 1.3.0, `houdini` 1.2.0, `gzlib` 2.0.0, `gleam_crypto` 1.6.0,
 `simplifile` 2.7.0, `platform` 1.0.0, `logging` 1.5.0, `term_size` 1.0.1,
 `birl` 2.0.0, `gleam_httpc` 5.0.0, `global_value` 1.0.0, `argv` 1.1.0,
-`splitter` 1.3.0, `envoy` 1.2.0, `operating_system` 1.0.1, and `exception`
-2.1.1 packages from Hex.
+`splitter` 1.3.0, `envoy` 1.2.0, `operating_system` 1.0.1, `exception` 2.1.1,
+and `glisten` 9.0.1 packages from Hex.
 The crypto, simplifile, logging, term_size, birl, global_value, splitter,
 envoy, and exception fixtures and the `operating_system` standalone fixture pin
 `gleam_stdlib` 1.0.3 for compatibility with this Geam commit; the simplifile
@@ -173,6 +181,18 @@ Rust tests:
 (cd exception/fixtures/embedding/gleam && gleam format --check && gleam check)
 ```
 
+When updating the common Geam revision, rebuild the pinned CLI and synchronize
+the OTP and httpc prepared embedding data before running the Rust workspace
+checks. These generated programs target that commit's prepared representation:
+
+```sh
+(cd gleam-otp/fixtures/embedding && "$GEAM_BIN" embedding sync)
+(cd gleam-httpc/fixtures/embedding && "$GEAM_BIN" embedding sync)
+```
+
+Commit the generated changes together with the pin; use `embedding check` to
+verify that they match the fixed CLI, and never edit prepared data by hand.
+
 The platform, birl, splitter, envoy, `operating_system`, and exception
 standalone Gleam fixtures can also run on Erlang with `gleam run` to check the
 original FFI as an independent behavioral reference. The envoy Erlang fixture
@@ -201,7 +221,8 @@ git -C target/geam-source checkout --detach -q FETCH_HEAD
 CARGO_TARGET_DIR="$PWD/target/geam-cli-build" \
   cargo build --manifest-path "$PWD/target/geam-source/Cargo.toml" \
   --locked --release --bin geam
-GEAM_BIN="$PWD/target/geam-cli-build/release/geam"
+export GEAM_BIN="$PWD/target/geam-cli-build/release/geam"
+export GEAM_REV=e5e1f5f772c6f48369050bdf3ee35c7a324277e2
 ```
 
 ## Standard Verification
@@ -499,40 +520,42 @@ required API and features. Do not treat `--list` as proof of registry readiness.
 Its mandatory entry runs low-level TCP, two concurrent connections through the
 original acceptor pool without a user message type annotation, a user selector,
 a supervised IPv6 server, TLS with server-preferred ALPN `h2`, no client ALPN,
-and ALPN mismatch. Both endpoints assert the mismatch failure.
-The driver binds clients only after a server reports its port-0 listener and
-checks complete response bytes and server termination. The fixture certificate
-and private key are public test credentials with a fixed 2020–2100 validity
-window; pass their paths explicitly to the standalone and Erlang entry.
+and ALPN mismatch. [The client driver](../../glisten/fixtures/run.py) waits for
+an explicit port-0 readiness record, sends the exact client input, and requires
+each matching completion record. It owns and cleans up the child process; no
+fixed port or startup sleep is used.
 
-From the repository root, with the pinned Geam CLI available as `geam`:
+The [owner hook](../../glisten/fixtures/ci.sh) handles `erlang`, `embedding`,
+`standalone`, and `executable`. It uses the common runner's native Windows path
+conversion and outside-fixture working directory. Preparation, builds, source
+and Rust quality, binding checks, tests, package checks, and the 100% line and
+region gate remain mandatory common workflow steps. CI declares Linux, macOS,
+and Windows through [Cargo metadata](../../glisten/Cargo.toml), with no glisten
+branch in the shared workflow.
+
+From the repository root, export the pinned CLI as `GEAM_BIN` as described in
+[dependency preparation](#dependency-preparation), then run:
 
 ```sh
-certificate="$PWD/glisten/fixtures/certs/cert.pem"
-key="$PWD/glisten/fixtures/certs/key.pem"
 (cd glisten/fixtures/gleam && gleam deps download && gleam format --check && gleam check)
-(cd glisten/fixtures/gleam && python3 ../run.py gleam run -- "$certificate" "$key")
-(cd glisten/fixtures/gleam && geam prepare)
-(cd glisten/fixtures/gleam && python3 ../run.py geam run -- "$certificate" "$key")
-(cd glisten/fixtures/gleam && geam build)
-```
-
-Run `glisten/fixtures/gleam/build/geam/target/debug/geam_glisten_fixture` from
-outside the fixture through the same driver, retaining the absolute certificate
-and key arguments. Use `.exe` on Windows. Do not run this server entry without
-the client driver: it deliberately waits for client IO.
-
-```sh
+bash .github/scripts/run_ci.sh provider glisten erlang
+(cd glisten/fixtures/gleam && "$GEAM_BIN" prepare)
+bash .github/scripts/run_ci.sh provider glisten standalone
+(cd glisten/fixtures/gleam && "$GEAM_BIN" build)
+bash .github/scripts/run_ci.sh provider glisten executable
 (cd glisten/fixtures/embedding/gleam && gleam deps download && gleam format --check && gleam check)
-(cd glisten/fixtures/embedding && geam embedding check)
+(cd glisten/fixtures/embedding && "$GEAM_BIN" embedding check)
 (cd glisten/fixtures/embedding && cargo fmt --all --check)
 (cd glisten/fixtures/embedding && cargo clippy --all-targets --locked -- -D warnings)
 (cd glisten/fixtures/embedding && RUSTDOCFLAGS='-D warnings' cargo doc --no-deps --locked)
 (cd glisten/fixtures/embedding && cargo test --locked)
-(cd glisten/fixtures/embedding && python3 ../run.py cargo run --locked)
+bash .github/scripts/run_ci.sh provider glisten embedding
 ```
 
-The embedding integration test starts its consumer through the driver and
+The hook supplies the absolute certificate/key arguments for Erlang and
+standalone execution. Those public fixture credentials are test data.
+Do not run the server entry without the client driver: it waits for client IO.
+The embedding integration test starts its consumer through the same driver and
 requires all seven scenarios in live and freshly generated prepared execution.
 The execution host enables time only; Glisten owns its explicitly selected IO
 reactor. Generated bindings and the prepared program are checked in together.
@@ -561,94 +584,80 @@ directory; the embedding consumer uses a Rust temporary directory. The
 original Erlang run is an independent behavioral reference, not a Geam
 execution mode.
 
-## GitHub Actions
-
-The [CI workflow](../../.github/workflows/ci.yml) runs on pushes and pull
-requests to `main` and can be started manually. Its `providers` job reads
-workspace members marked with `[package.metadata.geam.provider]` through
-`cargo metadata` and passes their crate names and directories to the other
-jobs. CI fails if that provider list is empty. Each provider uses the standard
-`<provider>/fixtures/embedding` and `<provider>/fixtures/gleam` layout; the
-standalone executable defaults to the crate name with hyphens replaced by
-underscores, followed by `_fixture`. A provider can override that name with
-`[package.metadata.geam.ci]`'s `fixture-bin` field. `geam-otp` uses this for
-`otp_service_fixture` and declares its runnable report service with
-`example-dir`.
-
-`[package.metadata.geam.ci]` also accepts `integration-case`; its default is
-`standard`. Named cases are `httpc` for `geam-httpc` and `glisten` for
-`geam-glisten`; each uses its own mandatory loopback client driver.
-Discovery rejects other values before building the provider matrix.
-
-- `quality` checks the root license and Geam revision, downloads both Gleam
-  fixture projects per provider, verifies any `fixtures/upstream.sha256`
-  against the original Hex source, and checks workspace Rust formatting,
-  tests, Clippy, and documentation once.
-- `validate` runs once for each selected provider and declared operating
-  system. It downloads both fixture projects, starts with a clean profile, and
-  first requires 100% line and full-scope region coverage for that production
-  crate and every file reported under its `src/` directory. If coverage fails,
-  the job stops before integration. After coverage passes, the same job checks
-  fixture Geam revisions, Gleam source and embedding Rust formatting, the
-  embedding consumer's Clippy and Rust documentation, and the package file
-  list. It builds the pinned Geam CLI, checks generated bindings, tests and
-  runs the embedding consumer, then verifies standalone `prepare`, the declared
-  integration case, `build`, and execution outside the fixture. The standard
-  case runs the default module and built executable directly. The `httpc` case
-  runs four entry modules against `fixtures/server.py` with explicit provider
-  configuration, then runs the built executable against the same local
-  HTTP/HTTPS server with fixture runtime configuration from outside the
-  fixture. If `example-dir` is set, it checks the example's Geam revision and
-  Gleam source, then compares its output with `expected-output.txt`. The
-  providers with `[package.metadata.geam.ci] erlang-oracle = true` also run
-  their original Erlang fixtures with `gleam run` before running the Geam
-  consumer. The argv jobs additionally run original Erlang, `geam run --`, and
-  the built executable with empty and nonempty application arguments, including
-  an empty value and Unicode.
-
-To register another provider in CI, add its crate to the Cargo workspace,
-declare its Gleam package in `[package.metadata.geam.provider]`, and provide
-both standard fixtures. The `standard` integration case needs no
-package-specific workflow entry. If a fixture needs an explicitly named
-integration case, declare it in `[package.metadata.geam.ci]` and add visible
-case steps to the workflow. If its fixture executable differs from the default
-or it has a runnable example, declare those paths in the same metadata. Its
-optional `runners` list declares operating systems; without it, the provider
-runs on `ubuntu-24.04`. The discovery job builds provider-by-runner rows. Currently
-`geam-simplifile`, `geam-birl`, `geam-httpc`, `geam-argv`, `geam-envoy`, and
-`geam-operating-system` declare `ubuntu-24.04`, `macos-15`, and `windows-2025`;
-the other providers keep the Ubuntu default.
-`quality` runs once on Ubuntu for the entire workspace, while `validate` runs
-for each selected row. Local Markdown links are not checked by this workflow.
-
-Set `erlang-oracle = true` for a provider whose original Erlang fixture is a
-mandatory CI reference. The matrix reads this flag from Cargo metadata; the
-existing argument-specific `argv` scenario remains its own CI step.
-
-On PRs and `main` pushes, [`select_providers.py`](../../.github/scripts/select_providers.py)
-compares the base and checked-out commits, then selects changed providers and
-their workspace or fixture path dependents. Each selected provider runs on all
-its declared operating systems. For example, changing `platform/` selects
-only `geam-platform` on Ubuntu; changing `filepath/` also selects
-`geam-simplifile` on Ubuntu, macOS, and Windows. Pure additions of new provider
-members and lockfile packages can be scoped, including accompanying root README
-and Markdown documentation changes. Documentation-only changes, changes to
-existing workspace or lockfile records, shared or unrecognized paths, and
-unavailable change analysis run the full matrix. Ordinary manual runs also
-use the full matrix. Changes only under `integrations/` select no provider
-rows; `quality` and the relevant package integration job still run. Every
-selected provider row keeps its 100% line and region coverage gate and fixture
-integration checks. To check the selector locally, run:
+The `clip` case has separate package-contract, CLI, and embedding consumers:
 
 ```sh
-python3 -m unittest discover -s .github/scripts -p 'test_*.py'
+for fixture in gleam cli embedding/gleam; do
+  (cd "integrations/clip/fixtures/$fixture" && gleam deps download && gleam format --check && gleam check)
+done
+clip_checksum="$PWD/integrations/clip/fixtures/upstream.sha256"
+for fixture in gleam cli embedding/gleam; do
+  (cd "integrations/clip/fixtures/$fixture/build/packages/clip" && if command -v sha256sum >/dev/null; then sha256sum --check "$clip_checksum"; else shasum -a 256 -c "$clip_checksum"; fi)
+done
+(cd integrations/clip/fixtures/gleam && gleam run && "$GEAM_BIN" prepare && "$GEAM_BIN" run && "$GEAM_BIN" build)
+python3 integrations/clip/fixtures/cli/check_cli.py --contracts --erlang-project integrations/clip/fixtures/gleam
+python3 integrations/clip/fixtures/cli/check_cli.py --contracts --executable integrations/clip/fixtures/gleam/build/geam/target/debug/geam_clip_fixture
+(cd integrations/clip/fixtures/cli && gleam run -- --help)
+python3 integrations/clip/fixtures/cli/check_cli.py --erlang-project integrations/clip/fixtures/cli
+(cd integrations/clip/fixtures/cli && "$GEAM_BIN" prepare && "$GEAM_BIN" run -m argv_contracts -- '' 'space value' -- -dash 한글 && "$GEAM_BIN" run -- search -p Rust ../../README.md && "$GEAM_BIN" build)
+python3 integrations/clip/fixtures/cli/check_cli.py --executable integrations/clip/fixtures/cli/build/geam/target/debug/geam_clip_search
+python3 integrations/clip/fixtures/cli/check_cli.py --geam-project integrations/clip/fixtures/cli --geam-bin "$GEAM_BIN"
+(cd integrations/clip/fixtures/native && cargo fmt --all --check && cargo clippy --all-targets --locked -- -D warnings)
+(cd integrations/clip/fixtures/native && RUSTDOCFLAGS='-D warnings' cargo doc --no-deps --locked)
+(cd integrations/clip/fixtures/embedding && cargo fmt --all --check && "$GEAM_BIN" embedding check && cargo test --locked && cargo run --locked)
+(cd integrations/clip/fixtures/embedding && cargo clippy --all-targets --locked -- -D warnings)
+(cd integrations/clip/fixtures/embedding && RUSTDOCFLAGS='-D warnings' cargo doc --no-deps --locked)
 ```
 
-A manual run with empty `coverage_provider` and `coverage_runner` inputs uses
-the full CI matrix. Set both inputs to run only coverage for one declared
-provider-and-runner pair; the discovery job rejects missing or undeclared
-pairs. For example, select `geam-simplifile` and `windows-2025` in the Actions
-"Run workflow" form, or run:
+Execute `integrations/clip/fixtures/gleam/build/geam/target/debug/geam_clip_fixture`
+from outside the project as well. Use `.exe` on Windows; when invoking a native
+Windows Python from Bash, pass native paths (`cygpath -w`) for absolute project
+and executable arguments. The CLI harness creates and removes its own corpus
+outside the project and checks exact exit status and both streams. It runs 32
+portable cases and a native backslash-path case on Windows. Successful runs,
+no matches, and help exit with 0; file failures exit with 1; argument and
+pattern failures exit with 2. Ten additional `geam run` cases use absolute
+corpus paths because Geam launches from the project directory. They require
+the runner phase and successful Cargo build, then compare the complete app
+stderr, stdout and exact status; runner diagnostics after the build fail the
+check. Regexp behavior follows the
+`geam-regexp` backend contract. The four providers retain their independent
+100% line and full-scope region coverage gates; this integration has no new
+production crate and does not replace those owner suites.
+
+## GitHub Actions
+
+The [CI workflow](../../.github/workflows/ci.yml) runs for main pushes, pull
+requests and manual dispatch. Discovery reads provider Cargo metadata and each
+integration's `ci.json`; target-owned Bash scripts contain custom execution
+commands. Discovery also requires actionlint, ShellCheck and selector/runner
+contract tests. See [CI registration and execution](ci.md) for declaration fields,
+phase contracts, local commands, selection and cache behavior.
+
+- `quality` runs once on Ubuntu for the entire workspace: license and Geam
+  revision, original package downloads/checksums, Rust formatting, tests,
+  Clippy and documentation.
+- `validate` runs each selected provider on its declared runners. It first
+  requires 100% production line and full-scope region coverage for every
+  reported `src/` file, then checks pins, source, embedding formatting/Clippy/
+  docs, package contents, generated bindings and embedding tests. The execution
+  runner invokes the default command or declared owner hook for Erlang,
+  embedding, standalone and outside-fixture execution. Preparation, build and
+  runnable-example checks remain common mandatory steps.
+- `integrations` groups selected cases by declared OS. It builds the pinned
+  CLI once per OS and calls each case's source, Erlang, embedding, standalone
+  and outside-fixture phases. Cases retain original package checksums and their
+  source-backed scenarios.
+
+Provider and fixture dependency changes select affected providers and cases.
+Pure new target additions can stay scoped; shared execution changes, existing
+lock record changes, unknown inputs and unavailable analysis use conservative
+fallbacks. Ordinary CI still runs workspace quality even when the repeated
+provider matrix is scoped. A runner declaration is not native-platform
+verification until its hosted job passes.
+
+Manual runs use all providers and omit integrations unless `run_integrations`
+is enabled. Focused coverage requires both inputs for a declared pair:
 
 ```sh
 gh workflow run ci.yml --ref your-branch \
@@ -656,23 +665,14 @@ gh workflow run ci.yml --ref your-branch \
   -f coverage_runner=windows-2025
 ```
 
-The focused run skips workspace quality and integration. It still applies the
-same 100% line and region coverage gate as a full PR run.
+Focused runs skip workspace quality and all integrations while retaining the
+same 100% line and region gate. The mandatory selector/runner tests are:
 
-The `integrations` job is separate from the provider matrix. It uses one job
-per OS (`ubuntu-24.04`, `macos-15`, `windows-2025`), building the pinned Geam
-CLI once per runner before running the original Erlang reference, standalone,
-and embedding checks in sequence. The discovery job enables the `directories`
-case for changes under `integrations/directories/` or in `envoy/`, `platform/`,
-`simplifile/`, or `filepath/`, for relevant shared Cargo inputs, or for the CI
-workflow/selector. Unrelated provider and documentation changes do not start
-these OS jobs. Unavailable change analysis runs the case rather than risk
-missing it. Job-level selection keeps the main workflow active without a
-workflow-wide path filter. Ordinary manual runs omit integration; set the
-`run_integrations` workflow input to run it explicitly. A focused coverage run
-always omits integration, even if that input is also set. New package cases
-can be run sequentially in these OS jobs without multiplying jobs by the
-number of packages.
+```sh
+python3 -m unittest discover -s .github/scripts -p 'test_*.py'
+```
+
+Local Markdown links are not checked by the workflow.
 
 The `filepath` fixtures check the active host's `split` branch and both
 explicit split functions. A `simplifile` Windows row also exercises its

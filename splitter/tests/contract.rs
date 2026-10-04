@@ -56,10 +56,7 @@ fn original_gleam_package_runs_through_public_host_boundary() {
                 );
             }),
         )
-        .map(|outcome| {
-            outcome
-                .try_into_value()
-                .expect("fixture must return normally")
-        })
-        .expect("host execution completes");
+        .expect("host execution completes")
+        .try_into_value()
+        .expect("source execution returns normally");
 }

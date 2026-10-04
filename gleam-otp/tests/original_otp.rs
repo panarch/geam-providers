@@ -7,7 +7,7 @@ mod cancellation;
 mod support;
 
 use geam::Value;
-use geam::execution::{ExecutionUnit, UnitExit};
+use geam::execution::{ExecutionOutcome, ExecutionUnit, UnitExit};
 use geam::gleam_stdlib::{GleamStdlibRunState, IoStream};
 use support::{execution, execution_fixture};
 
@@ -20,13 +20,8 @@ fn original_actor_system_callbacks_share_the_mailbox_and_receiver() {
         let mut echo = Vec::new();
         let result = host
             .block_on(execution.run_main(&host, &mut state, &mut echo))
-            .map(|outcome| {
-                outcome
-                    .try_into_value()
-                    .expect("fixture must return normally")
-            })
             .unwrap();
-        assert_eq!(result, Value::Nil);
+        assert_eq!(result, ExecutionOutcome::Returned(Value::Nil));
         assert!(echo.is_empty());
         assert!(state.provider.warnings.is_empty());
         assert_eq!(
@@ -61,11 +56,8 @@ fn mapped_static_child_preserves_its_capture_data_failure_and_supervisor_context
     let mut echo = Vec::new();
     assert_eq!(
         host.block_on(execution.run_main(&host, &mut state, &mut echo))
-            .map(|outcome| outcome
-                .try_into_value()
-                .expect("fixture must return normally"))
             .unwrap(),
-        Value::Nil,
+        ExecutionOutcome::Returned(Value::Nil),
     );
     assert!(echo.is_empty());
     assert!(state.stdlib.io_outputs().is_empty());
@@ -83,11 +75,8 @@ fn original_actor_failure_exit_and_unexpected_message_paths() {
     let mut echo = Vec::new();
     assert_eq!(
         host.block_on(execution.run_main(&host, &mut state, &mut echo))
-            .map(|outcome| outcome
-                .try_into_value()
-                .expect("fixture must return normally"))
             .unwrap(),
-        Value::Nil,
+        ExecutionOutcome::Returned(Value::Nil),
     );
     assert!(echo.is_empty());
     assert_eq!(
@@ -116,11 +105,8 @@ fn original_initialiser_times_out_only_after_the_host_deadline() {
     assert!(host.poll(run.as_mut()).is_pending());
     host.advance(std::time::Duration::from_millis(1));
     assert_eq!(
-        host.poll(run.as_mut()).map(|result| result
-            .unwrap()
-            .try_into_value()
-            .expect("fixture must return normally")),
-        std::task::Poll::Ready(Value::Nil)
+        host.poll(run.as_mut()).map(Result::unwrap),
+        std::task::Poll::Ready(ExecutionOutcome::Returned(Value::Nil))
     );
 }
 
@@ -132,11 +118,8 @@ fn original_supervisor_errors_restart_budget_and_graceful_shutdown() {
     let run = execution.run_main(&host, &mut state, &mut echo);
     let mut run = std::pin::pin!(run);
     assert_eq!(
-        host.poll(run.as_mut()).map(|result| result
-            .unwrap()
-            .try_into_value()
-            .expect("fixture must return normally")),
-        std::task::Poll::Ready(Value::Nil)
+        host.poll(run.as_mut()).map(Result::unwrap),
+        std::task::Poll::Ready(ExecutionOutcome::Returned(Value::Nil))
     );
 }
 
@@ -147,11 +130,8 @@ fn original_static_restart_strategies_and_significant_shutdown_policies() {
     let mut echo = Vec::new();
     assert_eq!(
         host.block_on(execution.run_main(&host, &mut state, &mut echo))
-            .map(|outcome| outcome
-                .try_into_value()
-                .expect("fixture must return normally"))
             .unwrap(),
-        Value::Nil,
+        ExecutionOutcome::Returned(Value::Nil),
     );
     assert!(echo.is_empty());
 }
@@ -164,11 +144,8 @@ fn original_factory_requests_report_missing_names_and_exited_supervisors() {
     let mut echo = Vec::new();
     let mut run = Box::pin(execution.run_main(&host, &mut state, &mut echo));
     assert_eq!(
-        host.poll(run.as_mut()).map(|result| result
-            .unwrap()
-            .try_into_value()
-            .expect("fixture must return normally")),
-        std::task::Poll::Ready(Value::Nil)
+        host.poll(run.as_mut()).map(Result::unwrap),
+        std::task::Poll::Ready(ExecutionOutcome::Returned(Value::Nil))
     );
     drop(run);
     let failures = observed
@@ -214,11 +191,8 @@ fn original_supervisors_stop_siblings_after_restart_failure_and_static_budget_ex
     let mut echo = Vec::new();
     let mut run = Box::pin(execution.run_main(&host, &mut state, &mut echo));
     assert_eq!(
-        host.poll(run.as_mut()).map(|result| result
-            .unwrap()
-            .try_into_value()
-            .expect("fixture must return normally")),
-        std::task::Poll::Ready(Value::Nil)
+        host.poll(run.as_mut()).map(Result::unwrap),
+        std::task::Poll::Ready(ExecutionOutcome::Returned(Value::Nil))
     );
 }
 
@@ -230,11 +204,8 @@ fn malformed_mailbox_requests_fail_before_invoking_retained_callbacks() {
     let mut echo = Vec::new();
     let mut run = Box::pin(execution.run_main(&host, &mut state, &mut echo));
     assert_eq!(
-        host.poll(run.as_mut()).map(|result| result
-            .unwrap()
-            .try_into_value()
-            .expect("fixture must return normally")),
-        std::task::Poll::Ready(Value::Nil)
+        host.poll(run.as_mut()).map(Result::unwrap),
+        std::task::Poll::Ready(ExecutionOutcome::Returned(Value::Nil))
     );
     drop(run);
     let failures = observed
@@ -270,11 +241,8 @@ fn restarting_callbacks_propagate_source_panics_and_release_linked_siblings() {
     let mut echo = Vec::new();
     assert_eq!(
         host.block_on(execution.run_main(&host, &mut state, &mut echo))
-            .map(|outcome| outcome
-                .try_into_value()
-                .expect("fixture must return normally"))
             .unwrap(),
-        Value::Nil
+        ExecutionOutcome::Returned(Value::Nil)
     );
     let panics = observed
         .lock()
@@ -311,11 +279,8 @@ fn factory_count_rejects_a_non_integer_response_from_a_registered_peer() {
     let mut echo = Vec::new();
     assert_eq!(
         host.block_on(execution.run_main(&host, &mut state, &mut echo))
-            .map(|outcome| outcome
-                .try_into_value()
-                .expect("fixture must return normally"))
             .unwrap(),
-        Value::Nil
+        ExecutionOutcome::Returned(Value::Nil)
     );
     let failures = observed
         .lock()
@@ -350,11 +315,8 @@ fn failed_startup_cleanup_propagates_clock_overflow_and_releases_started_childre
         }
     }
     assert_eq!(
-        host.poll(run.as_mut()).map(|result| result
-            .unwrap()
-            .try_into_value()
-            .expect("fixture must return normally")),
-        std::task::Poll::Ready(Value::Nil)
+        host.poll(run.as_mut()).map(Result::unwrap),
+        std::task::Poll::Ready(ExecutionOutcome::Returned(Value::Nil))
     );
     drop(run);
     let failures = observed
@@ -380,11 +342,8 @@ fn original_supervisor_policies_callbacks_and_parent_exit_keep_their_failure_bou
     let mut echo = Vec::new();
     let mut run = Box::pin(execution.run_main(&host, &mut state, &mut echo));
     assert_eq!(
-        host.poll(run.as_mut()).map(|result| result
-            .unwrap()
-            .try_into_value()
-            .expect("fixture must return normally")),
-        std::task::Poll::Ready(Value::Nil)
+        host.poll(run.as_mut()).map(Result::unwrap),
+        std::task::Poll::Ready(ExecutionOutcome::Returned(Value::Nil))
     );
     drop(run);
     let observation = observed.lock().unwrap();
@@ -436,11 +395,8 @@ fn original_supervisor_kills_a_child_that_ignores_shutdown() {
     assert!(host.poll(run.as_mut()).is_pending());
     host.advance(std::time::Duration::from_millis(1));
     assert_eq!(
-        host.poll(run.as_mut()).map(|result| result
-            .unwrap()
-            .try_into_value()
-            .expect("fixture must return normally")),
-        std::task::Poll::Ready(Value::Nil)
+        host.poll(run.as_mut()).map(Result::unwrap),
+        std::task::Poll::Ready(ExecutionOutcome::Returned(Value::Nil))
     );
 }
 
@@ -462,11 +418,8 @@ fn shutdown_propagates_clock_overflow_through_both_supervisors() {
         }
     }
     assert_eq!(
-        host.poll(run.as_mut()).map(|result| result
-            .unwrap()
-            .try_into_value()
-            .expect("fixture must return normally")),
-        std::task::Poll::Ready(Value::Nil)
+        host.poll(run.as_mut()).map(Result::unwrap),
+        std::task::Poll::Ready(ExecutionOutcome::Returned(Value::Nil))
     );
     drop(run);
     let failures = observed

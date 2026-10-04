@@ -1,0 +1,13 @@
+name = "geam_clip_search"
+version = "0.1.0"
+target = "erlang"
+description = "File search CLI composing unchanged clip and existing Geam providers"
+licences = ["Apache-2.0"]
+
+[dependencies]
+clip = ">= 1.2.2 and < 1.2.3"
+gleam_stdlib = ">= 1.0.3 and < 1.0.4"
+argv = ">= 1.1.0 and < 1.1.1"
+simplifile = ">= 2.7.0 and < 2.7.1"
+filepath = ">= 1.1.2 and < 1.1.3"
+gleam_regexp = ">= 1.1.1 and < 1.1.2"

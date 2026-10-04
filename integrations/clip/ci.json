@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "script": "ci.sh",
+  "providers": ["geam-argv", "geam-filepath", "geam-regexp", "geam-simplifile"],
+  "runners": ["ubuntu-24.04", "macos-15", "windows-2025"],
+  "cache-workspaces": [
+    "fixtures/gleam -> build/geam/target",
+    "fixtures/cli -> build/geam/target",
+    "fixtures/embedding -> target"
+  ]
+}

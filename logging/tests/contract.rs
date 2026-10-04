@@ -98,12 +98,9 @@ fn original_package_filters_and_formats_all_levels_through_geam() {
                     .expect("original level transitions");
             }),
         )
-        .map(|outcome| {
-            outcome
-                .try_into_value()
-                .expect("fixture must return normally")
-        })
-        .expect("source execution completes");
+        .expect("source execution completes")
+        .try_into_value()
+        .expect("source execution returns normally");
 
     assert_eq!(
         output.text(),
@@ -121,12 +118,9 @@ fn original_package_filters_and_formats_all_levels_through_geam() {
                     .expect("independent run logs");
             }),
         )
-        .map(|outcome| {
-            outcome
-                .try_into_value()
-                .expect("fixture must return normally")
-        })
-        .expect("second run completes");
+        .expect("second run completes")
+        .try_into_value()
+        .expect("source execution returns normally");
     assert_eq!(colored.text(), "\x1b[1;34mINFO\x1b[0m one\n");
 
     let mut failing_state = run_state(FailingWriter, Some("1"));
@@ -140,10 +134,7 @@ fn original_package_filters_and_formats_all_levels_through_geam() {
                 assert!(failure.to_string().contains("injected output failure"));
             }),
         )
-        .map(|outcome| {
-            outcome
-                .try_into_value()
-                .expect("fixture must return normally")
-        })
-        .expect("failed call stays in hosted execution");
+        .expect("failed call stays in hosted execution")
+        .try_into_value()
+        .expect("source execution returns normally");
 }

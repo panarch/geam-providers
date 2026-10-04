@@ -210,7 +210,7 @@ where
         .map(|outcome| {
             outcome
                 .try_into_value()
-                .expect("fixture must return normally")
+                .expect("fixture entry returns normally")
         })
         .map_err(|error| match error {
             RunError::Execution(error) => error,

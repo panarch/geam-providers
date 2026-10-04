@@ -95,12 +95,9 @@ fn unchanged_gleam_source_observes_result_and_dict_after_mutations() {
                     .expect("source set");
             }),
         )
-        .map(|outcome| {
-            outcome
-                .try_into_value()
-                .expect("fixture must return normally")
-        })
-        .expect("first execution completes");
+        .expect("first execution completes")
+        .try_into_value()
+        .expect("source execution returns normally");
     executor
         .block_on(
             module.with_execution(&host, &mut state, &mut echo, async |scope| {
@@ -118,12 +115,9 @@ fn unchanged_gleam_source_observes_result_and_dict_after_mutations() {
                 );
             }),
         )
-        .map(|outcome| {
-            outcome
-                .try_into_value()
-                .expect("fixture must return normally")
-        })
-        .expect("reused state completes");
+        .expect("reused state completes")
+        .try_into_value()
+        .expect("source execution returns normally");
     executor
         .block_on(
             module.with_execution(&host, &mut state, &mut echo, async |scope| {
@@ -165,11 +159,8 @@ fn unchanged_gleam_source_observes_result_and_dict_after_mutations() {
                 );
             }),
         )
-        .map(|outcome| {
-            outcome
-                .try_into_value()
-                .expect("fixture must return normally")
-        })
-        .expect("invalid inputs are reported at the host boundary");
+        .expect("invalid inputs are reported at the host boundary")
+        .try_into_value()
+        .expect("source execution returns normally");
     assert!(echo.is_empty());
 }

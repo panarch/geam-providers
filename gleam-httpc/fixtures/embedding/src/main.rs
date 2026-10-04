@@ -54,7 +54,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             })
             .await?
             .try_into_value()
-            .expect("fixture must return normally")?;
+            .map_err(|status| format!("unexpected application exit {status}"))??;
         assert!(matched, "original gleam_httpc receives the HTTP response");
         server.await??;
         Ok::<_, Box<dyn std::error::Error>>(())
