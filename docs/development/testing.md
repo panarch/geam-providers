@@ -221,7 +221,8 @@ git -C target/geam-source checkout --detach -q FETCH_HEAD
 CARGO_TARGET_DIR="$PWD/target/geam-cli-build" \
   cargo build --manifest-path "$PWD/target/geam-source/Cargo.toml" \
   --locked --release --bin geam
-GEAM_BIN="$PWD/target/geam-cli-build/release/geam"
+export GEAM_BIN="$PWD/target/geam-cli-build/release/geam"
+export GEAM_REV=e5e1f5f772c6f48369050bdf3ee35c7a324277e2
 ```
 
 ## Standard Verification
@@ -579,91 +580,37 @@ production crate and does not replace those owner suites.
 
 ## GitHub Actions
 
-The [CI workflow](../../.github/workflows/ci.yml) runs on pushes and pull
-requests to `main` and can be started manually. Its `providers` job reads
-workspace members marked with `[package.metadata.geam.provider]` through
-`cargo metadata` and passes their crate names and directories to the other
-jobs. CI fails if that provider list is empty. Each provider uses the standard
-`<provider>/fixtures/embedding` and `<provider>/fixtures/gleam` layout; the
-standalone executable defaults to the crate name with hyphens replaced by
-underscores, followed by `_fixture`. A provider can override that name with
-`[package.metadata.geam.ci]`'s `fixture-bin` field. `geam-otp` uses this for
-`otp_service_fixture` and declares its runnable report service with
-`example-dir`.
+The [CI workflow](../../.github/workflows/ci.yml) runs for main pushes, pull
+requests and manual dispatch. Discovery reads provider Cargo metadata and each
+integration's `ci.json`; target-owned Bash scripts contain custom execution
+commands. Discovery also requires actionlint, ShellCheck and selector/runner
+contract tests. See [CI registration and execution](ci.md) for declaration fields,
+phase contracts, local commands, selection and cache behavior.
 
-`[package.metadata.geam.ci]` also accepts `integration-case`; its default is
-`standard`, and the current named exception is `httpc` for `geam-httpc`.
-Discovery rejects other values before building the provider matrix.
+- `quality` runs once on Ubuntu for the entire workspace: license and Geam
+  revision, original package downloads/checksums, Rust formatting, tests,
+  Clippy and documentation.
+- `validate` runs each selected provider on its declared runners. It first
+  requires 100% production line and full-scope region coverage for every
+  reported `src/` file, then checks pins, source, embedding formatting/Clippy/
+  docs, package contents, generated bindings and embedding tests. The execution
+  runner invokes the default command or declared owner hook for Erlang,
+  embedding, standalone and outside-fixture execution. Preparation, build and
+  runnable-example checks remain common mandatory steps.
+- `integrations` groups selected cases by declared OS. It builds the pinned
+  CLI once per OS and calls each case's source, Erlang, embedding, standalone
+  and outside-fixture phases. Cases retain original package checksums and their
+  source-backed scenarios.
 
-- `quality` checks the root license and Geam revision, downloads both Gleam
-  fixture projects per provider, verifies any `fixtures/upstream.sha256`
-  against the original Hex source, and checks workspace Rust formatting,
-  tests, Clippy, and documentation once.
-- `validate` runs once for each selected provider and declared operating
-  system. It downloads both fixture projects, starts with a clean profile, and
-  first requires 100% line and full-scope region coverage for that production
-  crate and every file reported under its `src/` directory. If coverage fails,
-  the job stops before integration. After coverage passes, the same job checks
-  fixture Geam revisions, Gleam source and embedding Rust formatting, the
-  embedding consumer's Clippy and Rust documentation, and the package file
-  list. It builds the pinned Geam CLI, checks generated bindings, tests and
-  runs the embedding consumer, then verifies standalone `prepare`, the declared
-  integration case, `build`, and execution outside the fixture. The standard
-  case runs the default module and built executable directly. The `httpc` case
-  runs four entry modules against `fixtures/server.py` with explicit provider
-  configuration, then runs the built executable against the same local
-  HTTP/HTTPS server with fixture runtime configuration from outside the
-  fixture. If `example-dir` is set, it checks the example's Geam revision and
-  Gleam source, then compares its output with `expected-output.txt`. The
-  providers with `[package.metadata.geam.ci] erlang-oracle = true` also run
-  their original Erlang fixtures with `gleam run` before running the Geam
-  consumer. The argv jobs additionally run original Erlang, `geam run --`, and
-  the built executable with empty and nonempty application arguments, including
-  an empty value and Unicode.
+Provider and fixture dependency changes select affected providers and cases.
+Pure new target additions can stay scoped; shared execution changes, existing
+lock record changes, unknown inputs and unavailable analysis use conservative
+fallbacks. Ordinary CI still runs workspace quality even when the repeated
+provider matrix is scoped. A runner declaration is not native-platform
+verification until its hosted job passes.
 
-To register another provider in CI, add its crate to the Cargo workspace,
-declare its Gleam package in `[package.metadata.geam.provider]`, and provide
-both standard fixtures. The `standard` integration case needs no
-package-specific workflow entry. If a fixture needs an explicitly named
-integration case, declare it in `[package.metadata.geam.ci]` and add visible
-case steps to the workflow. If its fixture executable differs from the default
-or it has a runnable example, declare those paths in the same metadata. Its
-optional `runners` list declares operating systems; without it, the provider
-runs on `ubuntu-24.04`. The discovery job builds provider-by-runner rows. Currently
-`geam-simplifile`, `geam-birl`, `geam-httpc`, `geam-argv`, `geam-envoy`, and
-`geam-operating-system` declare `ubuntu-24.04`, `macos-15`, and `windows-2025`;
-the other providers keep the Ubuntu default.
-`quality` runs once on Ubuntu for the entire workspace, while `validate` runs
-for each selected row. Local Markdown links are not checked by this workflow.
-
-Set `erlang-oracle = true` for a provider whose original Erlang fixture is a
-mandatory CI reference. The matrix reads this flag from Cargo metadata; the
-existing argument-specific `argv` scenario remains its own CI step.
-
-On PRs and `main` pushes, [`select_providers.py`](../../.github/scripts/select_providers.py)
-compares the base and checked-out commits, then selects changed providers and
-their workspace or fixture path dependents. Each selected provider runs on all
-its declared operating systems. For example, changing `platform/` selects
-only `geam-platform` on Ubuntu; changing `filepath/` also selects
-`geam-simplifile` on Ubuntu, macOS, and Windows. Pure additions of new provider
-members and lockfile packages can be scoped, including accompanying root README
-and Markdown documentation changes. Documentation-only changes, changes to
-existing workspace or lockfile records, shared or unrecognized paths, and
-unavailable change analysis run the full matrix. Ordinary manual runs also
-use the full matrix. Changes only under `integrations/` select no provider
-rows; `quality` and the relevant package integration job still run. Every
-selected provider row keeps its 100% line and region coverage gate and fixture
-integration checks. To check the selector locally, run:
-
-```sh
-python3 -m unittest discover -s .github/scripts -p 'test_*.py'
-```
-
-A manual run with empty `coverage_provider` and `coverage_runner` inputs uses
-the full CI matrix. Set both inputs to run only coverage for one declared
-provider-and-runner pair; the discovery job rejects missing or undeclared
-pairs. For example, select `geam-simplifile` and `windows-2025` in the Actions
-"Run workflow" form, or run:
+Manual runs use all providers and omit integrations unless `run_integrations`
+is enabled. Focused coverage requires both inputs for a declared pair:
 
 ```sh
 gh workflow run ci.yml --ref your-branch \
@@ -671,29 +618,14 @@ gh workflow run ci.yml --ref your-branch \
   -f coverage_runner=windows-2025
 ```
 
-The focused run skips workspace quality and integration. It still applies the
-same 100% line and region coverage gate as a full PR run.
+Focused runs skip workspace quality and all integrations while retaining the
+same 100% line and region gate. The mandatory selector/runner tests are:
 
-The `integrations` job is separate from the provider matrix. It uses one job
-per OS (`ubuntu-24.04`, `macos-15`, `windows-2025`), building the pinned Geam
-CLI once per runner and runs selected original Erlang references, standalone,
-and embedding checks in sequence. The discovery job enables the `directories`
-case for changes under `integrations/directories/` or in `envoy/`, `platform/`,
-`simplifile/`, or `filepath/`, for relevant shared Cargo inputs, or for the CI
-workflow/selector. It independently enables `clip` for `integrations/clip/`,
-`argv/`, `gleam-regexp/`, `simplifile/`, `filepath/`, its workspace dependencies
-(`geam`, `regex`, `regex-syntax`), and shared CI changes. A filepath or simplifile
-change selects both cases; argv or regexp selects clip; envoy or platform
-selects directories. Adding an unrelated workspace member or changing an
-unused workspace dependency does not select either integration. Unrelated
-provider and documentation changes do not start these OS jobs. Unavailable
-change analysis runs both cases rather than risk
-missing it. Job-level selection keeps the main workflow active without a
-workflow-wide path filter. Ordinary manual runs omit integration; set the
-`run_integrations` workflow input to run both explicitly. A focused coverage run
-always omits integration, even if that input is also set. New package cases
-can be run sequentially in these OS jobs without multiplying jobs by the
-number of packages.
+```sh
+python3 -m unittest discover -s .github/scripts -p 'test_*.py'
+```
+
+Local Markdown links are not checked by the workflow.
 
 The `filepath` fixtures check the active host's `split` branch and both
 explicit split functions. A `simplifile` Windows row also exercises its

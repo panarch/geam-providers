@@ -1,8 +1,6 @@
-"""Contract tests for the CI matrix selector's fail-closed decisions."""
+"""Contracts for CI discovery, ownership and affected-target selection."""
 
 import json
-import contextlib
-import io
 import os
 import shutil
 import subprocess
@@ -10,436 +8,421 @@ import tempfile
 import textwrap
 import unittest
 from pathlib import Path
-from unittest.mock import patch
 
 import select_providers as ci
 
 
 ROWS = [
     {"crate": "geam-filepath", "dir": "filepath", "runners": ["ubuntu-24.04"]},
-    {
-        "crate": "geam-simplifile",
-        "dir": "simplifile",
-        "runners": ["ubuntu-24.04", "macos-15", "windows-2025"],
-    },
+    {"crate": "geam-simplifile", "dir": "simplifile", "runners": ["ubuntu-24.04", "macos-15", "windows-2025"]},
     {"crate": "geam-platform", "dir": "platform", "runners": ["ubuntu-24.04"]},
 ]
-DEPENDENCIES = {
-    "geam-filepath": set(),
-    "geam-simplifile": {"geam-filepath"},
-    "geam-platform": set(),
-}
+DEPENDENCIES = {"geam-filepath": set(), "geam-simplifile": {"geam-filepath"}, "geam-platform": set()}
 ALL = set(DEPENDENCIES)
 
 
 class SelectionTests(unittest.TestCase):
-    def test_platform_change_selects_only_platform(self):
-        selected, reason = ci.affected_providers(
-            ["platform/src/lib.rs", "platform/fixtures/gleam/Cargo.lock"], ROWS, DEPENDENCIES
-        )
-        self.assertEqual(selected, {"geam-platform"})
-        self.assertEqual(reason, "affected providers")
+    def test_changed_owner_and_reverse_dependents(self):
+        for directory, expected in (
+            ("platform", {"geam-platform"}),
+            ("simplifile", {"geam-simplifile"}),
+            ("filepath", {"geam-filepath", "geam-simplifile"}),
+        ):
+            with self.subTest(directory=directory):
+                selected, reason = ci.affected_providers([directory + "/src/lib.rs"], ROWS, DEPENDENCIES)
+                self.assertEqual(selected, expected)
+                self.assertEqual(reason, "affected providers")
 
-    def test_filepath_change_includes_simplifile_on_all_declared_runners(self):
-        selected, _ = ci.affected_providers(["filepath/src/lib.rs"], ROWS, DEPENDENCIES)
-        self.assertEqual(selected, {"geam-filepath", "geam-simplifile"})
-        runners = {runner for row in ROWS if row["crate"] in selected for runner in row["runners"]}
-        self.assertEqual(runners, {"ubuntu-24.04", "macos-15", "windows-2025"})
+    def test_integration_only_and_combined_changes(self):
+        for paths, expected in (
+            (["integrations/tool/ci.sh"], set()),
+            (["integrations/tool/ci.sh", "filepath/src/lib.rs"], {"geam-filepath", "geam-simplifile"}),
+        ):
+            selected, _ = ci.affected_providers(paths, ROWS, DEPENDENCIES, integration_dirs=["integrations/tool"])
+            self.assertEqual(selected, expected)
 
-    def test_simplifile_change_does_not_select_its_dependency(self):
-        selected, _ = ci.affected_providers(["simplifile/src/lib.rs"], ROWS, DEPENDENCIES)
-        self.assertEqual(selected, {"geam-simplifile"})
+    def test_shared_unknown_and_removed_integration_paths(self):
+        for path in (".github/workflows/ci.yml", ".github/scripts/ci-lib.sh", "LICENSE", "integrations/removed/ci.sh"):
+            selected, reason = ci.affected_providers([path], ROWS, DEPENDENCIES)
+            self.assertEqual(selected, ALL)
+            self.assertEqual(reason, "shared or unknown path changed")
 
-    def test_documentation_only_uses_full_matrix(self):
-        selected, reason = ci.affected_providers(
-            ["README.md", "docs/development/testing.md"], ROWS, DEPENDENCIES
-        )
-        self.assertEqual(selected, ALL)
-        self.assertEqual(reason, "no provider change")
+    def test_docs_and_empty_diff_keep_full_provider_policy(self):
+        for paths in ([], ["README.md", "docs/development/testing.md"]):
+            selected, reason = ci.affected_providers(paths, ROWS, DEPENDENCIES)
+            self.assertEqual(selected, ALL)
+            self.assertEqual(reason, "no provider change")
 
-    def test_no_provider_change_uses_full_matrix(self):
-        selected, reason = ci.affected_providers([], ROWS, DEPENDENCIES)
-        self.assertEqual(selected, ALL)
-        self.assertEqual(reason, "no provider change")
-
-    def test_integration_only_change_skips_provider_matrix(self):
-        selected, reason = ci.affected_providers(
-            ["integrations/directories/fixtures/gleam/gleam.toml", "README.md"],
-            ROWS,
-            DEPENDENCIES,
-        )
-        self.assertEqual(selected, set())
-        self.assertEqual(reason, "integration-only change")
-
-    def test_integration_and_provider_change_keeps_affected_providers(self):
-        selected, reason = ci.affected_providers(
-            ["integrations/directories/README.md", "filepath/src/lib.rs"],
-            ROWS,
-            DEPENDENCIES,
-        )
-        self.assertEqual(selected, {"geam-filepath", "geam-simplifile"})
-        self.assertEqual(reason, "affected providers")
-
-    def test_shared_and_unknown_paths_require_full_matrix(self):
-        for path in (".github/workflows/ci.yml", ".github/scripts/select_providers.py", "LICENSE"):
-            with self.subTest(path=path):
-                selected, reason = ci.affected_providers([path], ROWS, DEPENDENCIES)
-                self.assertEqual(selected, ALL)
-                self.assertEqual(reason, "shared or unknown path changed")
-
-    def test_new_member_selects_its_provider(self):
+    def test_new_member_is_scoped_but_shared_cargo_is_not(self):
         selected, _ = ci.affected_providers(
-            [
-                "Cargo.toml",
-                "Cargo.lock",
-                "README.md",
-                "docs/development/testing.md",
-                "platform/Cargo.toml",
-            ],
-            ROWS,
-            DEPENDENCIES,
-            added_members={"platform"},
+            ["Cargo.toml", "Cargo.lock", "platform/Cargo.toml", "README.md"],
+            ROWS, DEPENDENCIES, added_members={"platform"},
         )
         self.assertEqual(selected, {"geam-platform"})
-
-    def test_non_provider_member_or_changed_shared_cargo_requires_full_matrix(self):
-        cases = [
-            {"added_members": {"tools"}},
-            {"manifest_safe": False},
-            {"lock_safe": False},
-        ]
-        for options in cases:
-            with self.subTest(options=options):
-                selected, _ = ci.affected_providers(
-                    ["Cargo.toml", "Cargo.lock"], ROWS, DEPENDENCIES, **options
-                )
-                self.assertEqual(selected, ALL)
+        for options in ({"added_members": {"xtask"}}, {"manifest_safe": False}, {"lock_safe": False}):
+            selected, _ = ci.affected_providers(["Cargo.toml", "Cargo.lock"], ROWS, DEPENDENCIES, **options)
+            self.assertEqual(selected, ALL)
 
 
 class CargoChangeTests(unittest.TestCase):
-    MANIFEST = """[workspace]
-members = ["filepath"]
-resolver = "3"
+    MANIFEST = '[workspace]\nmembers = ["filepath"]\nresolver = "3"\n\n[workspace.dependencies]\ngeam = { git = "https://example.test/geam", rev = "old" }\n'
+    LOCK = 'version = 4\n\n[[package]]\nname = "geam-filepath"\nversion = "0.1.0"\n\n[[package]]\nname = "geam"\nversion = "0.1.0"\n'
 
-[workspace.dependencies]
-geam = { git = "https://example.test/geam", rev = "old" }
-"""
-    LOCK = """version = 4
-
-[[package]]
-name = "geam-filepath"
-version = "0.1.0"
-
-[[package]]
-name = "geam"
-version = "0.1.0"
-"""
-
-    def test_only_new_members_and_dependencies_are_scoped(self):
-        new = self.MANIFEST.replace(
-            'members = ["filepath"]', 'members = ["filepath", "platform"]'
-        ) + 'regex = "1.12"\n'
-        self.assertEqual(ci.manifest_additions(self.MANIFEST, new), {"platform"})
-        changed_existing = new.replace('rev = "old"', 'rev = "new"')
-        self.assertIsNone(ci.manifest_additions(self.MANIFEST, changed_existing))
-        self.assertIsNone(ci.manifest_additions(self.MANIFEST, self.MANIFEST.replace('"filepath"', '"platform"')))
+    def test_pure_member_and_dependency_additions(self):
+        after = self.MANIFEST.replace('["filepath"]', '["filepath", "platform"]') + 'regex = "1.12"\n'
+        self.assertEqual(ci.manifest_additions(self.MANIFEST, after), {"platform"})
+        self.assertIsNone(ci.manifest_additions(self.MANIFEST, after.replace('"old"', '"new"')))
+        self.assertIsNone(ci.manifest_additions(self.MANIFEST, self.MANIFEST.replace('"filepath"', '"other"')))
 
     def test_existing_lock_records_must_be_identical(self):
-        added = self.LOCK + '\n[[package]]\nname = "geam-platform"\nversion = "0.1.0"\n'
-        self.assertTrue(ci.lock_additions_only(self.LOCK, added))
-        self.assertFalse(ci.lock_additions_only(self.LOCK, added.replace('name = "geam"', 'name = "geam-core"')))
-        self.assertFalse(ci.lock_additions_only(self.LOCK, self.LOCK.replace('version = "0.1.0"', 'version = "0.2.0"')))
+        after = self.LOCK + '\n[[package]]\nname = "geam-platform"\nversion = "0.1.0"\n'
+        self.assertTrue(ci.lock_additions_only(self.LOCK, after))
+        self.assertFalse(ci.lock_additions_only(self.LOCK, after.replace('name = "geam"', 'name = "core"')))
+        self.assertFalse(ci.lock_additions_only(self.LOCK, self.LOCK.replace('"0.1.0"', '"0.2.0"')))
 
-    def test_directories_runs_for_relevant_paths_only(self):
-        for path in (
-            "integrations/directories/fixtures/gleam/gleam.toml",
-            "envoy/src/lib.rs",
-            "filepath/Cargo.toml",
-            "platform/src/lib.rs",
-            "simplifile/src/lib.rs",
-            ".github/workflows/ci.yml",
-            ".github/scripts/select_providers.py",
+    def test_relevant_shared_inputs(self):
+        before = self.MANIFEST + 'regex = "1.12"\nreqwest = "0.13"\n'
+        for after in (
+            before.replace('["filepath"]', '["filepath", "other"]'),
+            before.replace('reqwest = "0.13"', 'reqwest = "0.14"'),
         ):
-            with self.subTest(path=path):
-                self.assertTrue(ci.run_directories_for_changes([path]))
-        for path in (
-            "integrations/another/fixtures/gleam/gleam.toml",
-            "logging/src/lib.rs",
-            "docs/development/testing.md",
-            "Cargo.lock",
-            "README.md",
+            self.assertFalse(ci.relevant_workspace_manifest_change(before, after, {"geam", "regex"}))
+        for after in (
+            before.replace('rev = "old"', 'rev = "new"'),
+            before.replace('regex = "1.12"', 'regex = "1.13"'),
+            before.replace('resolver = "3"', 'resolver = "2"'),
         ):
-            with self.subTest(path=path):
-                self.assertFalse(ci.run_directories_for_changes([path]))
-        self.assertTrue(ci.run_directories_for_changes(["logging/src/lib.rs", "envoy/src/lib.rs"]))
-        self.assertFalse(ci.run_directories_for_changes([]))
+            self.assertTrue(ci.relevant_workspace_manifest_change(before, after, {"geam", "regex"}))
 
-    def test_directories_root_manifest_checks_only_relevant_workspace_inputs(self):
-        original = self.MANIFEST + 'reqwest = "0.13"\n'
-        another_member = original.replace('members = ["filepath"]', 'members = ["filepath", "logging"]')
-        another_dependency = original.replace('reqwest = "0.13"', 'reqwest = "0.14"')
-        comment_only = original.replace('reqwest = "0.13"', '# unrelated note\nreqwest = "0.13"')
-        changed_geam = original.replace('rev = "old"', 'rev = "new"')
-        for changed in (another_member, another_dependency, comment_only):
-            self.assertFalse(ci.run_directories_for_changes(
-                ["Cargo.toml"], original, changed, {"geam"}
-            ))
-        self.assertTrue(ci.run_directories_for_changes(
-            ["Cargo.toml"], original, changed_geam, {"geam"}
-        ))
-        with self.assertRaises(ValueError):
-            ci.run_directories_for_changes(["Cargo.toml"])
-
-    def test_integration_flags_are_independent(self):
-        cases = [
-            (["integrations/clip/README.md"], (False, True)),
-            (["integrations/directories/README.md"], (True, False)),
-            (["integrations/clip/README.md", "integrations/directories/README.md"], (True, True)),
-            (["argv/src/lib.rs"], (False, True)),
-            (["gleam-regexp/fixtures/embedding/src/main.rs"], (False, True)),
-            (["filepath/src/lib.rs"], (True, True)),
-            (["simplifile/Cargo.toml"], (True, True)),
-            (["envoy/src/lib.rs"], (True, False)),
-            (["platform/src/lib.rs"], (True, False)),
-            (["logging/src/lib.rs", "docs/development/testing.md"], (False, False)),
-            (["integrations/unrelated/README.md", "Cargo.lock"], (False, False)),
-            ([], (False, False)),
-        ]
-        cases.extend(([path], (True, True)) for path in ci.INTEGRATION_CI_PATHS)
-        for paths, expected in cases:
-            with self.subTest(paths=paths):
-                self.assertEqual((
-                    ci.run_directories_for_changes(paths),
-                    ci.run_clip_for_changes(paths),
-                ), expected)
-
-    def test_clip_root_manifest_uses_its_workspace_dependencies(self):
-        original = self.MANIFEST + 'reqwest = "0.13"\n'
-        for changed in (
-            original.replace('members = ["filepath"]', 'members = ["filepath", "logging"]'),
-            original.replace('reqwest = "0.13"', 'reqwest = "0.14"'),
-        ):
-            self.assertFalse(ci.run_clip_for_changes(["Cargo.toml"], original, changed, {"geam"}))
-        self.assertTrue(ci.run_clip_for_changes(
-            ["Cargo.toml"], original, original.replace('rev = "old"', 'rev = "new"'), {"geam"}
-        ))
-        self.assertTrue(ci.run_clip_for_changes(
-            ["Cargo.toml"], original, original.replace('resolver = "3"', 'resolver = "2"'), {"geam"}
-        ))
-        regex = original + 'regex = "1.12"\n'
-        self.assertTrue(ci.run_clip_for_changes(
-            ["Cargo.toml"], regex, regex.replace('regex = "1.12"', 'regex = "1.13"'),
-            {"geam", "regex", "regex-syntax"},
-        ))
-        self.assertFalse(ci.run_directories_for_changes(
-            ["Cargo.toml"], regex, regex.replace('regex = "1.12"', 'regex = "1.13"'), {"geam"},
-        ))
-        with self.assertRaises(ValueError):
-            ci.run_clip_for_changes(["Cargo.toml"])
-
-    def test_unrecognized_root_dependency_format_requires_full_analysis_fallback(self):
-        # An unrecognized layout must not silently discard revision changes.
+    def test_unknown_syntax_cannot_hide_pin_change(self):
         before = self.MANIFEST.replace(
             'geam = { git = "https://example.test/geam", rev = "old" }',
-            'geam = {\n  git = "https://example.test/geam",\n  rev = "old"\n}',
+            'geam = {\n git = "https://example.test/geam",\n rev = "old"\n}',
         )
-        for selector in (ci.run_directories_for_changes, ci.run_clip_for_changes):
-            with self.subTest(selector=selector.__name__), self.assertRaises(ValueError):
-                selector(["Cargo.toml"], before, before.replace('"old"', '"new"'), {"geam"})
+        with self.assertRaises(ValueError):
+            ci.relevant_workspace_manifest_change(before, before.replace('"old"', '"new"'), {"geam"})
 
 
-class RepositoryTests(unittest.TestCase):
-    def test_directories_workspace_dependencies_include_geam(self):
-        self.assertEqual(ci.directories_workspace_dependencies(), {"geam"})
+class FixtureRepository:
+    """Independent Git/Cargo workspace; only metadata is run, never a build."""
 
-    def test_clip_workspace_dependencies_include_geam(self):
-        self.assertEqual(ci.clip_workspace_dependencies(), {"geam", "regex", "regex-syntax"})
+    def __init__(self):
+        self.temporary = tempfile.TemporaryDirectory(prefix="ci-selection 한글 ")
+        self.root = Path(self.temporary.name).resolve()
+        self.members = ["support"]
+        support = self.root / "support"
+        (support / "src").mkdir(parents=True)
+        (support / "src/lib.rs").write_text("")
+        (support / "Cargo.toml").write_text('[package]\nname = "ci-support"\nversion = "0.1.0"\n')
+        scripts = self.root / ".github/scripts"
+        scripts.mkdir(parents=True)
+        shutil.copyfile(ci.ROOT / ".github/scripts/select_providers.py", scripts / "select_providers.py")
+        (self.root / ".gitignore").write_text("target/\n")
+        self.write_provider("filepath")
+        self.write_provider("simplifile", dependency="filepath", declaration={
+            "runners": ["ubuntu-24.04", "macos-15", "windows-2025"],
+        })
+        self.write_provider("platform")
+        self.write_integration("paths", ["geam-simplifile"])
+        self.write_integration("system", ["geam-platform"], ["ubuntu-24.04"])
+        self.git("init", "-q")
+        self.git("config", "user.name", "CI fixture")
+        self.git("config", "user.email", "ci@example.test")
+        self.base = self.commit("base")
 
-    def test_current_workspace_and_fixtures_expose_filepath_dependency(self):
-        metadata = json.loads(
-            subprocess.check_output(
-                ["cargo", "metadata", "--no-deps", "--format-version", "1", "--locked"],
-                cwd=ci.ROOT,
-            )
+    def close(self):
+        self.temporary.cleanup()
+
+    def git(self, *args):
+        return subprocess.check_output(["git", *args], cwd=self.root, text=True, stderr=subprocess.PIPE).strip()
+
+    def write_provider(self, directory, dependency=None, declaration=None):
+        if directory not in self.members:
+            self.members.append(directory)
+        owner = self.root / directory
+        (owner / "src").mkdir(parents=True, exist_ok=True)
+        (owner / "src/lib.rs").write_text("")
+        (owner / "fixtures/embedding").mkdir(parents=True, exist_ok=True)
+        (owner / "fixtures/embedding/Cargo.toml").write_text("[workspace]\n")
+        declaration = declaration or {}
+        metadata = "".join(key + " = " + json.dumps(value) + "\n" for key, value in declaration.items())
+        extra = 'other = { package = "geam-' + dependency + '", path = "../' + dependency + '" }\n' if dependency else ""
+        (owner / "Cargo.toml").write_text(
+            '[package]\nname = "geam-' + directory + '"\nversion = "0.1.0"\n'
+            '[package.metadata.geam.provider]\ngleam-package = "' + directory + '"\n'
+            '[package.metadata.geam.ci]\n' + metadata +
+            '[dependencies]\ngeam.workspace = true\n' + extra
         )
-        graph = ci.provider_dependencies(ROWS, metadata, ci.ROOT, ci.fixture_manifests(ci.ROOT))
+        if declaration.get("script"):
+            script = owner / declaration["script"]
+            script.parent.mkdir(parents=True, exist_ok=True)
+            script.write_text("#!/usr/bin/env bash\nexit 0\n")
+        (self.root / "Cargo.toml").write_text(
+            '[workspace]\nmembers = ' + json.dumps(self.members) + '\nresolver = "3"\n\n'
+            '[workspace.dependencies]\ngeam = { package = "ci-support", path = "support" }\n'
+        )
+
+    def write_integration(self, name, providers, runners=None):
+        owner = self.root / "integrations" / name
+        owner.mkdir(parents=True, exist_ok=True)
+        (owner / "ci.sh").write_text("#!/usr/bin/env bash\nexit 0\n")
+        (owner / "ci.json").write_text(json.dumps({
+            "schema": 1, "script": "ci.sh", "providers": providers,
+            "runners": runners or ["ubuntu-24.04", "macos-15", "windows-2025"],
+            "cache-workspaces": [],
+        }))
+
+    def commit(self, message):
+        subprocess.run(["cargo", "generate-lockfile", "--offline"], cwd=self.root, check=True, capture_output=True)
+        self.git("add", ".")
+        self.git("-c", "commit.gpgsign=false", "-c", "core.hooksPath=/dev/null", "commit", "-qm", message)
+        return self.git("rev-parse", "HEAD")
+
+    def declarations(self):
+        metadata = json.loads(subprocess.check_output(
+            ["cargo", "metadata", "--no-deps", "--format-version", "1", "--locked", "--offline"], cwd=self.root,
+        ))
+        rows = ci.discover_providers(metadata, self.root)
+        return rows, ci.discover_integrations(rows, self.root), metadata
+
+    def select(self, **env):
+        rows, cases, metadata = self.declarations()
+        return ci.select_event(rows, cases, metadata, self.root, {
+            "CI_EVENT": "pull_request", "CI_BASE_SHA": self.base,
+            "GITHUB_SHA": self.git("rev-parse", "HEAD"), **env,
+        })
+
+    def workflow(self, **env):
+        content = (ci.ROOT / ".github/workflows/ci.yml").read_text()
+        step = content.split("      - name: Build provider matrix from Cargo metadata\n", 1)[1]
+        script = textwrap.dedent(step.split("        run: |\n", 1)[1].split("\n  quality:", 1)[0])
+        output = self.root / "workflow-output"
+        result = subprocess.run(
+            ["bash", "-e", "-o", "pipefail", "-c", script], cwd=self.root, text=True, capture_output=True,
+            env={**os.environ, "GITHUB_OUTPUT": str(output), "CARGO_NET_OFFLINE": "true",
+                 "CI_EVENT": "workflow_dispatch", "COVERAGE_PROVIDER": "", "COVERAGE_RUNNER": "",
+                 "RUN_INTEGRATIONS": "false", **env},
+        )
+        values = dict(line.split("=", 1) for line in output.read_text().splitlines()) if output.exists() else {}
+        output.unlink(missing_ok=True)
+        return result, values
+
+
+class RepositorySelectionTests(unittest.TestCase):
+    def setUp(self):
+        self.fixture = FixtureRepository()
+        self.addCleanup(self.fixture.close)
+
+    def test_new_integration_needs_no_shared_ci_edit(self):
+        self.fixture.write_integration("new-cli", ["geam-platform"], ["windows-2025"])
+        self.fixture.commit("add integration")
+        providers, cases, coverage, reason = self.fixture.select()
+        self.assertEqual((providers, cases, coverage, reason), (set(), {"new-cli"}, False, "integration-only change"))
+        rows, integrations, _ = self.fixture.declarations()
+        matrix = ci.build_matrices(rows, integrations, providers, cases, coverage)
+        self.assertEqual(matrix["integrations"]["include"], [{
+            "runner": "windows-2025", "cases": [{"dir": "integrations/new-cli"}],
+            "cache_workspaces": ". -> target/geam-cli-build",
+        }])
+
+    def test_new_provider_with_four_server_hooks_is_scoped(self):
+        self.fixture.write_provider("server", "filepath", {
+            "script": "fixtures/ci.sh", "script-phases": ["erlang", "embedding", "standalone", "executable"],
+            "erlang-oracle": True, "runners": ["windows-2025"],
+        })
+        head = self.fixture.commit("add server")
+        providers, cases, _, reason = self.fixture.select()
+        self.assertEqual((providers, cases, reason), ({"geam-server"}, set(), "affected providers"))
+        result, values = self.fixture.workflow(CI_EVENT="pull_request", CI_BASE_SHA=self.fixture.base, GITHUB_SHA=head)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(values["has_integrations"], "false")
+        self.assertEqual([
+            (row["crate"], row["runner"]) for row in json.loads(values["targets"])["include"]
+        ], [("geam-server", "windows-2025")])
+
+    def test_hook_edit_runs_owner_and_integration_consumers(self):
+        self.fixture.write_provider("platform", declaration={"script": "fixtures/ci.sh", "script-phases": ["standalone"]})
+        self.fixture.base = self.fixture.commit("register hook")
+        (self.fixture.root / "platform/fixtures/ci.sh").write_text("exit 1\n")
+        self.fixture.commit("change hook")
+        providers, cases, _, _ = self.fixture.select()
+        self.assertEqual((providers, cases), ({"geam-platform"}, {"system"}))
+
+    def test_dependency_reaches_transitive_integration_consumer(self):
+        (self.fixture.root / "filepath/src/lib.rs").write_text("// change\n")
+        self.fixture.commit("dependency")
+        providers, cases, _, _ = self.fixture.select()
+        self.assertEqual((providers, cases), ({"geam-filepath", "geam-simplifile"}, {"paths"}))
+
+    def test_rename_selects_both_registered_owners(self):
+        (self.fixture.root / "integrations/paths/scenario.txt").write_text("fixture")
+        self.fixture.base = self.fixture.commit("scenario")
+        self.fixture.git("mv", "integrations/paths/scenario.txt", "integrations/system/scenario.txt")
+        head = self.fixture.commit("rename")
+        self.assertEqual(set(ci.changed_paths(self.fixture.base, head, self.fixture.root)), {
+            "integrations/paths/scenario.txt", "integrations/system/scenario.txt",
+        })
+        providers, cases, _, _ = self.fixture.select()
+        self.assertEqual((providers, cases), (set(), {"paths", "system"}))
+
+    def test_shared_execution_and_cargo_changes_run_all(self):
+        for path in (".github/scripts/ci-lib.sh", "Cargo.toml"):
+            with self.subTest(path=path):
+                original = self.fixture.root / path
+                if path == "Cargo.toml":
+                    original.write_text(original.read_text().replace('resolver = "3"', 'resolver = "2"'))
+                else:
+                    original.write_text("# shared execution changed\n")
+                self.fixture.commit("shared")
+                providers, cases, _, _ = self.fixture.select()
+                self.assertEqual((providers, cases), (ALL, {"paths", "system"}))
+
+    def test_missing_diff_is_full_fallback(self):
+        providers, cases, _, reason = self.fixture.select(CI_BASE_SHA="missing")
+        self.assertEqual((providers, cases, reason), (ALL, {"paths", "system"}, "change analysis unavailable"))
+
+    def test_actual_workflow_manual_and_focused_requests(self):
+        for enabled in ("true", "false"):
+            result, values = self.fixture.workflow(RUN_INTEGRATIONS=enabled)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual((values["has_targets"], values["has_integrations"]), ("true", enabled))
+        result, values = self.fixture.workflow(
+            COVERAGE_PROVIDER="geam-simplifile", COVERAGE_RUNNER="windows-2025", RUN_INTEGRATIONS="true",
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual((values["coverage_only"], values["has_integrations"]), ("true", "false"))
+        rows = json.loads(values["targets"])["include"]
+        self.assertEqual([(row["crate"], row["runner"]) for row in rows], [("geam-simplifile", "windows-2025")])
+
+    def test_actual_workflow_new_integration_is_scoped(self):
+        self.fixture.write_integration("third", [])
+        head = self.fixture.commit("third integration")
+        result, values = self.fixture.workflow(CI_EVENT="pull_request", CI_BASE_SHA=self.fixture.base, GITHUB_SHA=head)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual((values["has_targets"], values["has_integrations"]), ("false", "true"))
+        self.assertTrue(all(
+            row["cases"] == [{"dir": "integrations/third"}]
+            for row in json.loads(values["integrations"])["include"]
+        ))
+
+    def test_invalid_focused_requests_fail(self):
+        for env in ({"COVERAGE_PROVIDER": "geam-filepath"}, {"COVERAGE_PROVIDER": "geam-filepath", "COVERAGE_RUNNER": "missing"}):
+            result, _ = self.fixture.workflow(**env)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("coverage", result.stderr)
+
+
+class DeclarationTests(unittest.TestCase):
+    def setUp(self):
+        self.fixture = FixtureRepository()
+        self.addCleanup(self.fixture.close)
+
+    def test_unregistered_integration_is_an_error(self):
+        (self.fixture.root / "integrations/unregistered").mkdir()
+        with self.assertRaises(FileNotFoundError):
+            self.fixture.declarations()
+
+    def test_invalid_provider_declaration_types_fail_at_the_registration_boundary(self):
+        _, _, metadata = self.fixture.declarations()
+        geam = next(package["metadata"]["geam"] for package in metadata["packages"] if package["name"] == "geam-platform")
+        for value in (False, [], None):
+            geam["ci"] = value
+            with self.assertRaisesRegex(ValueError, "geam-platform: CI declaration"):
+                ci.discover_providers(metadata, self.fixture.root)
+
+    def test_empty_gleam_package_fails_actual_workflow_discovery(self):
+        path = self.fixture.root / "platform/Cargo.toml"
+        path.write_text(path.read_text().replace('gleam-package = "platform"', 'gleam-package = ""'))
+        result, outputs = self.fixture.workflow()
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("geam-platform: gleam-package", result.stderr)
+        self.assertEqual(outputs, {})
+
+    def test_invalid_integration_declarations_are_not_analysis_fallback(self):
+        path = self.fixture.root / "integrations/paths/ci.json"
+        original = json.loads(path.read_text())
+        for change in (
+            {"schema": True}, {"schema": 2}, {"providers": ["missing"]}, {"runners": []},
+            {"runners": ["ubuntu-24.04", "ubuntu-24.04"]}, {"script": "../system/ci.sh"},
+            {"script": "missing.sh"}, {"cache-workspaces": ["../system -> target"]}, {"unknown": True},
+        ):
+            with self.subTest(change=change):
+                path.write_text(json.dumps({**original, **change}))
+                with self.assertRaises(ValueError):
+                    self.fixture.declarations()
+        path.write_text('{"schema":1,"schema":1}')
+        with self.assertRaisesRegex(ValueError, "duplicate"):
+            self.fixture.declarations()
+
+    def test_invalid_provider_hooks_fail_registration(self):
+        for declaration in (
+            {"script": "fixtures/ci.sh"}, {"script-phases": ["standalone"]},
+            {"script": "fixtures/ci.sh", "script-phases": ["unsupported"]},
+            {"script": "fixtures/ci.sh", "script-phases": ["erlang"]},
+            {"script": False}, {"example-dir": 0}, {"integration-case": "server"},
+        ):
+            with self.subTest(declaration=declaration):
+                self.fixture.write_provider("platform", declaration=declaration)
+                with self.assertRaises(ValueError):
+                    self.fixture.declarations()
+
+    def test_symlink_cannot_escape_script_owner(self):
+        script = self.fixture.root / "integrations/paths/ci.sh"
+        script.unlink()
+        script.symlink_to(self.fixture.root / "integrations/system/ci.sh")
+        with self.assertRaises(ValueError):
+            self.fixture.declarations()
+
+    def test_runner_specific_cache_and_cases(self):
+        owner = self.fixture.root / "integrations/paths"
+        (owner / "fixtures/embedding").mkdir(parents=True)
+        (owner / "fixtures/embedding/Cargo.toml").write_text("[workspace]\n")
+        declaration_path = owner / "ci.json"
+        declaration = json.loads(declaration_path.read_text())
+        declaration["cache-workspaces"] = ["fixtures/embedding -> target"]
+        declaration_path.write_text(json.dumps(declaration))
+        rows, cases, _ = self.fixture.declarations()
+        matrix = ci.build_matrices(rows, cases, ALL, {"paths", "system"}, False)
+        for row in matrix["integrations"]["include"]:
+            self.assertIn("integrations/paths/fixtures/embedding -> target", row["cache_workspaces"])
+            expected = {"paths", "system"} if row["runner"] == "ubuntu-24.04" else {"paths"}
+            self.assertEqual({case["dir"].split("/")[-1] for case in row["cases"]}, expected)
+
+
+class CurrentRepositoryTests(unittest.TestCase):
+    def test_real_dependencies_and_declared_shared_inputs(self):
+        metadata = json.loads(subprocess.check_output(
+            ["cargo", "metadata", "--no-deps", "--format-version", "1", "--locked"], cwd=ci.ROOT,
+        ))
+        rows = ci.discover_providers(metadata)
+        cases = ci.discover_integrations(rows)
+        graph = ci.provider_dependencies(rows, metadata, ci.ROOT, ci.fixture_manifests(ci.ROOT))
         self.assertIn("geam-filepath", graph["geam-simplifile"])
+        directories = {row["crate"]: row["dir"] for row in rows}
+        expected = {"directories": {"geam"}, "clip": {"geam", "regex", "regex-syntax"}}
+        by_name = {case["name"]: case for case in cases}
+        for name, expected_names in expected.items():
+            case = by_name[name]
+            names = ci.integration_workspace_dependencies([directories[name] for name in case["providers"]])
+            self.assertEqual(names, expected_names)
 
-    def test_fixture_only_provider_dependency_is_detected(self):
+    def test_fixture_only_dependency_and_unknown_syntax(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             manifest = root / "first/fixtures/gleam/Cargo.toml"
             manifest.parent.mkdir(parents=True)
             (root / "second").mkdir()
             manifest.write_text('other = { path = "../../../second" }\n')
-            rows = [
-                {"crate": "first", "dir": "first"},
-                {"crate": "second", "dir": "second"},
-            ]
-            metadata = {
-                "workspace_members": ["first-id", "second-id"],
-                "packages": [
-                    {"id": "first-id", "name": "first", "dependencies": []},
-                    {"id": "second-id", "name": "second", "dependencies": []},
-                ],
-            }
-            graph = ci.provider_dependencies(
-                rows, metadata, root, ["first/fixtures/gleam/Cargo.toml"]
-            )
+            rows = [{"crate": "first", "dir": "first"}, {"crate": "second", "dir": "second"}]
+            metadata = {"workspace_members": ["first-id", "second-id"], "packages": [
+                {"id": "first-id", "name": "first", "dependencies": []},
+                {"id": "second-id", "name": "second", "dependencies": []},
+            ]}
+            graph = ci.provider_dependencies(rows, metadata, root, ["first/fixtures/gleam/Cargo.toml"])
             self.assertEqual(graph["first"], {"second"})
             manifest.write_text("other = { path = '../../../second' }\n")
             with self.assertRaises(ValueError):
                 ci.provider_dependencies(rows, metadata, root, ["first/fixtures/gleam/Cargo.toml"])
-
-    def test_rename_reports_both_paths_and_missing_diff_fails_closed(self):
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
-            subprocess.check_call(["git", "init", "-q"], cwd=root)
-            subprocess.check_call(["git", "config", "user.name", "CI test"], cwd=root)
-            subprocess.check_call(["git", "config", "user.email", "ci@example.test"], cwd=root)
-            old = root / "integrations/directories/old.txt"
-            old.parent.mkdir(parents=True)
-            old.write_text("fixture\n")
-            subprocess.check_call(["git", "add", "."], cwd=root)
-            subprocess.check_call(["git", "commit", "-qm", "initial"], cwd=root)
-            base = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=root).decode().strip()
-            (root / "integrations/clip").mkdir()
-            subprocess.check_call([
-                "git", "mv", "integrations/directories/old.txt", "integrations/clip/new.txt",
-            ], cwd=root)
-            subprocess.check_call(["git", "commit", "-qm", "rename"], cwd=root)
-            head = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=root).decode().strip()
-            paths = ci.changed_paths(base, head, root)
-            self.assertEqual(set(paths), {"integrations/directories/old.txt", "integrations/clip/new.txt"})
-            self.assertTrue(ci.run_directories_for_changes(paths))
-            self.assertTrue(ci.run_clip_for_changes(paths))
-            with self.assertRaises(ValueError):
-                ci.changed_paths("0" * 40, head, root)
-
-
-class SelectorOutputTests(unittest.TestCase):
-    def select(self, paths=None, error=None):
-        metadata = {"workspace_members": [], "packages": []}
-        stdout = io.StringIO()
-        with (
-            patch.dict(os.environ, {"PROVIDER_ROWS": json.dumps(ROWS)}),
-            patch.object(ci, "changed_paths", return_value=paths, side_effect=error),
-            patch.object(ci, "fixture_manifests", return_value=[]),
-            patch.object(ci.subprocess, "check_output", return_value=json.dumps(metadata).encode()),
-            contextlib.redirect_stdout(stdout),
-            contextlib.redirect_stderr(io.StringIO()),
-        ):
-            ci.main()
-        return json.loads(stdout.getvalue())
-
-    def test_clip_only_cli_output_skips_providers_and_directories(self):
-        self.assertEqual(self.select(["integrations/clip/README.md"]), {
-            "providers": [], "run_directories": False, "run_clip": True,
-        })
-
-    def test_directories_only_cli_output_skips_clip(self):
-        self.assertEqual(self.select(["integrations/directories/README.md"]), {
-            "providers": [], "run_directories": True, "run_clip": False,
-        })
-
-    def test_diff_failure_runs_every_provider_and_integration(self):
-        for error in (ValueError("missing endpoint"), subprocess.CalledProcessError(1, "git")):
-            with self.subTest(error=error):
-                self.assertEqual(self.select(error=error), {
-                    "providers": sorted(ALL), "run_directories": True, "run_clip": True,
-                })
-
-
-class WorkflowOutputTests(unittest.TestCase):
-    def matrix(self, root=ci.ROOT, **env):
-        # Execute the workflow's actual Bash rather than a copy of its dispatch logic.
-        content = (ci.ROOT / ".github/workflows/ci.yml").read_text()
-        step = content.split("      - name: Build provider matrix from Cargo metadata\n", 1)[1]
-        script = step.split("        run: |\n", 1)[1].split("\n  quality:", 1)[0]
-        with tempfile.TemporaryDirectory() as directory:
-            output = Path(directory) / "output"
-            result = subprocess.run(
-                ["bash", "-e", "-o", "pipefail", "-c", textwrap.dedent(script)],
-                cwd=root, text=True, capture_output=True,
-                env={**os.environ, "GITHUB_WORKSPACE": str(root), "GITHUB_OUTPUT": str(output),
-                     "CI_EVENT": "workflow_dispatch", "COVERAGE_PROVIDER": "", "COVERAGE_RUNNER": "",
-                     "RUN_INTEGRATIONS": "false", **env},
-            )
-            values = dict(line.split("=", 1) for line in output.read_text().splitlines()) if output.exists() else {}
-        return result, values
-
-    def test_manual_integrations_flag_controls_both_cases(self):
-        for enabled in ("true", "false"):
-            with self.subTest(enabled=enabled):
-                result, values = self.matrix(RUN_INTEGRATIONS=enabled)
-                self.assertEqual(result.returncode, 0, result.stderr)
-                self.assertEqual(values["coverage_only"], "false")
-                self.assertEqual(values["run_directories"], enabled)
-                self.assertEqual(values["run_clip"], enabled)
-                self.assertEqual(values["has_targets"], "true")
-
-    def test_focused_coverage_skips_integrations_even_when_requested(self):
-        result, values = self.matrix(
-            COVERAGE_PROVIDER="geam-argv", COVERAGE_RUNNER="ubuntu-24.04", RUN_INTEGRATIONS="true",
-        )
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(values["coverage_only"], "true")
-        self.assertEqual(values["run_directories"], "false")
-        self.assertEqual(values["run_clip"], "false")
-        self.assertEqual([target["crate"] for target in json.loads(values["targets"])["include"]], ["geam-argv"])
-
-    def test_invalid_focused_target_fails(self):
-        result, _ = self.matrix(COVERAGE_PROVIDER="geam-argv", COVERAGE_RUNNER="invalid")
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("No declared coverage target", result.stderr)
-
-    def test_actual_pull_request_diff_controls_workflow_flags_and_provider_rows(self):
-        cases = [
-            (["integrations/clip/README.md"], ("false", "true"), "false"),
-            (["integrations/directories/README.md"], ("true", "false"), "false"),
-            (["integrations/clip/README.md", "integrations/directories/README.md"], ("true", "true"), "false"),
-            (["invalid-diff"], ("true", "true"), "true"),
-        ]
-        for paths, flags, has_targets in cases:
-            with self.subTest(paths=paths), tempfile.TemporaryDirectory() as directory:
-                root = Path(directory)
-                (root / "Cargo.toml").write_text(
-                    '[workspace]\nmembers = ["argv"]\nresolver = "3"\n\n[workspace.dependencies]\n'
-                )
-                for provider in set(ci.DIRECTORIES_PROVIDERS + ci.CLIP_PROVIDERS):
-                    crate = root / provider
-                    (crate / "src").mkdir(parents=True)
-                    (crate / "src/lib.rs").write_text("")
-                    (crate / "Cargo.toml").write_text(
-                        '[package]\nname = "geam-' + provider + '"\nversion = "0.1.0"\n'
-                        '[package.metadata.geam.provider]\ngleam-package = "' + provider + '"\n'
-                        '[dependencies]\n'
-                    )
-                scripts = root / ".github/scripts"
-                scripts.mkdir(parents=True)
-                shutil.copyfile(ci.ROOT / ".github/scripts/select_providers.py", scripts / "select_providers.py")
-                subprocess.check_call(["cargo", "generate-lockfile", "--offline"], cwd=root)
-                subprocess.check_call(["git", "init", "-q"], cwd=root)
-                subprocess.check_call(["git", "config", "user.name", "CI test"], cwd=root)
-                subprocess.check_call(["git", "config", "user.email", "ci@example.test"], cwd=root)
-                subprocess.check_call(["git", "add", "."], cwd=root)
-                subprocess.check_call(["git", "commit", "-qm", "base"], cwd=root)
-                base = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=root).decode().strip()
-                for path in paths:
-                    changed = root / path
-                    changed.parent.mkdir(parents=True, exist_ok=True)
-                    changed.write_text("integration\n")
-                subprocess.check_call(["git", "add", "."], cwd=root)
-                subprocess.check_call(["git", "commit", "-qm", "change"], cwd=root)
-                head = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=root).decode().strip()
-                result, values = self.matrix(
-                    root=root, CI_EVENT="pull_request", GITHUB_SHA=head,
-                    CI_BASE_SHA="missing" if paths == ["invalid-diff"] else base,
-                )
-                self.assertEqual(result.returncode, 0, result.stderr)
-                self.assertEqual((values["run_directories"], values["run_clip"]), flags)
-                self.assertEqual(values["has_targets"], has_targets)
-                self.assertEqual(values["coverage_only"], "false")
 
 
 if __name__ == "__main__":

@@ -6,18 +6,166 @@ import re
 import subprocess
 import sys
 from collections import Counter
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 
 ROOT = Path(__file__).resolve().parents[2]
 PATH_DEPENDENCY = re.compile(r'\bpath\s*=\s*"([^"]+)"')
-DIRECTORIES_PROVIDERS = ("envoy", "filepath", "platform", "simplifile")
-CLIP_PROVIDERS = ("argv", "filepath", "gleam-regexp", "simplifile")
-INTEGRATION_CI_PATHS = {
-    ".github/workflows/ci.yml",
-    ".github/scripts/select_providers.py",
-    ".github/scripts/test_select_providers.py",
-}
+PROVIDER_PHASES = {"erlang", "embedding", "standalone", "executable"}
+
+
+def main():
+    try:
+        metadata = json.loads(subprocess.check_output(
+            ["cargo", "metadata", "--no-deps", "--format-version", "1", "--locked"],
+            cwd=ROOT,
+        ))
+        rows = discover_providers(metadata)
+        integrations = discover_integrations(rows)
+        selected, cases, coverage_only, reason = select_event(rows, integrations, metadata)
+        result = build_matrices(rows, integrations, selected, cases, coverage_only)
+    except (KeyError, OSError, subprocess.CalledProcessError, TypeError, ValueError) as error:
+        print("CI declaration: {}".format(error), file=sys.stderr)
+        raise SystemExit(1) from error
+    print("CI selection: {}".format(reason), file=sys.stderr)
+    print(json.dumps(result))
+
+
+def discover_providers(metadata, root=ROOT):
+    members = set(metadata["workspace_members"])
+    rows = []
+    for package in metadata["packages"]:
+        package_metadata = package.get("metadata") or {}
+        if package["id"] not in members or "provider" not in package_metadata.get("geam", {}):
+            continue
+        declaration = package["metadata"]["geam"].get("ci", {})
+        if not isinstance(declaration, dict):
+            raise ValueError(package["name"] + ": CI declaration must be an object")
+        provider = package["metadata"]["geam"]["provider"]
+        gleam_package = provider.get("gleam-package") if isinstance(provider, dict) else None
+        if not isinstance(gleam_package, str) or not gleam_package:
+            raise ValueError(package["name"] + ": gleam-package must be a nonempty string")
+        allowed = {"fixture-bin", "example-dir", "erlang-oracle", "runners", "script", "script-phases", "cache-workspaces"}
+        if set(declaration) - allowed:
+            raise ValueError("{}: unknown CI fields {}".format(package["name"], sorted(set(declaration) - allowed)))
+        directory = Path(package["manifest_path"]).resolve().parent.relative_to(root.resolve()).as_posix()
+        relative_path(directory)
+        script = declaration.get("script", "")
+        if not isinstance(script, str):
+            raise ValueError(directory + ": script must be a string")
+        phases = string_list(declaration.get("script-phases", []), "script-phases")
+        if not set(phases) <= PROVIDER_PHASES or bool(script) != bool(phases):
+            raise ValueError("{}: script and supported script-phases must be declared together".format(directory))
+        if script:
+            owner_script(root / directory, script)
+        oracle = declaration.get("erlang-oracle", False)
+        if type(oracle) is not bool or ("erlang" in phases and not oracle):
+            raise ValueError("{}: an erlang hook requires erlang-oracle = true".format(directory))
+        binary = declaration.get("fixture-bin", package["name"].replace("-", "_") + "_fixture")
+        if not isinstance(binary, str) or not re.fullmatch(r"[A-Za-z0-9_-]+", binary):
+            raise ValueError("{}: invalid fixture-bin".format(directory))
+        example = declaration.get("example-dir", "")
+        if not isinstance(example, str):
+            raise ValueError(directory + ": example-dir must be a string")
+        if example:
+            relative_path(example)
+        row = {
+            "crate": package["name"], "dir": directory,
+            "gleam_package": gleam_package,
+            "fixture_bin": binary, "example_dir": example, "erlang_oracle": oracle,
+            "script": script, "script_phases": phases,
+            "runners": runner_list(declaration.get("runners", ["ubuntu-24.04"])),
+            "cache_workspaces": "\n".join([
+                ". -> target", directory + "/fixtures/embedding -> target",
+                *cache_workspaces(declaration.get("cache-workspaces", []), directory, root),
+            ]),
+        }
+        rows.append(row)
+    if not rows:
+        raise ValueError("no workspace providers declared")
+    return sorted(rows, key=lambda row: row["crate"])
+
+
+def discover_integrations(rows, root=ROOT):
+    crates = {row["crate"] for row in rows}
+    integrations = []
+    directory = root / "integrations"
+    for owner in sorted(directory.iterdir()) if directory.exists() else []:
+        if not owner.is_dir() or owner.name.startswith("."):
+            continue
+        relative_path(owner.relative_to(root).as_posix())
+        declaration_path = owner / "ci.json"
+        declaration = json.loads(declaration_path.read_text(), object_pairs_hook=unique_object)
+        fields = {"schema", "script", "providers", "runners", "cache-workspaces"}
+        if set(declaration) != fields or type(declaration["schema"]) is not int or declaration["schema"] != 1:
+            raise ValueError("{}: expected CI schema 1 and fields {}".format(declaration_path, sorted(fields)))
+        owner_script(owner, declaration["script"])
+        providers = string_list(declaration["providers"], "providers")
+        if set(providers) - crates:
+            raise ValueError("{}: unknown providers {}".format(owner, sorted(set(providers) - crates)))
+        integrations.append({
+            "name": owner.name, "dir": owner.relative_to(root).as_posix(),
+            "script": declaration["script"], "providers": providers,
+            "runners": runner_list(declaration["runners"]),
+            "cache_workspaces": cache_workspaces(declaration["cache-workspaces"], owner.relative_to(root).as_posix(), root),
+        })
+    return integrations
+
+
+def unique_object(pairs):
+    result = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError("duplicate CI declaration field: " + key)
+        result[key] = value
+    return result
+
+
+def string_list(values, field):
+    if not isinstance(values, list) or not all(isinstance(value, str) and value for value in values):
+        raise ValueError(field + " must be a list of nonempty strings")
+    if len(values) != len(set(values)):
+        raise ValueError(field + " must not contain duplicates")
+    return values
+
+
+def runner_list(values):
+    runners = string_list(values, "runners")
+    if not runners or not all(re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.-]*", runner) for runner in runners):
+        raise ValueError("declare at least one valid runner label")
+    return runners
+
+
+def relative_path(value):
+    if not isinstance(value, str) or not value or any(char in value for char in "\\:\n\r\t"):
+        raise ValueError("invalid relative repository path: {!r}".format(value))
+    path = PurePosixPath(value)
+    if path.is_absolute() or ".." in path.parts or path.as_posix() != value:
+        raise ValueError("expected a normalized relative repository path: " + value)
+    return value
+
+
+def owner_script(owner, script):
+    relative_path(script)
+    path = owner / script
+    path.resolve().relative_to(owner.resolve())
+    if not path.is_file() or path.is_symlink() or path.suffix != ".sh":
+        raise ValueError("CI script must be an existing regular Bash file: " + str(path))
+
+
+def cache_workspaces(values, directory, root):
+    result = []
+    for value in string_list(values, "cache-workspaces"):
+        parts = value.split(" -> ")
+        if len(parts) != 2:
+            raise ValueError("cache workspace must use 'path -> target': " + value)
+        workspace, target = map(relative_path, parts)
+        path = root / directory / workspace
+        path.resolve().relative_to((root / directory).resolve())
+        if not (path / "Cargo.toml").is_file():
+            raise ValueError("cache workspace must have a Cargo manifest: " + str(path))
+        result.append(directory + "/" + value)
+    return result
 
 
 def git(*args, root=ROOT):
@@ -25,7 +173,7 @@ def git(*args, root=ROOT):
 
 
 def fixture_manifests(root):
-    tracked = git("ls-files", "-z", "--", root=root).split(b"\0")
+    tracked = git("ls-files", "--cached", "--others", "--exclude-standard", "-z", "--", root=root).split(b"\0")
     return [
         path.decode("utf-8", "surrogateescape")
         for path in tracked
@@ -152,7 +300,7 @@ def lock_additions_only(base, head):
     return old_header == new_header and not old_packages - new_packages
 
 
-def affected_providers(paths, rows, dependencies, added_members=(), manifest_safe=True, lock_safe=True):
+def affected_providers(paths, rows, dependencies, added_members=(), manifest_safe=True, lock_safe=True, integration_dirs=()):
     all_crates = {row["crate"] for row in rows}
     if not manifest_safe or not lock_safe:
         return all_crates, "shared Cargo manifest or lockfile changed"
@@ -166,7 +314,7 @@ def affected_providers(paths, rows, dependencies, added_members=(), manifest_saf
         direct.add(by_directory[member])
 
     for path in paths:
-        if path.startswith("integrations/"):
+        if any(path.startswith(directory + "/") for directory in integration_dirs):
             integration_changed = True
             continue
         if path in ("Cargo.toml", "Cargo.lock", "README.md") or (
@@ -214,14 +362,6 @@ def integration_workspace_dependencies(providers, root=ROOT):
     return names
 
 
-def directories_workspace_dependencies(root=ROOT):
-    return integration_workspace_dependencies(DIRECTORIES_PROVIDERS, root)
-
-
-def clip_workspace_dependencies(root=ROOT):
-    return integration_workspace_dependencies(CLIP_PROVIDERS, root)
-
-
 def relevant_workspace_manifest_change(before, after, dependency_names):
     def relevant(content):
         sections = manifest_sections(content)
@@ -247,59 +387,33 @@ def relevant_workspace_manifest_change(before, after, dependency_names):
     return relevant(before) != relevant(after)
 
 
-def run_integration_for_changes(
-    paths, integration, providers, root_manifest_before, root_manifest_after,
-    workspace_dependencies,
-):
-    if any(
-        path.startswith("integrations/" + integration + "/")
-        or any(path.startswith(directory + "/") for directory in providers)
-        or path in INTEGRATION_CI_PATHS
-        for path in paths
-    ):
-        return True
-    if "Cargo.toml" not in paths:
-        return False
-    if root_manifest_before is None or root_manifest_after is None:
-        raise ValueError("Missing root Cargo manifest for change analysis")
-    return relevant_workspace_manifest_change(
-        root_manifest_before, root_manifest_after, workspace_dependencies
-    )
-
-
-def run_directories_for_changes(
-    paths, root_manifest_before=None, root_manifest_after=None, workspace_dependencies=()
-):
-    return run_integration_for_changes(
-        paths, "directories", DIRECTORIES_PROVIDERS,
-        root_manifest_before, root_manifest_after, workspace_dependencies,
-    )
-
-
-def run_clip_for_changes(
-    paths, root_manifest_before=None, root_manifest_after=None, workspace_dependencies=()
-):
-    return run_integration_for_changes(
-        paths, "clip", CLIP_PROVIDERS,
-        root_manifest_before, root_manifest_after, workspace_dependencies,
-    )
-
-
-def main():
-    rows = json.loads(os.environ["PROVIDER_ROWS"])
+def select_event(rows, integrations, metadata, root=ROOT, env=None):
+    env = os.environ if env is None else env
     all_crates = {row["crate"] for row in rows}
-    base = os.environ.get("CI_BASE_SHA", "")
-    head = os.environ.get("GITHUB_SHA", "")
+    all_cases = {case["name"] for case in integrations}
+    provider = env.get("COVERAGE_PROVIDER", "")
+    runner = env.get("COVERAGE_RUNNER", "")
+    if provider or runner:
+        if not provider or not runner:
+            raise ValueError("Set both coverage_provider and coverage_runner for a focused run")
+        if not any(row["crate"] == provider and runner in row["runners"] for row in rows):
+            raise ValueError("No declared coverage target for {} on {}".format(provider, runner))
+        return {provider}, set(), True, "focused coverage"
+    if env.get("CI_EVENT") not in ("push", "pull_request"):
+        cases = all_cases if env.get("RUN_INTEGRATIONS") == "true" else set()
+        return all_crates, cases, False, "manual run"
+    base = env.get("CI_BASE_SHA", "")
+    head = env.get("GITHUB_SHA", "")
     try:
-        paths = changed_paths(base, head)
+        paths = changed_paths(base, head, root)
         added_members = set()
         manifest_safe = True
         lock_safe = True
         root_manifest_before = None
         root_manifest_after = None
         if "Cargo.toml" in paths:
-            root_manifest_before = git("show", base + ":Cargo.toml").decode()
-            root_manifest_after = (ROOT / "Cargo.toml").read_text()
+            root_manifest_before = git("show", base + ":Cargo.toml", root=root).decode()
+            root_manifest_after = (root / "Cargo.toml").read_text()
             added_members = manifest_additions(
                 root_manifest_before,
                 root_manifest_after,
@@ -307,41 +421,80 @@ def main():
             manifest_safe = added_members is not None
         if "Cargo.lock" in paths:
             lock_safe = lock_additions_only(
-                git("show", base + ":Cargo.lock").decode(),
-                (ROOT / "Cargo.lock").read_text(),
+                git("show", base + ":Cargo.lock", root=root).decode(),
+                (root / "Cargo.lock").read_text(),
             )
-        metadata = json.loads(
-            subprocess.check_output(
-                ["cargo", "metadata", "--no-deps", "--format-version", "1", "--locked"],
-                cwd=ROOT,
-            )
-        )
-        dependencies = provider_dependencies(rows, metadata, ROOT, fixture_manifests(ROOT))
+        dependencies = provider_dependencies(rows, metadata, root, fixture_manifests(root))
         selected, reason = affected_providers(
-            paths, rows, dependencies, added_members or (), manifest_safe, lock_safe
+            paths, rows, dependencies, added_members or (), manifest_safe, lock_safe,
+            [case["dir"] for case in integrations],
         )
-        run_directories = run_directories_for_changes(
-            paths,
-            root_manifest_before,
-            root_manifest_after,
-            directories_workspace_dependencies(),
-        )
-        run_clip = run_clip_for_changes(
-            paths,
-            root_manifest_before,
-            root_manifest_after,
-            clip_workspace_dependencies(),
+        cases = affected_integrations(
+            paths, rows, integrations, dependencies, selected, reason,
+            root_manifest_before, root_manifest_after, lock_safe, root,
         )
     except (KeyError, OSError, subprocess.CalledProcessError, TypeError, UnicodeError, ValueError):
-        selected, reason = all_crates, "change analysis unavailable"
-        run_directories = True
-        run_clip = True
-    print("CI selection: {}".format(reason), file=sys.stderr)
-    print(json.dumps({
-        "providers": sorted(selected),
-        "run_directories": run_directories,
-        "run_clip": run_clip,
-    }))
+        selected, cases, reason = all_crates, all_cases, "change analysis unavailable"
+    return selected, cases, False, reason
+
+
+def affected_integrations(paths, rows, integrations, dependencies, selected, reason, before, after, lock_safe, root):
+    if reason == "shared or unknown path changed" or not lock_safe:
+        return {case["name"] for case in integrations}
+    directories = {row["crate"]: row["dir"] for row in rows}
+    cases = set()
+    for case in integrations:
+        if any(path.startswith(case["dir"] + "/") for path in paths):
+            cases.add(case["name"])
+            continue
+        requirements = set(case["providers"])
+        while True:
+            expanded = requirements | set().union(*(dependencies[crate] for crate in requirements))
+            if expanded == requirements:
+                break
+            requirements = expanded
+        if reason == "affected providers" and requirements & selected:
+            cases.add(case["name"])
+            continue
+        if "Cargo.toml" in paths:
+            names = integration_workspace_dependencies([directories[crate] for crate in requirements], root)
+            if relevant_workspace_manifest_change(before, after, names):
+                cases.add(case["name"])
+    return cases
+
+
+def build_matrices(rows, integrations, selected, cases, coverage_only, env=None):
+    env = os.environ if env is None else env
+    providers = [{key: value for key, value in row.items() if key != "runners"} for row in rows]
+    targets = []
+    for row in rows:
+        if row["crate"] not in selected:
+            continue
+        for runner in row["runners"]:
+            if coverage_only and runner != env.get("COVERAGE_RUNNER"):
+                continue
+            targets.append({**{key: value for key, value in row.items() if key != "runners"}, "runner": runner})
+    by_runner = {}
+    for case in integrations:
+        if case["name"] not in cases:
+            continue
+        for runner in case["runners"]:
+            by_runner.setdefault(runner, []).append(case)
+    integration_targets = []
+    for runner, runner_cases in sorted(by_runner.items()):
+        caches = [". -> target/geam-cli-build"]
+        for case in runner_cases:
+            caches.extend(case["cache_workspaces"])
+        integration_targets.append({
+            "runner": runner,
+            "cases": [{"dir": case["dir"]} for case in runner_cases],
+            "cache_workspaces": "\n".join(dict.fromkeys(caches)),
+        })
+    return {
+        "providers": {"include": providers}, "targets": {"include": targets},
+        "has_targets": bool(targets), "coverage_only": coverage_only,
+        "integrations": {"include": integration_targets}, "has_integrations": bool(integration_targets),
+    }
 
 
 if __name__ == "__main__":

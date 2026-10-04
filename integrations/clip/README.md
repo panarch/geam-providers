@@ -159,3 +159,16 @@ temporary files. The [package-contract fixture](fixtures/gleam/src/clip_contract
 also covers clip's API beyond the search example. See the
 [testing guide](../../docs/development/testing.md#package-integration-verification)
 for package-contract checks, Erlang reference runs and full verification commands.
+
+For the complete check sequence, install Bash, jq and Erlang as well, export
+`GEAM_BIN` and the matching revision, then run from the repository root:
+
+```sh
+export GEAM_REV=e5e1f5f772c6f48369050bdf3ee35c7a324277e2
+export GEAM_BIN="$PWD/target/geam-cli-build/release/geam"
+bash .github/scripts/run_ci.sh integration clip
+```
+
+[ci.json](ci.json) registers this case and [ci.sh](ci.sh) contains its checks.
+See [CI registration and execution](../../docs/development/ci.md) for individual
+phases and Windows setup.
