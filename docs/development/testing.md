@@ -5,7 +5,7 @@ Providers. The current production packages are `geam-filepath`,
 `geam-regexp`, `geam-otp`, `geam-houdini`, `geam-gzlib`, `geam-crypto`,
 `geam-simplifile`, `geam-platform`, `geam-logging`, `geam-term-size`,
 `geam-birl`, `geam-httpc`, `geam-global-value`, `geam-argv`, `geam-splitter`,
-`geam-envoy`, `geam-operating-system`, and `geam-exception`. This document must
+`geam-envoy`, `geam-operating-system`, `geam-exception`, and `geam-glisten`. This document must
 remain the source of truth for the checks actually run.
 
 For acceptance rules, see [review-policy.md](review-policy.md). For practical
@@ -66,7 +66,7 @@ expectations, including expected errors and representative fallback paths.
 ## Dependency Preparation
 
 The Rust workspace, fixture consumers, and report service example use Geam
-`main` commit `5adbf4e654c6e4ca518e60babe19c3dc88532d4d`. Houdini also
+`main` commit `5ad13b7a78652f95b6801e8bf836b9a1fb3ec789`. Houdini also
 uses the public `geam-core` byte-slice helper from that commit. The Gleam
 projects resolve the unmodified `filepath` 1.1.2, `gleam_regexp` 1.1.1,
 `gleam_otp` 1.3.0, `houdini` 1.2.0, `gzlib` 2.0.0, `gleam_crypto` 1.6.0,
@@ -196,7 +196,7 @@ commit (a Git-package `cargo install` can resolve a published `geam-core`):
 
 ```sh
 git init -q target/geam-source
-git -C target/geam-source fetch --depth=1 https://github.com/panarch/geam.git 5adbf4e654c6e4ca518e60babe19c3dc88532d4d
+git -C target/geam-source fetch --depth=1 https://github.com/panarch/geam.git 5ad13b7a78652f95b6801e8bf836b9a1fb3ec789
 git -C target/geam-source checkout --detach -q FETCH_HEAD
 CARGO_TARGET_DIR="$PWD/target/geam-cli-build" \
   cargo build --manifest-path "$PWD/target/geam-source/Cargo.toml" \
@@ -480,6 +480,7 @@ cargo package --list --package geam-splitter --locked
 cargo package --list --package geam-envoy --locked
 cargo package --list --package geam-operating-system --locked
 cargo package --list --package geam-exception --locked
+cargo package --list --package geam-glisten --locked
 ```
 
 Confirm that each list contains `LICENSE` along with the manifest, README, and
@@ -491,6 +492,50 @@ The current Git-pinned Geam dependency is not publishable through Cargo's
 registry-only package resolution. Archive creation, registry publication, and
 consumption of a published crate are a separate gate after Geam publishes the
 required API and features. Do not treat `--list` as proof of registry readiness.
+
+### Glisten TCP And TLS Servers
+
+`glisten/fixtures/gleam` pins the unchanged Hex `glisten` 9.0.1 package.
+Its mandatory entry runs low-level TCP, two concurrent connections through the
+original acceptor pool without a user message type annotation, a user selector,
+a supervised IPv6 server, TLS with server-preferred ALPN `h2`, no client ALPN,
+and ALPN mismatch. Both endpoints assert the mismatch failure.
+The driver binds clients only after a server reports its port-0 listener and
+checks complete response bytes and server termination. The fixture certificate
+and private key are public test credentials with a fixed 2020–2100 validity
+window; pass their paths explicitly to the standalone and Erlang entry.
+
+From the repository root, with the pinned Geam CLI available as `geam`:
+
+```sh
+certificate="$PWD/glisten/fixtures/certs/cert.pem"
+key="$PWD/glisten/fixtures/certs/key.pem"
+(cd glisten/fixtures/gleam && gleam deps download && gleam format --check && gleam check)
+(cd glisten/fixtures/gleam && python3 ../run.py gleam run -- "$certificate" "$key")
+(cd glisten/fixtures/gleam && geam prepare)
+(cd glisten/fixtures/gleam && python3 ../run.py geam run -- "$certificate" "$key")
+(cd glisten/fixtures/gleam && geam build)
+```
+
+Run `glisten/fixtures/gleam/build/geam/target/debug/geam_glisten_fixture` from
+outside the fixture through the same driver, retaining the absolute certificate
+and key arguments. Use `.exe` on Windows. Do not run this server entry without
+the client driver: it deliberately waits for client IO.
+
+```sh
+(cd glisten/fixtures/embedding/gleam && gleam deps download && gleam format --check && gleam check)
+(cd glisten/fixtures/embedding && geam embedding check)
+(cd glisten/fixtures/embedding && cargo fmt --all --check)
+(cd glisten/fixtures/embedding && cargo clippy --all-targets --locked -- -D warnings)
+(cd glisten/fixtures/embedding && RUSTDOCFLAGS='-D warnings' cargo doc --no-deps --locked)
+(cd glisten/fixtures/embedding && cargo test --locked)
+(cd glisten/fixtures/embedding && python3 ../run.py cargo run --locked)
+```
+
+The embedding integration test starts its consumer through the driver and
+requires all seven scenarios in live and freshly generated prepared execution.
+The execution host enables time only; Glisten owns its explicitly selected IO
+reactor. Generated bindings and the prepared program are checked in together.
 
 ## Package Integration Verification
 
@@ -531,7 +576,8 @@ underscores, followed by `_fixture`. A provider can override that name with
 `example-dir`.
 
 `[package.metadata.geam.ci]` also accepts `integration-case`; its default is
-`standard`, and the current named exception is `httpc` for `geam-httpc`.
+`standard`. Named cases are `httpc` for `geam-httpc` and `glisten` for
+`geam-glisten`; each uses its own mandatory loopback client driver.
 Discovery rejects other values before building the provider matrix.
 
 - `quality` checks the root license and Geam revision, downloads both Gleam
@@ -808,6 +854,11 @@ cargo llvm-cov --package geam-operating-system --locked \
 cargo llvm-cov clean --workspace
 cargo llvm-cov --package geam-exception --locked \
   --json --summary-only --output-path target/exception-coverage.json \
+  --fail-under-lines 100 \
+  --fail-under-regions 100
+cargo llvm-cov clean --workspace
+cargo llvm-cov --package geam-glisten --locked \
+  --json --summary-only --output-path target/glisten-coverage.json \
   --fail-under-lines 100 \
   --fail-under-regions 100
 ```

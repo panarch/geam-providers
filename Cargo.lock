@@ -1120,7 +1120,7 @@ dependencies = [
 [[package]]
 name = "geam"
 version = "0.2.3"
-source = "git+https://github.com/panarch/geam.git?rev=5adbf4e654c6e4ca518e60babe19c3dc88532d4d#5adbf4e654c6e4ca518e60babe19c3dc88532d4d"
+source = "git+https://github.com/panarch/geam.git?rev=5ad13b7a78652f95b6801e8bf836b9a1fb3ec789#5ad13b7a78652f95b6801e8bf836b9a1fb3ec789"
 dependencies = [
  "geam-builtin",
  "geam-core",
@@ -1152,7 +1152,7 @@ dependencies = [
 [[package]]
 name = "geam-builtin"
 version = "0.2.3"
-source = "git+https://github.com/panarch/geam.git?rev=5adbf4e654c6e4ca518e60babe19c3dc88532d4d#5adbf4e654c6e4ca518e60babe19c3dc88532d4d"
+source = "git+https://github.com/panarch/geam.git?rev=5ad13b7a78652f95b6801e8bf836b9a1fb3ec789#5ad13b7a78652f95b6801e8bf836b9a1fb3ec789"
 dependencies = [
  "ecow",
  "geam-core",
@@ -1161,7 +1161,7 @@ dependencies = [
 [[package]]
 name = "geam-core"
 version = "0.2.3"
-source = "git+https://github.com/panarch/geam.git?rev=5adbf4e654c6e4ca518e60babe19c3dc88532d4d#5adbf4e654c6e4ca518e60babe19c3dc88532d4d"
+source = "git+https://github.com/panarch/geam.git?rev=5ad13b7a78652f95b6801e8bf836b9a1fb3ec789#5ad13b7a78652f95b6801e8bf836b9a1fb3ec789"
 dependencies = [
  "bitvec",
  "camino",
@@ -1203,7 +1203,7 @@ dependencies = [
 [[package]]
 name = "geam-erlang"
 version = "0.2.3"
-source = "git+https://github.com/panarch/geam.git?rev=5adbf4e654c6e4ca518e60babe19c3dc88532d4d#5adbf4e654c6e4ca518e60babe19c3dc88532d4d"
+source = "git+https://github.com/panarch/geam.git?rev=5ad13b7a78652f95b6801e8bf836b9a1fb3ec789#5ad13b7a78652f95b6801e8bf836b9a1fb3ec789"
 dependencies = [
  "ecow",
  "futures-channel",
@@ -1352,6 +1352,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "geam-glisten"
+version = "0.1.0"
+dependencies = [
+ "camino",
+ "futures-util",
+ "geam",
+ "geam-argv",
+ "geam-logging",
+ "geam-otp",
+ "parking_lot",
+ "rcgen",
+ "rustls",
+ "rustls-pemfile",
+ "sha2 0.10.9",
+ "socket2",
+ "tokio",
+ "tokio-rustls",
+]
+
+[[package]]
 name = "geam-global-value"
 version = "0.1.0"
 dependencies = [
@@ -1402,7 +1422,7 @@ dependencies = [
 [[package]]
 name = "geam-macros"
 version = "0.2.3"
-source = "git+https://github.com/panarch/geam.git?rev=5adbf4e654c6e4ca518e60babe19c3dc88532d4d#5adbf4e654c6e4ca518e60babe19c3dc88532d4d"
+source = "git+https://github.com/panarch/geam.git?rev=5ad13b7a78652f95b6801e8bf836b9a1fb3ec789#5ad13b7a78652f95b6801e8bf836b9a1fb3ec789"
 dependencies = [
  "proc-macro-crate",
  "proc-macro2",
@@ -1467,7 +1487,7 @@ dependencies = [
 [[package]]
 name = "geam-stdlib"
 version = "0.2.3"
-source = "git+https://github.com/panarch/geam.git?rev=5adbf4e654c6e4ca518e60babe19c3dc88532d4d#5adbf4e654c6e4ca518e60babe19c3dc88532d4d"
+source = "git+https://github.com/panarch/geam.git?rev=5ad13b7a78652f95b6801e8bf836b9a1fb3ec789#5ad13b7a78652f95b6801e8bf836b9a1fb3ec789"
 dependencies = [
  "base64 0.22.1",
  "bitvec",
@@ -1496,7 +1516,7 @@ dependencies = [
 [[package]]
 name = "geam-time"
 version = "0.2.3"
-source = "git+https://github.com/panarch/geam.git?rev=5adbf4e654c6e4ca518e60babe19c3dc88532d4d#5adbf4e654c6e4ca518e60babe19c3dc88532d4d"
+source = "git+https://github.com/panarch/geam.git?rev=5ad13b7a78652f95b6801e8bf836b9a1fb3ec789#5ad13b7a78652f95b6801e8bf836b9a1fb3ec789"
 dependencies = [
  "geam-core",
  "geam-macros",
@@ -3146,6 +3166,15 @@ dependencies = [
  "rustls-pki-types",
  "schannel",
  "security-framework",
+]
+
+[[package]]
+name = "rustls-pemfile"
+version = "2.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dce314e5fee3f39953d46bb63bb8a46d40c2f8fb7cc5a3b6cab2bde9721d6e50"
+dependencies = [
+ "rustls-pki-types",
 ]
 
 [[package]]

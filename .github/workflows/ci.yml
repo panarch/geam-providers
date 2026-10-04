@@ -27,7 +27,7 @@ concurrency:
 
 env:
   CARGO_TERM_COLOR: always
-  GEAM_REV: 5adbf4e654c6e4ca518e60babe19c3dc88532d4d
+  GEAM_REV: 5ad13b7a78652f95b6801e8bf836b9a1fb3ec789
 
 jobs:
   providers:
@@ -88,7 +88,7 @@ jobs:
                   ]
                 | select(length > 0 and all(.[];
                     (.runners | length > 0)
-                    and (.integration_case == "standard" or .integration_case == "httpc")))
+                    and (.integration_case == "standard" or .integration_case == "httpc" or .integration_case == "glisten")))
               '
           )"
           targets="$(jq -c '{include: [.[] | . as $provider | .runners[] | $provider + {runner: .} | del(.runners)]}' <<< "$provider_rows")"
@@ -319,7 +319,7 @@ jobs:
           done
 
       - name: Run original Erlang fixture
-        if: env.COVERAGE_ONLY != 'true' && matrix.erlang_oracle
+        if: env.COVERAGE_ONLY != 'true' && matrix.erlang_oracle && matrix.integration_case != 'glisten'
         working-directory: ${{ matrix.dir }}/fixtures/gleam
         run: gleam run
 
@@ -401,9 +401,31 @@ jobs:
         run: cargo test --locked
 
       - name: Run Rust embedding consumer
-        if: env.COVERAGE_ONLY != 'true'
+        if: env.COVERAGE_ONLY != 'true' && matrix.integration_case != 'glisten'
         working-directory: ${{ matrix.dir }}/fixtures/embedding
         run: cargo run --locked
+
+      - name: Run glisten live and prepared embedding servers
+        if: env.COVERAGE_ONLY != 'true' && matrix.integration_case == 'glisten'
+        working-directory: ${{ matrix.dir }}/fixtures/embedding
+        run: python3 ../run.py cargo run --locked
+
+      - name: Prepare glisten certificate arguments
+        if: env.COVERAGE_ONLY != 'true' && matrix.integration_case == 'glisten'
+        run: |
+          certificate="$GITHUB_WORKSPACE/$PROVIDER_DIR/fixtures/certs/cert.pem"
+          key="$GITHUB_WORKSPACE/$PROVIDER_DIR/fixtures/certs/key.pem"
+          if [[ "$RUNNER_OS" == Windows ]]; then
+            certificate="$(cygpath -w "$certificate")"
+            key="$(cygpath -w "$key")"
+          fi
+          echo "GLISTEN_CERTIFICATE=$certificate" >> "$GITHUB_ENV"
+          echo "GLISTEN_KEY=$key" >> "$GITHUB_ENV"
+
+      - name: Run original glisten Erlang servers
+        if: env.COVERAGE_ONLY != 'true' && matrix.integration_case == 'glisten'
+        working-directory: ${{ matrix.dir }}/fixtures/gleam
+        run: python3 ../run.py gleam run -- "$GLISTEN_CERTIFICATE" "$GLISTEN_KEY"
 
       - name: Prepare standalone consumer
         if: env.COVERAGE_ONLY != 'true'
@@ -432,6 +454,11 @@ jobs:
             python3 ../server.py "$GEAM_BIN" run --module "$module" \
               --provider-config gleam_httpc=../config/provider.toml
           done
+
+      - name: Run glisten standalone servers
+        if: env.COVERAGE_ONLY != 'true' && matrix.integration_case == 'glisten'
+        working-directory: ${{ matrix.dir }}/fixtures/gleam
+        run: python3 ../run.py "$GEAM_BIN" run -- "$GLISTEN_CERTIFICATE" "$GLISTEN_KEY"
 
       - name: Build standalone executable
         if: env.COVERAGE_ONLY != 'true'
@@ -477,6 +504,12 @@ jobs:
             export GEAM_CONFIG="$FIXTURE_WORKSPACE/$PROVIDER_DIR/fixtures/config/runtime.toml"
           fi
           python3 "$FIXTURE_WORKSPACE/$PROVIDER_DIR/fixtures/server.py" "$FIXTURE_BINARY"
+
+      - name: Run glisten executable outside its fixture
+        if: env.COVERAGE_ONLY != 'true' && matrix.integration_case == 'glisten'
+        run: |
+          cd "$FIXTURE_RUN_DIR"
+          python3 "$FIXTURE_WORKSPACE/$PROVIDER_DIR/fixtures/run.py" "$FIXTURE_BINARY" "$GLISTEN_CERTIFICATE" "$GLISTEN_KEY"
 
       - name: Run provider example
         if: env.COVERAGE_ONLY != 'true' && matrix.example_dir != ''

@@ -2,7 +2,7 @@
 
 This crate implements the six Erlang externals of the unmodified [`splitter` 1.3.0](https://hex.pm/packages/splitter/1.3.0) package through Geam's public typed provider API. Add `splitter` to the Gleam project and select this crate as its Geam provider. The verified package range is limited to 1.3.0 until other releases are tested.
 
-The Geam dependency is pinned to `main` commit `5adbf4e654c6e4ca518e60babe19c3dc88532d4d`. The [standalone fixture](fixtures/gleam/) and [embedding fixture](fixtures/embedding/) use the original Hex package. `splitter.new` and its empty-pattern filtering remain in the original Gleam source; this crate supplies only its native calls.
+The Geam dependency is pinned to `main` commit `5ad13b7a78652f95b6801e8bf836b9a1fb3ec789`. The [standalone fixture](fixtures/gleam/) and [embedding fixture](fixtures/embedding/) use the original Hex package. `splitter.new` and its empty-pattern filtering remain in the original Gleam source; this crate supplies only its native calls.
 
 Matching selects the earliest byte position, then the longest delimiter at that position, as observed in the original Erlang implementation. Put longer delimiters before their prefixes as the upstream documentation recommends; JavaScript can otherwise select a different delimiter. A splitter with no nonempty delimiters preserves the original Erlang FFI results, including `split(empty, input) == #("", "", input)`, while `split_all(empty, input) == [input]`. Repeated use of a splitter reuses compiled substring finders. Distinct nonempty compiled splitters retain separate opaque identities; empty splitters compare equal.
 
