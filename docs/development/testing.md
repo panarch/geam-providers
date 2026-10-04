@@ -5,8 +5,8 @@ Providers. The current production packages are `geam-filepath`,
 `geam-regexp`, `geam-otp`, `geam-houdini`, `geam-gzlib`, `geam-crypto`,
 `geam-simplifile`, `geam-platform`, `geam-logging`, `geam-term-size`,
 `geam-birl`, `geam-httpc`, `geam-global-value`, `geam-argv`, `geam-splitter`,
-`geam-envoy`, `geam-operating-system`, and `geam-exception`. This document must
-remain the source of truth for the checks actually run.
+`geam-envoy`, `geam-operating-system`, `geam-exception`, and `geam-glisten`.
+This document must remain the source of truth for the checks actually run.
 
 For acceptance rules, see [review-policy.md](review-policy.md). For practical
 test construction and difficult coverage work, see
@@ -80,8 +80,8 @@ projects resolve the unmodified `filepath` 1.1.2, `gleam_regexp` 1.1.1,
 `gleam_otp` 1.3.0, `houdini` 1.2.0, `gzlib` 2.0.0, `gleam_crypto` 1.6.0,
 `simplifile` 2.7.0, `platform` 1.0.0, `logging` 1.5.0, `term_size` 1.0.1,
 `birl` 2.0.0, `gleam_httpc` 5.0.0, `global_value` 1.0.0, `argv` 1.1.0,
-`splitter` 1.3.0, `envoy` 1.2.0, `operating_system` 1.0.1, and `exception`
-2.1.1 packages from Hex.
+`splitter` 1.3.0, `envoy` 1.2.0, `operating_system` 1.0.1, `exception` 2.1.1,
+and `glisten` 9.0.1 packages from Hex.
 The crypto, simplifile, logging, term_size, birl, global_value, splitter,
 envoy, and exception fixtures and the `operating_system` standalone fixture pin
 `gleam_stdlib` 1.0.3 for compatibility with this Geam commit; the simplifile
@@ -501,6 +501,7 @@ cargo package --list --package geam-splitter --locked
 cargo package --list --package geam-envoy --locked
 cargo package --list --package geam-operating-system --locked
 cargo package --list --package geam-exception --locked
+cargo package --list --package geam-glisten --locked
 ```
 
 Confirm that each list contains `LICENSE` along with the manifest, README, and
@@ -512,6 +513,52 @@ The current Git-pinned Geam dependency is not publishable through Cargo's
 registry-only package resolution. Archive creation, registry publication, and
 consumption of a published crate are a separate gate after Geam publishes the
 required API and features. Do not treat `--list` as proof of registry readiness.
+
+### Glisten TCP And TLS Servers
+
+`glisten/fixtures/gleam` pins the unchanged Hex `glisten` 9.0.1 package.
+Its mandatory entry runs low-level TCP, two concurrent connections through the
+original acceptor pool without a user message type annotation, a user selector,
+a supervised IPv6 server, TLS with server-preferred ALPN `h2`, no client ALPN,
+and ALPN mismatch. [The client driver](../../glisten/fixtures/run.py) waits for
+an explicit port-0 readiness record, sends the exact client input, and requires
+each matching completion record. It owns and cleans up the child process; no
+fixed port or startup sleep is used.
+
+The [owner hook](../../glisten/fixtures/ci.sh) handles `erlang`, `embedding`,
+`standalone`, and `executable`. It uses the common runner's native Windows path
+conversion and outside-fixture working directory. Preparation, builds, source
+and Rust quality, binding checks, tests, package checks, and the 100% line and
+region gate remain mandatory common workflow steps. CI declares Linux, macOS,
+and Windows through [Cargo metadata](../../glisten/Cargo.toml), with no glisten
+branch in the shared workflow.
+
+From the repository root, export the pinned CLI as `GEAM_BIN` as described in
+[dependency preparation](#dependency-preparation), then run:
+
+```sh
+(cd glisten/fixtures/gleam && gleam deps download && gleam format --check && gleam check)
+bash .github/scripts/run_ci.sh provider glisten erlang
+(cd glisten/fixtures/gleam && "$GEAM_BIN" prepare)
+bash .github/scripts/run_ci.sh provider glisten standalone
+(cd glisten/fixtures/gleam && "$GEAM_BIN" build)
+bash .github/scripts/run_ci.sh provider glisten executable
+(cd glisten/fixtures/embedding/gleam && gleam deps download && gleam format --check && gleam check)
+(cd glisten/fixtures/embedding && "$GEAM_BIN" embedding check)
+(cd glisten/fixtures/embedding && cargo fmt --all --check)
+(cd glisten/fixtures/embedding && cargo clippy --all-targets --locked -- -D warnings)
+(cd glisten/fixtures/embedding && RUSTDOCFLAGS='-D warnings' cargo doc --no-deps --locked)
+(cd glisten/fixtures/embedding && cargo test --locked)
+bash .github/scripts/run_ci.sh provider glisten embedding
+```
+
+The hook supplies the absolute certificate/key arguments for Erlang and
+standalone execution. Those public fixture credentials are test data.
+Do not run the server entry without the client driver: it waits for client IO.
+The embedding integration test starts its consumer through the same driver and
+requires all seven scenarios in live and freshly generated prepared execution.
+The execution host enables time only; Glisten owns its explicitly selected IO
+reactor. Generated bindings and the prepared program are checked in together.
 
 ## Package Integration Verification
 
@@ -807,6 +854,11 @@ cargo llvm-cov --package geam-operating-system --locked \
 cargo llvm-cov clean --workspace
 cargo llvm-cov --package geam-exception --locked \
   --json --summary-only --output-path target/exception-coverage.json \
+  --fail-under-lines 100 \
+  --fail-under-regions 100
+cargo llvm-cov clean --workspace
+cargo llvm-cov --package geam-glisten --locked \
+  --json --summary-only --output-path target/glisten-coverage.json \
   --fail-under-lines 100 \
   --fail-under-regions 100
 ```

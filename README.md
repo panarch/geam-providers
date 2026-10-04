@@ -22,6 +22,7 @@ This repository implements native functions for existing Gleam packages through 
 | [`envoy`](https://hex.pm/packages/envoy) | [`geam-envoy`](envoy/README.md) | 1.2.0 |
 | [`operating_system`](https://hex.pm/packages/operating_system) | [`geam-operating-system`](operating-system/README.md) | 1.0.1 |
 | [`exception`](https://hex.pm/packages/exception) | [`geam-exception`](exception/README.md) | 2.1.1 |
+| [`glisten`](https://hex.pm/packages/glisten) | [`geam-glisten`](glisten/README.md) | 9.0.1 |
 
 ## Package integrations
 
