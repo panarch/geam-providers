@@ -647,11 +647,13 @@ mod tests {
         );
         listener.close();
 
-        let listener = network.listen(options(false)).unwrap();
+        let listener = network.bind(options(false)).unwrap();
         let _client = TcpStream::connect(listener.address().unwrap()).unwrap();
-        let connection = caller.block_on(listener.accept()).unwrap();
-        let bytes = vec![42; 16 * 1024 * 1024];
-        let mut write = connection.write(&bytes);
+        let connection = caller.block_on(listener.accept_owned()).unwrap();
+        // Hold the writer so both operations wait independently of OS buffers.
+        let halves = connection.ready().unwrap();
+        let _writer = caller.block_on(halves.write.lock());
+        let mut write = connection.write(b"pending");
         assert!(write.as_mut().poll(&mut context).is_pending());
         let mut shutdown = connection.shutdown_write();
         assert!(shutdown.as_mut().poll(&mut context).is_pending());
