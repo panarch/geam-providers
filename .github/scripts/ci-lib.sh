@@ -29,6 +29,11 @@ ci_is_windows() {
   esac
 }
 
+ci_jq() {
+  # Native jq.exe converts LF to CRLF unless binary output is requested.
+  if ci_is_windows; then jq --binary "$@"; else jq "$@"; fi
+}
+
 ci_native_path() {
   if ci_is_windows; then cygpath -w "$1"; else printf '%s\n' "$1"; fi
 }

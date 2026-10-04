@@ -28,7 +28,7 @@ run_integration() (
     all|embedding|standalone|executable) ci_require_geam ;;
     *) ci_fail "unknown integration phase: $phase" ;;
   esac
-  script="$(jq -er '.script | select(type == "string" and length > 0)' "$CI_OWNER_DIR/ci.json")"
+  script="$(ci_jq -er '.script | select(type == "string" and length > 0)' "$CI_OWNER_DIR/ci.json")"
   set_script "$script"
   if [[ "$phase" == all || "$phase" == executable ]]; then create_run_directory; fi
   printf 'Running %s (%s)\n' "$1" "$phase"
@@ -38,8 +38,8 @@ run_integration() (
 run_integrations() {
   local cases
   : "${CI_INTEGRATIONS:?Set CI_INTEGRATIONS to the selected integration rows}"
-  cases="$(jq -ce 'select(type == "array" and all(.[]; .dir | type == "string"))' <<< "$CI_INTEGRATIONS")"
-  jq -r '.[].dir' <<< "$cases" | while IFS= read -r directory; do
+  cases="$(ci_jq -ce 'select(type == "array" and all(.[]; .dir | type == "string"))' <<< "$CI_INTEGRATIONS")"
+  ci_jq -r '.[].dir' <<< "$cases" | while IFS= read -r directory; do
     run_integration "$directory" "$1"
   done
 }
@@ -53,7 +53,9 @@ run_provider() (
     *) ci_fail "unknown provider phase: $phase" ;;
   esac
   metadata="$(cd "$CI_ROOT" && cargo metadata --no-deps --format-version 1 --locked)"
-  row="$(jq -ce --arg dir "$1" '
+  # Filter variables belong to jq; Bash passes their inputs through --arg.
+  # shellcheck disable=SC2016
+  row="$(ci_jq -ce --arg dir "$1" '
     .workspace_members as $members
     | [.packages[]
         | select(.id as $id | $members | index($id))
@@ -70,16 +72,18 @@ run_provider() (
     | select($phases | all(.[]; . == "erlang" or . == "embedding" or . == "standalone" or . == "executable"))
     | select(($phases | index("erlang") == null) or .ci."erlang-oracle" == true)
   ' <<< "$metadata")" || ci_fail "invalid provider CI declaration for $1"
-  script="$(jq -r '.ci.script // ""' <<< "$row")"
+  script="$(ci_jq -r '.ci.script // ""' <<< "$row")"
   if [[ "$phase" == executable ]]; then
     local binary
-    binary="$(jq -r '.ci."fixture-bin" // (.crate | gsub("-"; "_") + "_fixture")' <<< "$row")"
+    binary="$(ci_jq -r '.ci."fixture-bin" // (.crate | gsub("-"; "_") + "_fixture")' <<< "$row")"
     [[ "$binary" =~ ^[A-Za-z0-9_-]+$ ]] || ci_fail 'invalid fixture executable name'
     CI_FIXTURE_BINARY="$(ci_binary_path "$1/fixtures/gleam" "$binary")"
     export CI_FIXTURE_BINARY
     create_run_directory
   fi
-  if jq -e --arg phase "$phase" '(.ci."script-phases" // []) | index($phase) != null' <<< "$row" >/dev/null; then
+  # $phase is a jq variable supplied by --arg, not a Bash expansion.
+  # shellcheck disable=SC2016
+  if ci_jq -e --arg phase "$phase" '(.ci."script-phases" // []) | index($phase) != null' <<< "$row" >/dev/null; then
     set_script "$script"
     ci_step "$1 ($phase)" bash "$CI_SCRIPT" "$phase"
   else

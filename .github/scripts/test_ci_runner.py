@@ -94,6 +94,88 @@ class RunnerTests(unittest.TestCase):
     def commands(self):
         return [json.loads(line) for line in self.log.read_text().splitlines()] if self.log.exists() else []
 
+    def use_windows_jq_output(self):
+        """Keep real jq filters and emulate jq.exe's documented text-mode stdout."""
+        jq = shutil.which("jq")
+        self.assertIsNotNone(jq)
+        wrapper = self.bin / "jq"
+        wrapper.write_text(
+            "#!" + sys.executable + "\n"
+            "import subprocess, sys\n"
+            "args = sys.argv[1:]\n"
+            "binary = '--binary' in args or '-b' in args\n"
+            "args = [arg for arg in args if arg not in ('--binary', '-b')]\n"
+            f"result = subprocess.run([{jq!r}, *args], input=sys.stdin.buffer.read(), capture_output=True)\n"
+            "sys.stdout.buffer.write(result.stdout if binary else result.stdout.replace(b'\\n', b'\\r\\n'))\n"
+            "sys.stderr.buffer.write(result.stderr)\n"
+            "sys.exit(result.returncode)\n"
+        )
+        wrapper.chmod(0o755)
+
+    def test_windows_jq_keeps_integration_batch_and_script_paths_exact(self):
+        self.use_windows_jq_output()
+        owner = self.write_integration("tool 한글", '"$CI_ROOT/bin/trace" "$CI_OWNER_DIR" "$1"\n')
+        script = owner / "check source 한글.sh"
+        (owner / "ci.sh").rename(script)
+        declaration = json.loads((owner / "ci.json").read_text())
+        declaration["script"] = script.name
+        (owner / "ci.json").write_text(json.dumps(declaration))
+        for arguments in (("integration", "tool 한글", "source"), ("integrations", "source")):
+            with self.subTest(arguments=arguments):
+                self.log.unlink(missing_ok=True)
+                result = self.run_ci(
+                    *arguments, RUNNER_OS="Windows",
+                    CI_INTEGRATIONS=json.dumps([{"dir": "integrations/tool 한글"}]),
+                )
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(self.commands(), [{
+                    "program": "trace", "args": [str(owner), "source"], "cwd": str(self.root),
+                }])
+
+    def test_windows_jq_keeps_provider_hook_and_executable_paths_exact(self):
+        self.use_windows_jq_output()
+        (self.bin / "cygpath").write_text('#!/usr/bin/env bash\nprintf "%s\\n" "$2"\n')
+        script = self.owner / "fixtures/check hook 한글.sh"
+        script.write_text('set -euo pipefail\n"$CI_ROOT/bin/trace" "$1" "${CI_FIXTURE_BINARY:-}"\n')
+        self.declare_provider({
+            "script": "fixtures/" + script.name, "script-phases": ["embedding", "executable"],
+            "fixture-bin": "custom_fixture",
+        })
+        for phase in ("embedding", "standalone", "executable"):
+            with self.subTest(phase=phase):
+                self.log.unlink(missing_ok=True)
+                result = self.run_ci("provider", "toy", phase, RUNNER_OS="Windows")
+                self.assertEqual(result.returncode, 0, result.stderr)
+                if phase == "standalone":
+                    expected = {
+                        "program": "geam", "args": ["run"],
+                        "cwd": str(self.owner / "fixtures/gleam"),
+                    }
+                else:
+                    binary = str(self.owner / "fixtures/gleam/build/geam/target/debug/custom_fixture.exe")
+                    expected = {
+                        "program": "trace", "args": [phase, binary if phase == "executable" else ""],
+                        "cwd": str(self.root),
+                    }
+                self.assertEqual(self.commands(), [expected])
+                self.assertEqual(list(self.temp_parent.glob("geam-ci.*")), [])
+
+    def test_windows_jq_does_not_strip_control_characters_from_declared_paths(self):
+        self.use_windows_jq_output()
+        owner = self.write_integration("tool", '"$CI_ROOT/bin/trace" unexpected\n')
+        declaration = json.loads((owner / "ci.json").read_text())
+        declaration["script"] = "ci.sh\r"
+        (owner / "ci.json").write_text(json.dumps(declaration))
+        for arguments in (("integration", "tool", "source"), ("integrations", "source")):
+            with self.subTest(arguments=arguments):
+                result = self.run_ci(
+                    *arguments, RUNNER_OS="Windows",
+                    CI_INTEGRATIONS=json.dumps([{"dir": "integrations/tool\r"}]),
+                )
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn("expected a relative repository path", result.stderr)
+                self.assertEqual(self.commands(), [])
+
     def test_standard_provider_phases_use_expected_commands_and_working_directories(self):
         for phase, program, args, directory in (
             ("erlang", "gleam", ["run"], "gleam"),
@@ -214,6 +296,7 @@ class RunnerTests(unittest.TestCase):
         self.assertEqual(self.commands(), [])
 
     def test_httpc_hook_keeps_all_modules_and_native_windows_process_paths(self):
+        self.use_windows_jq_output()
         self.write_command(self.bin / "python3")
         (self.bin / "cygpath").write_text(
             '#!/usr/bin/env bash\ncase "$1" in -u) printf "%s\\n" "$2";; '
