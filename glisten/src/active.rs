@@ -297,6 +297,9 @@ pub fn main() {
         let host = TestHost::default();
         assert_eq!(
             host.block_on(execution.run_main(&host, &mut state, &mut Vec::new()))
+                .map(|outcome| outcome
+                    .try_into_value()
+                    .expect("fixture must return normally"))
                 .unwrap(),
             geam::Value::Nil
         );
@@ -392,7 +395,10 @@ pub fn main() {
         assert!(host.poll(run.as_mut()).is_pending());
         host.advance(std::time::Duration::from_millis(8));
         assert_eq!(
-            host.poll(run.as_mut()).map(Result::unwrap),
+            host.poll(run.as_mut()).map(|result| result
+                .unwrap()
+                .try_into_value()
+                .expect("fixture must return normally")),
             std::task::Poll::Ready(geam::Value::Nil)
         );
         let events = network.events.lock();
@@ -531,6 +537,9 @@ pub fn main() {{
                 let host = TestHost::default();
                 assert_eq!(
                     host.block_on(execution.run_main(&host, &mut state, &mut Vec::new()))
+                        .map(|outcome| outcome
+                            .try_into_value()
+                            .expect("fixture must return normally"))
                         .unwrap(),
                     geam::Value::Nil
                 );
@@ -613,7 +622,10 @@ pub fn main() {{
                     &mut state,
                     &mut Vec::new()
                 )))
-                .map(Result::unwrap),
+                .map(|result| result
+                    .unwrap()
+                    .try_into_value()
+                    .expect("fixture must return normally")),
                 std::task::Poll::Ready(geam::Value::Nil),
                 "{transport}"
             );
@@ -678,7 +690,10 @@ pub fn main() {{
                     &mut state,
                     &mut Vec::new()
                 )))
-                .map(Result::unwrap),
+                .map(|result| result
+                    .unwrap()
+                    .try_into_value()
+                    .expect("fixture must return normally")),
                 std::task::Poll::Ready(geam::Value::Nil)
             );
             assert_eq!(

@@ -46,6 +46,11 @@ fn original_simplifile_and_filepath_run_through_public_host_boundary() {
                 );
             }),
         )
+        .map(|outcome| {
+            outcome
+                .try_into_value()
+                .expect("fixture must return normally")
+        })
         .expect("host execution completes");
     assert!(!temp.path().join("contract").exists());
 }

@@ -52,7 +52,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .with_execution(&host, &mut state, &mut echo, async |scope| {
                 scope.call(&functions.verify, (url.into(),)).await
             })
-            .await??;
+            .await?
+            .try_into_value()
+            .expect("fixture must return normally")?;
         assert!(matched, "original gleam_httpc receives the HTTP response");
         server.await??;
         Ok::<_, Box<dyn std::error::Error>>(())

@@ -105,6 +105,11 @@ fn original_gleam_package_runs_through_public_host_boundary() {
                 );
             }),
         )
+        .map(|outcome| {
+            outcome
+                .try_into_value()
+                .expect("fixture must return normally")
+        })
         .expect("host execution completes");
 
     let mut deterministic = geam_bindings::RunStateInputs {
@@ -129,6 +134,11 @@ fn original_gleam_package_runs_through_public_host_boundary() {
                 );
             }),
         )
+        .map(|outcome| {
+            outcome
+                .try_into_value()
+                .expect("fixture must return normally")
+        })
         .expect("deterministic source execution completes");
 
     let mut failed = geam_bindings::RunStateInputs {
@@ -150,5 +160,10 @@ fn original_gleam_package_runs_through_public_host_boundary() {
                 assert!(failure.to_string().contains("injected entropy failure"));
             }),
         )
+        .map(|outcome| {
+            outcome
+                .try_into_value()
+                .expect("fixture must return normally")
+        })
         .expect("failure reaches embedding caller");
 }

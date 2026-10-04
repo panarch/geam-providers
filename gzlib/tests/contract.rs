@@ -77,6 +77,11 @@ fn original_gleam_contract_and_erlang_zlib_interoperability() {
                     .expect("public compress call")
             }),
         )
+        .map(|outcome| {
+            outcome
+                .try_into_value()
+                .expect("fixture must return normally")
+        })
         .expect("host execution completes");
     assert!(echo.is_empty());
 

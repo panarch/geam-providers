@@ -140,6 +140,11 @@ fn original_birl_uses_injected_wall_time_offset_timezone_and_monotonic_order() {
                 );
             }),
         )
+        .map(|outcome| {
+            outcome
+                .try_into_value()
+                .expect("fixture must return normally")
+        })
         .expect("source execution completes");
 
     for timezone in [Some("Not/AZone"), None] {
@@ -156,6 +161,11 @@ fn original_birl_uses_injected_wall_time_offset_timezone_and_monotonic_order() {
                     );
                 }),
             )
+            .map(|outcome| {
+                outcome
+                    .try_into_value()
+                    .expect("fixture must return normally")
+            })
             .expect("timezone absence is a successful run");
     }
 }

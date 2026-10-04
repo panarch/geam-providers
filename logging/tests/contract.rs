@@ -98,6 +98,11 @@ fn original_package_filters_and_formats_all_levels_through_geam() {
                     .expect("original level transitions");
             }),
         )
+        .map(|outcome| {
+            outcome
+                .try_into_value()
+                .expect("fixture must return normally")
+        })
         .expect("source execution completes");
 
     assert_eq!(
@@ -116,6 +121,11 @@ fn original_package_filters_and_formats_all_levels_through_geam() {
                     .expect("independent run logs");
             }),
         )
+        .map(|outcome| {
+            outcome
+                .try_into_value()
+                .expect("fixture must return normally")
+        })
         .expect("second run completes");
     assert_eq!(colored.text(), "\x1b[1;34mINFO\x1b[0m one\n");
 
@@ -130,5 +140,10 @@ fn original_package_filters_and_formats_all_levels_through_geam() {
                 assert!(failure.to_string().contains("injected output failure"));
             }),
         )
+        .map(|outcome| {
+            outcome
+                .try_into_value()
+                .expect("fixture must return normally")
+        })
         .expect("failed call stays in hosted execution");
 }

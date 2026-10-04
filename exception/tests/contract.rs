@@ -71,6 +71,11 @@ fn original_exception_source_preserves_results_and_cleanup_order() {
                 );
             }),
         )
+        .map(|outcome| {
+            outcome
+                .try_into_value()
+                .expect("fixture must return normally")
+        })
         .expect("host execution completes");
 
     let output = state
@@ -186,6 +191,11 @@ fn callback_cancellation_keeps_its_execution_domain_and_cleanup_boundary() {
                     scope.call(function, ()).await
                 }),
             )
+            .map(|outcome| {
+                outcome
+                    .try_into_value()
+                    .expect("fixture must return normally")
+            })
             .unwrap();
         assert_eq!(result, expected_result);
         let output = state

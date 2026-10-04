@@ -177,6 +177,11 @@ mod terminal_contract {
                     }
                 }),
             )
+            .map(|outcome| {
+                outcome
+                    .try_into_value()
+                    .expect("fixture must return normally")
+            })
             .expect("host execution completes");
         assert!(echo.is_empty());
     }

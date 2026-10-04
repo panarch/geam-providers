@@ -20,15 +20,18 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     } else {
         ("linux", "x86_64")
     };
-    executor.block_on(
-        module.with_execution(&host, &mut state, &mut echo, async |scope| {
-            assert!(
-                scope
-                    .call(&functions.verify, (os.into(), arch.into()))
-                    .await
-                    .expect("original platform contract")
-            );
-        }),
-    )?;
+    executor
+        .block_on(
+            module.with_execution(&host, &mut state, &mut echo, async |scope| {
+                assert!(
+                    scope
+                        .call(&functions.verify, (os.into(), arch.into()))
+                        .await
+                        .expect("original platform contract")
+                );
+            }),
+        )?
+        .try_into_value()
+        .expect("fixture must return normally");
     Ok(())
 }

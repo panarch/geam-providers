@@ -95,6 +95,11 @@ fn unchanged_gleam_source_observes_result_and_dict_after_mutations() {
                     .expect("source set");
             }),
         )
+        .map(|outcome| {
+            outcome
+                .try_into_value()
+                .expect("fixture must return normally")
+        })
         .expect("first execution completes");
     executor
         .block_on(
@@ -113,6 +118,11 @@ fn unchanged_gleam_source_observes_result_and_dict_after_mutations() {
                 );
             }),
         )
+        .map(|outcome| {
+            outcome
+                .try_into_value()
+                .expect("fixture must return normally")
+        })
         .expect("reused state completes");
     executor
         .block_on(
@@ -155,6 +165,11 @@ fn unchanged_gleam_source_observes_result_and_dict_after_mutations() {
                 );
             }),
         )
+        .map(|outcome| {
+            outcome
+                .try_into_value()
+                .expect("fixture must return normally")
+        })
         .expect("invalid inputs are reported at the host boundary");
     assert!(echo.is_empty());
 }

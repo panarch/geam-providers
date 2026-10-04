@@ -489,6 +489,9 @@ pub fn main() {
         let host = TestHost::default();
         assert_eq!(
             host.block_on(execution.run_main(&host, &mut state, &mut Vec::new()))
+                .map(|outcome| outcome
+                    .try_into_value()
+                    .expect("fixture must return normally"))
                 .unwrap(),
             geam::Value::Nil
         );
@@ -539,7 +542,13 @@ pub fn main() {{
             ));
             let (mut execution, mut state) = source_project_with(&source, network, [provider]);
             let host = TestHost::default();
-            let actual = host.block_on(execution.run_main(&host, &mut state, &mut Vec::new()));
+            let actual = host
+                .block_on(execution.run_main(&host, &mut state, &mut Vec::new()))
+                .map(|outcome| {
+                    outcome
+                        .try_into_value()
+                        .expect("fixture must return normally")
+                });
             match expected {
                 None => assert_eq!(actual.unwrap(), geam::Value::Nil),
                 Some(message) => assert!(actual.unwrap_err().to_string().contains(message)),
@@ -583,6 +592,9 @@ pub fn main() {
         let host = TestHost::default();
         assert_eq!(
             host.block_on(execution.run_main(&host, &mut state, &mut Vec::new()))
+                .map(|outcome| outcome
+                    .try_into_value()
+                    .expect("fixture must return normally"))
                 .unwrap(),
             geam::Value::Nil
         );

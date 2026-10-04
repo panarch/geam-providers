@@ -17,30 +17,33 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     .initialize()?;
     let mut echo = Vec::new();
 
-    executor.block_on(
-        module.with_execution(&host, &mut state, &mut echo, async |scope| {
-            assert!(
-                scope
-                    .call(&functions.verify, ())
+    executor
+        .block_on(
+            module.with_execution(&host, &mut state, &mut echo, async |scope| {
+                assert!(
+                    scope
+                        .call(&functions.verify, ())
+                        .await
+                        .expect("source contract")
+                );
+                let parts = scope
+                    .call(&functions.split_commas, ("a,,é,".into(),))
                     .await
-                    .expect("source contract")
-            );
-            let parts = scope
-                .call(&functions.split_commas, ("a,,é,".into(),))
-                .await
-                .expect("source call");
-            assert_eq!(
-                (0..parts.len())
-                    .map(|index| parts.read_item(index, Clone::clone).expect("list item"))
-                    .collect::<Vec<_>>(),
-                vec![
-                    geam::StringValue::from("a"),
-                    "".into(),
-                    "é".into(),
-                    "".into(),
-                ]
-            );
-        }),
-    )?;
+                    .expect("source call");
+                assert_eq!(
+                    (0..parts.len())
+                        .map(|index| parts.read_item(index, Clone::clone).expect("list item"))
+                        .collect::<Vec<_>>(),
+                    vec![
+                        geam::StringValue::from("a"),
+                        "".into(),
+                        "é".into(),
+                        "".into(),
+                    ]
+                );
+            }),
+        )?
+        .try_into_value()
+        .expect("fixture must return normally");
     Ok(())
 }

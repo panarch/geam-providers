@@ -66,7 +66,7 @@ expectations, including expected errors and representative fallback paths.
 ## Dependency Preparation
 
 The Rust workspace, fixture consumers, and report service example use Geam
-`main` commit `5ad13b7a78652f95b6801e8bf836b9a1fb3ec789`. Houdini also
+`main` commit `e5e1f5f772c6f48369050bdf3ee35c7a324277e2`. Houdini also
 uses the public `geam-core` byte-slice helper from that commit. The Gleam
 projects resolve the unmodified `filepath` 1.1.2, `gleam_regexp` 1.1.1,
 `gleam_otp` 1.3.0, `houdini` 1.2.0, `gzlib` 2.0.0, `gleam_crypto` 1.6.0,
@@ -196,7 +196,7 @@ commit (a Git-package `cargo install` can resolve a published `geam-core`):
 
 ```sh
 git init -q target/geam-source
-git -C target/geam-source fetch --depth=1 https://github.com/panarch/geam.git 5ad13b7a78652f95b6801e8bf836b9a1fb3ec789
+git -C target/geam-source fetch --depth=1 https://github.com/panarch/geam.git e5e1f5f772c6f48369050bdf3ee35c7a324277e2
 git -C target/geam-source checkout --detach -q FETCH_HEAD
 CARGO_TARGET_DIR="$PWD/target/geam-cli-build" \
   cargo build --manifest-path "$PWD/target/geam-source/Cargo.toml" \

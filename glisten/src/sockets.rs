@@ -367,6 +367,9 @@ pub fn main() {{
             let host = TestHost::default();
             assert_eq!(
                 host.block_on(execution.run_main(&host, &mut state, &mut Vec::new()))
+                    .map(|outcome| outcome
+                        .try_into_value()
+                        .expect("fixture must return normally"))
                     .unwrap(),
                 geam::Value::Nil
             );

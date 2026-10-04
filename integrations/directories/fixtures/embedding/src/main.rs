@@ -30,19 +30,25 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     .initialize()?;
     let mut echo = Vec::new();
 
-    executor.block_on(
-        module.with_execution(&host, &mut state, &mut echo, async |scope| {
-            assert!(scope.call(&functions.seed_is, ("ready".into(),)).await?);
-            assert!(scope.call(&functions.verify, (root.into(),)).await?);
-            Ok::<(), Box<dyn std::error::Error>>(())
-        }),
-    )??;
-    executor.block_on(
-        module.with_execution(&host, &mut state, &mut echo, async |scope| {
-            assert!(scope.call(&functions.seed_is, ("ready".into(),)).await?);
-            Ok::<(), Box<dyn std::error::Error>>(())
-        }),
-    )??;
+    executor
+        .block_on(
+            module.with_execution(&host, &mut state, &mut echo, async |scope| {
+                assert!(scope.call(&functions.seed_is, ("ready".into(),)).await?);
+                assert!(scope.call(&functions.verify, (root.into(),)).await?);
+                Ok::<(), Box<dyn std::error::Error>>(())
+            }),
+        )?
+        .try_into_value()
+        .expect("fixture must return normally")?;
+    executor
+        .block_on(
+            module.with_execution(&host, &mut state, &mut echo, async |scope| {
+                assert!(scope.call(&functions.seed_is, ("ready".into(),)).await?);
+                Ok::<(), Box<dyn std::error::Error>>(())
+            }),
+        )?
+        .try_into_value()
+        .expect("fixture must return normally")?;
 
     let fresh_root = temp.path().join("fresh");
     let fresh_root = fresh_root.to_str().ok_or("temporary path is not Unicode")?;
@@ -57,13 +63,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         simplifile: HostProviderConfiguration::empty(),
     }
     .initialize()?;
-    executor.block_on(
-        module.with_execution(&host, &mut fresh, &mut echo, async |scope| {
-            assert!(!scope.call(&functions.seed_is, ("ready".into(),)).await?);
-            assert!(scope.call(&functions.verify, (fresh_root.into(),)).await?);
-            Ok::<(), Box<dyn std::error::Error>>(())
-        }),
-    )??;
+    executor
+        .block_on(
+            module.with_execution(&host, &mut fresh, &mut echo, async |scope| {
+                assert!(!scope.call(&functions.seed_is, ("ready".into(),)).await?);
+                assert!(scope.call(&functions.verify, (fresh_root.into(),)).await?);
+                Ok::<(), Box<dyn std::error::Error>>(())
+            }),
+        )?
+        .try_into_value()
+        .expect("fixture must return normally")?;
     assert!(echo.is_empty());
     Ok(())
 }

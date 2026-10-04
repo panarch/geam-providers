@@ -134,7 +134,8 @@ Every successful client scenario compares complete response bytes.
 Generic TCP close accepts a retained Socket or ListenSocket; unrelated source
 specializations return `Badarg`. TLS close uses its declared Socket type.
 Repeated close succeeds. Handles keep logical equality/hash and do not keep IO
-alive. Process exit/kill, domain close, and cancellation close owned resources.
+alive. Process exit/kill, application exit, domain close, and cancellation close
+owned resources.
 TLS listener cleanup uses process ownership because the original public typed
 API does not expose a listener close function.
 
@@ -287,9 +288,13 @@ The original handler tests and public server scenarios execute record decoding.
 Generic callback success returns the same typed source value inside `Ok`.
 Upstream rescue catches Erlang throw only; Geam source has no throw class.
 Source panic, provider failure, and cancellation keep their identity, causing
-normal original handler/supervision cleanup rather than manufactured success.
+normal original handler/supervision cleanup. Intentional application exit also
+propagates through rescue: the domain closes pending readers, accepts, and live
+sockets before returning `ExecutionOutcome::Exited(status)`. The embedding
+process stays alive and can start a fresh domain in the same module.
 
 Owner tests: `unchanged_tcp_and_tls_handlers_preserve_callback_state_and_close_after_eof`
-and `unchanged_handler_normal_stop_abnormal_stop_panic_and_io_error_release_the_owner`.
+`unchanged_handler_normal_stop_abnormal_stop_panic_and_io_error_release_the_owner`,
+and `application_exit_in_rescue_closes_tcp_and_tls_servers_with_pending_io`.
 The user selector scenario exercises retained generic callbacks in both live
 and prepared executions.

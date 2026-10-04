@@ -970,6 +970,9 @@ pub fn main() {
         );
         assert_eq!(
             host.block_on(execution.run_main(&host, &mut state, &mut Vec::new()))
+                .map(|outcome| outcome
+                    .try_into_value()
+                    .expect("fixture must return normally"))
                 .unwrap(),
             Value::Nil
         );
@@ -1016,7 +1019,13 @@ pub fn main() {{ {body} Nil }}
             ));
             let (mut execution, mut state) = source_project_with(&source, network, [provider]);
             let host = TestHost::default();
-            let actual = host.block_on(execution.run_main(&host, &mut state, &mut Vec::new()));
+            let actual = host
+                .block_on(execution.run_main(&host, &mut state, &mut Vec::new()))
+                .map(|outcome| {
+                    outcome
+                        .try_into_value()
+                        .expect("fixture must return normally")
+                });
             if result.is_some() {
                 assert_eq!(actual.unwrap(), Value::Nil);
             } else {
@@ -1081,7 +1090,10 @@ pub fn main() {{
             assert!(network.events.lock().contains(&Event::Write(expected)));
             network.timer.notify_one();
             assert_eq!(
-                host.poll(running.as_mut()).map(Result::unwrap),
+                host.poll(running.as_mut()).map(|result| result
+                    .unwrap()
+                    .try_into_value()
+                    .expect("fixture must return normally")),
                 std::task::Poll::Ready(Value::Nil),
                 "{transport}, close={close_on_timeout}"
             );
@@ -1137,7 +1149,10 @@ pub fn main() {{
             io.incoming.lock().push_back(Ok(b"cd".to_vec()));
             io.changed.notify_waiters();
             assert_eq!(
-                host.poll(running.as_mut()).map(Result::unwrap),
+                host.poll(running.as_mut()).map(|result| result
+                    .unwrap()
+                    .try_into_value()
+                    .expect("fixture must return normally")),
                 std::task::Poll::Ready(Value::Nil),
                 "{transport}"
             );
@@ -1199,7 +1214,10 @@ pub fn main() {{
                 .store(false, std::sync::atomic::Ordering::Release);
             io.changed.notify_waiters();
             assert_eq!(
-                host.poll(running.as_mut()).map(Result::unwrap),
+                host.poll(running.as_mut()).map(|result| result
+                    .unwrap()
+                    .try_into_value()
+                    .expect("fixture must return normally")),
                 std::task::Poll::Ready(Value::Nil),
                 "{transport}"
             );
@@ -1241,7 +1259,10 @@ pub fn main() { assert tcp.listen(0, []) == Error(socket.Eaddrinuse) Nil }
                 &mut state,
                 &mut Vec::new()
             )))
-            .map(Result::unwrap),
+            .map(|result| result
+                .unwrap()
+                .try_into_value()
+                .expect("fixture must return normally")),
             std::task::Poll::Ready(Value::Nil)
         );
         assert_eq!(
@@ -1274,7 +1295,10 @@ pub fn main() {
                 &mut state,
                 &mut Vec::new()
             )))
-            .map(Result::unwrap),
+            .map(|result| result
+                .unwrap()
+                .try_into_value()
+                .expect("fixture must return normally")),
             std::task::Poll::Ready(Value::Nil)
         );
         assert_eq!(
@@ -1351,7 +1375,10 @@ pub fn main() {{
                 assert!(network.events.lock().contains(&Event::Read(65536)));
                 host.advance(std::time::Duration::from_millis(5));
                 assert_eq!(
-                    host.poll(running.as_mut()).map(Result::unwrap),
+                    host.poll(running.as_mut()).map(|result| result
+                        .unwrap()
+                        .try_into_value()
+                        .expect("fixture must return normally")),
                     std::task::Poll::Ready(Value::Nil)
                 );
             }
@@ -1408,6 +1435,9 @@ pub fn main() {{
             let host = TestHost::default();
             assert_eq!(
                 host.block_on(execution.run_main(&host, &mut state, &mut Vec::new()))
+                    .map(|outcome| outcome
+                        .try_into_value()
+                        .expect("fixture must return normally"))
                     .unwrap(),
                 Value::Nil
             );
@@ -1594,7 +1624,10 @@ pub fn main() {
                 &mut state,
                 &mut Vec::new()
             )))
-            .map(Result::unwrap),
+            .map(|result| result
+                .unwrap()
+                .try_into_value()
+                .expect("fixture must return normally")),
             std::task::Poll::Ready(Value::Nil)
         );
         assert_eq!(
@@ -1655,7 +1688,10 @@ pub fn main() {{
             assert!(host.poll(running.as_mut()).is_pending());
             host.advance(std::time::Duration::from_millis(1));
             assert_eq!(
-                host.poll(running.as_mut()).map(Result::unwrap),
+                host.poll(running.as_mut()).map(|result| result
+                    .unwrap()
+                    .try_into_value()
+                    .expect("fixture must return normally")),
                 std::task::Poll::Ready(Value::Nil)
             );
             assert_eq!(
@@ -1708,7 +1744,10 @@ pub fn main() {
                 &mut state,
                 &mut Vec::new()
             )))
-            .map(Result::unwrap),
+            .map(|result| result
+                .unwrap()
+                .try_into_value()
+                .expect("fixture must return normally")),
             std::task::Poll::Ready(Value::Nil)
         );
         assert_eq!(
@@ -1854,7 +1893,10 @@ pub fn main() {
                     &mut state,
                     &mut Vec::new()
                 )))
-                .map(Result::unwrap),
+                .map(|result| result
+                    .unwrap()
+                    .try_into_value()
+                    .expect("fixture must return normally")),
                 std::task::Poll::Ready(Value::Nil)
             );
             assert_eq!(
@@ -1919,7 +1961,10 @@ pub fn main() {
                 &mut state,
                 &mut Vec::new()
             )))
-            .map(Result::unwrap),
+            .map(|result| result
+                .unwrap()
+                .try_into_value()
+                .expect("fixture must return normally")),
             std::task::Poll::Ready(Value::Nil)
         );
         assert_eq!(
@@ -2094,7 +2139,10 @@ pub fn main() {{
                     &mut state,
                     &mut Vec::new()
                 )))
-                .map(Result::unwrap),
+                .map(|result| result
+                    .unwrap()
+                    .try_into_value()
+                    .expect("fixture must return normally")),
                 std::task::Poll::Ready(Value::Nil),
                 "{transport}"
             );
@@ -2200,7 +2248,10 @@ pub fn main() {{
                     &mut state,
                     &mut Vec::new()
                 )))
-                .map(Result::unwrap),
+                .map(|result| result
+                    .unwrap()
+                    .try_into_value()
+                    .expect("fixture must return normally")),
                 std::task::Poll::Ready(Value::Nil),
                 "{transport}"
             );
@@ -2266,7 +2317,10 @@ pub fn main() {{
                     &mut state,
                     &mut Vec::new()
                 )))
-                .map(Result::unwrap),
+                .map(|result| result
+                    .unwrap()
+                    .try_into_value()
+                    .expect("fixture must return normally")),
                 std::task::Poll::Ready(Value::Nil),
                 "{transport}"
             );
@@ -2342,7 +2396,10 @@ pub fn main() {
                 &mut state,
                 &mut Vec::new()
             )))
-            .map(Result::unwrap),
+            .map(|result| result
+                .unwrap()
+                .try_into_value()
+                .expect("fixture must return normally")),
             std::task::Poll::Ready(Value::Nil)
         );
         assert_eq!(

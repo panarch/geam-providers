@@ -21,28 +21,31 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     .initialize()?;
     let mut echo = Vec::new();
 
-    executor.block_on(
-        module.with_execution(&host, &mut state, &mut echo, async |scope| {
-            assert_eq!(
-                scope
-                    .call(&functions.weekday_at, (BigInt::from(0), "Z".into()))
+    executor
+        .block_on(
+            module.with_execution(&host, &mut state, &mut echo, async |scope| {
+                assert_eq!(
+                    scope
+                        .call(&functions.weekday_at, (BigInt::from(0), "Z".into()))
+                        .await
+                        .expect("epoch weekday"),
+                    "Thursday"
+                );
+                let _ = scope
+                    .call(&functions.observed_timezone, ())
                     .await
-                    .expect("epoch weekday"),
-                "Thursday"
-            );
-            let _ = scope
-                .call(&functions.observed_timezone, ())
-                .await
-                .expect("system timezone");
-            let _ = scope
-                .call(&functions.observed_offset, ())
-                .await
-                .expect("system offset");
-            let _ = scope
-                .call(&functions.sampled_difference, ())
-                .await
-                .expect("monotonic difference");
-        }),
-    )?;
+                    .expect("system timezone");
+                let _ = scope
+                    .call(&functions.observed_offset, ())
+                    .await
+                    .expect("system offset");
+                let _ = scope
+                    .call(&functions.sampled_difference, ())
+                    .await
+                    .expect("monotonic difference");
+            }),
+        )?
+        .try_into_value()
+        .expect("fixture must return normally");
     Ok(())
 }

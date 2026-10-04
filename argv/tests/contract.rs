@@ -58,6 +58,11 @@ fn original_argv_load_uses_the_host_snapshot_and_repeats_it() {
                 );
             }),
         )
+        .map(|outcome| {
+            outcome
+                .try_into_value()
+                .expect("fixture must return normally")
+        })
         .expect("source execution succeeds");
 }
 
@@ -96,5 +101,10 @@ fn original_argv_load_accepts_an_empty_argument_list() {
                 );
             }),
         )
+        .map(|outcome| {
+            outcome
+                .try_into_value()
+                .expect("fixture must return normally")
+        })
         .expect("source execution succeeds");
 }

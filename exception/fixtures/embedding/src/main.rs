@@ -17,34 +17,37 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     .initialize()?;
     let mut echo = Vec::new();
 
-    executor.block_on(
-        module.with_execution(&host, &mut state, &mut echo, async |scope| {
-            assert!(
-                scope
-                    .call(&functions.verify, ())
-                    .await
-                    .expect("source contract")
-            );
-            assert!(
-                scope
-                    .call(&functions.cleanup_failure_wins, ())
-                    .await
-                    .expect("cleanup failure contract")
-            );
-            assert!(
-                scope
-                    .call(&functions.native_failure_is_caught, ())
-                    .await
-                    .expect("native failure contract")
-            );
-            assert!(
-                scope
-                    .call(&functions.nested_cleanup_order, ())
-                    .await
-                    .expect("nested cleanup contract")
-            );
-        }),
-    )?;
+    executor
+        .block_on(
+            module.with_execution(&host, &mut state, &mut echo, async |scope| {
+                assert!(
+                    scope
+                        .call(&functions.verify, ())
+                        .await
+                        .expect("source contract")
+                );
+                assert!(
+                    scope
+                        .call(&functions.cleanup_failure_wins, ())
+                        .await
+                        .expect("cleanup failure contract")
+                );
+                assert!(
+                    scope
+                        .call(&functions.native_failure_is_caught, ())
+                        .await
+                        .expect("native failure contract")
+                );
+                assert!(
+                    scope
+                        .call(&functions.nested_cleanup_order, ())
+                        .await
+                        .expect("nested cleanup contract")
+                );
+            }),
+        )?
+        .try_into_value()
+        .expect("fixture must return normally");
     assert_eq!(
         state
             .stdlib()

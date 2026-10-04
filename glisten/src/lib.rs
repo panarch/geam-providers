@@ -128,7 +128,7 @@ impl<Profile: GlistenProfile> HostProviderComponentRegistration<Profile> for Com
 
 /// Handles retain identity only. The execution domain owns live IO resources.
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct SocketKey {
+pub(crate) struct SocketKey {
     creator: ExecutionUnitId,
     serial: BigInt,
 }
@@ -261,7 +261,10 @@ pub fn main() {
         assert!(host.poll(running.as_mut()).is_pending());
         host.advance(std::time::Duration::from_millis(1));
         assert_eq!(
-            host.poll(running.as_mut()).map(Result::unwrap),
+            host.poll(running.as_mut()).map(|result| result
+                .unwrap()
+                .try_into_value()
+                .expect("fixture must return normally")),
             std::task::Poll::Ready(geam::Value::Nil)
         );
         assert_eq!(

@@ -21,14 +21,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         other => other,
     };
 
-    executor.block_on(
-        module.with_execution(&host, &mut state, &mut echo, async |scope| {
-            let actual = scope
-                .call(&functions.name, ())
-                .await
-                .expect("original operating_system.name contract");
-            assert_eq!(actual.as_str(), expected);
-        }),
-    )?;
+    executor
+        .block_on(
+            module.with_execution(&host, &mut state, &mut echo, async |scope| {
+                let actual = scope
+                    .call(&functions.name, ())
+                    .await
+                    .expect("original operating_system.name contract");
+                assert_eq!(actual.as_str(), expected);
+            }),
+        )?
+        .try_into_value()
+        .expect("fixture must return normally");
     Ok(())
 }

@@ -12,7 +12,7 @@ mod functions {
         body: Callback<fn() -> Value<Item>>,
     ) -> HostResult<Result<Value<Item>, geam::gleam_stdlib::Dynamic>> {
         // The Erlang FFI catches throw only. Geam has no throw class; its source
-        // and host failures (and cancellation) keep their original identity.
+        // and host failures, cancellation, and application exit keep their identity.
         Ok(Ok(call.invoke(&body, ()).await?))
     }
 }
@@ -117,7 +117,13 @@ pub fn main() {{ assert data({record}) == <<0, 255>> Nil }}
             ));
             let (mut execution, mut state) = source_project_with(&source, network, [provider]);
             let host = TestHost::default();
-            let result = host.block_on(execution.run_main(&host, &mut state, &mut Vec::new()));
+            let result = host
+                .block_on(execution.run_main(&host, &mut state, &mut Vec::new()))
+                .map(|outcome| {
+                    outcome
+                        .try_into_value()
+                        .expect("fixture must return normally")
+                });
             match expected {
                 None => assert_eq!(result.unwrap(), geam::Value::Nil),
                 Some(message) => assert!(
@@ -179,7 +185,13 @@ pub fn main() {{ assert reason({record}) == socket.Econnreset Nil }}
             ));
             let (mut execution, mut state) = source_project_with(&source, network, [provider]);
             let host = TestHost::default();
-            let result = host.block_on(execution.run_main(&host, &mut state, &mut Vec::new()));
+            let result = host
+                .block_on(execution.run_main(&host, &mut state, &mut Vec::new()))
+                .map(|outcome| {
+                    outcome
+                        .try_into_value()
+                        .expect("fixture must return normally")
+                });
             match expected {
                 None => assert_eq!(result.unwrap(), geam::Value::Nil),
                 Some(message) => assert!(result.unwrap_err().to_string().contains(message)),
@@ -246,7 +258,10 @@ pub fn main() {{
             assert!(host.poll(running.as_mut()).is_pending());
             network.offer(io);
             assert_eq!(
-                host.poll(running.as_mut()).map(Result::unwrap),
+                host.poll(running.as_mut()).map(|result| result
+                    .unwrap()
+                    .try_into_value()
+                    .expect("fixture must return normally")),
                 Poll::Ready(geam::Value::Nil),
                 "TLS={tls}"
             );
@@ -274,6 +289,139 @@ pub fn main() {{
                     .count(),
                 1
             );
+        }
+    }
+
+    #[test]
+    fn application_exit_in_rescue_closes_tcp_and_tls_servers_with_pending_io() {
+        use crate::test_support::{Profile, source_project_with};
+        use geam::execution::{ExecutionOutcome, ExitStatus};
+        use geam::host::{HostCallCompletion, HostCallError, HostProviderModule};
+
+        fn exit_application<'call>(
+            call: crate::Call<'call, Profile, ()>,
+        ) -> Result<HostCallCompletion<'call, ()>, HostCallError> {
+            call.exit(ExitStatus::new(7))
+        }
+
+        for tls in [false, true] {
+            let provider = HostProviderModule::new("fixture", "fixture")
+                .unwrap()
+                .with_scoped_function::<crate::Component, (), (), _>(
+                    "exit_application",
+                    exit_application,
+                )
+                .unwrap();
+            let source = format!(
+                r#"
+import gleam/erlang/process
+import gleam/option.{{None}}
+import glisten
+@external(erlang, "fixture", "exit_application") fn exit_application() -> Nil
+pub fn main() {{
+  let initialised = process.new_subject()
+  let assert Ok(_server) = glisten.new(
+    fn(_connection) {{ process.send(initialised, Nil) #(7, None) }},
+    fn(state, message, _connection) {{
+      assert state == 7
+      let assert glisten.Packet(<<"exit":utf8>>) = message
+      exit_application()
+      panic as "application exit must leave the callback"
+    }},
+  ) |> glisten.with_pool_size(2) {tls} |> glisten.start(0)
+  assert process.receive(initialised, 1000) == Ok(Nil)
+  assert process.receive(initialised, 1000) == Ok(Nil)
+  process.sleep(60_000)
+  panic as "application exit must leave the main unit"
+}}
+"#,
+                tls = if tls {
+                    "|> glisten.with_tls(\"cert\", \"key\")"
+                } else {
+                    ""
+                }
+            );
+            let address = "127.0.0.1:4321".parse().unwrap();
+            let initial_network = Arc::new(ScriptedNetwork::new(address, vec![]));
+            let (mut execution, mut state) =
+                source_project_with(&source, initial_network, [provider]);
+            let host = TestHost::default();
+            // Reuse the same module and host after Exited; each run owns a fresh domain.
+            for _ in 0..2 {
+                let first = Arc::new(ScriptedConnection::new(
+                    address,
+                    "127.0.0.2:1234".parse().unwrap(),
+                    vec![],
+                ));
+                let second = Arc::new(ScriptedConnection::new(
+                    address,
+                    "127.0.0.3:5678".parse().unwrap(),
+                    vec![],
+                ));
+                let network = Arc::new(ScriptedNetwork::new(address, vec![]));
+                state.provider = crate::State::with_network(network.clone());
+                let mut echo = Vec::new();
+                let mut running = Box::pin(execution.run_main(&host, &mut state, &mut echo));
+                assert!(host.poll(running.as_mut()).is_pending());
+                network.offer(first.clone());
+                network.offer(second.clone());
+                assert!(host.poll(running.as_mut()).is_pending());
+                assert_eq!(
+                    network
+                        .events
+                        .lock()
+                        .iter()
+                        .filter(|event| matches!(event, Event::Read(_)))
+                        .count(),
+                    2,
+                    "both active readers must be waiting before exit"
+                );
+                assert!(
+                    network
+                        .events
+                        .lock()
+                        .iter()
+                        .filter(|event| **event == Event::Accept)
+                        .count()
+                        > 2
+                );
+                first.incoming.lock().push_back(Ok(b"exit".to_vec()));
+                first.changed.notify_waiters();
+                assert_eq!(
+                    host.poll(running.as_mut()).map(Result::unwrap),
+                    Poll::Ready(ExecutionOutcome::Exited(ExitStatus::new(7))),
+                    "TLS={tls}"
+                );
+                drop(running);
+                assert!(echo.is_empty());
+                assert_eq!(
+                    network
+                        .events
+                        .lock()
+                        .iter()
+                        .filter(|event| **event == Event::CloseConnection)
+                        .count(),
+                    2
+                );
+                assert_eq!(
+                    network
+                        .events
+                        .lock()
+                        .iter()
+                        .filter(|event| **event == Event::CloseListener)
+                        .count(),
+                    1
+                );
+                let events = network.events.lock().len();
+                second.incoming.lock().push_back(Ok(b"exit".to_vec()));
+                second.changed.notify_waiters();
+                host.step();
+                assert_eq!(
+                    network.events.lock().len(),
+                    events,
+                    "no IO worker remains after Exited"
+                );
+            }
         }
     }
 
@@ -356,7 +504,10 @@ pub fn main() {{
             io.incoming.lock().push_back(input);
             io.changed.notify_waiters();
             assert_eq!(
-                host.poll(running.as_mut()).map(Result::unwrap),
+                host.poll(running.as_mut()).map(|result| result
+                    .unwrap()
+                    .try_into_value()
+                    .expect("fixture must return normally")),
                 Poll::Ready(geam::Value::Nil),
                 "{callback}"
             );

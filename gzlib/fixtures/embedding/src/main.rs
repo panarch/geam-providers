@@ -16,20 +16,23 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     .initialize()?;
     let mut echo = Vec::new();
 
-    executor.block_on(
-        module.with_execution(&host, &mut state, &mut echo, async |scope| {
-            assert!(
-                scope
-                    .call(&functions.verify, ())
+    executor
+        .block_on(
+            module.with_execution(&host, &mut state, &mut echo, async |scope| {
+                assert!(
+                    scope
+                        .call(&functions.verify, ())
+                        .await
+                        .expect("source contract")
+                );
+                let compressed = scope
+                    .call(&functions.compressed_sample, ())
                     .await
-                    .expect("source contract")
-            );
-            let compressed = scope
-                .call(&functions.compressed_sample, ())
-                .await
-                .expect("public compress call");
-            assert!(!compressed.bytes().is_empty());
-        }),
-    )?;
+                    .expect("public compress call");
+                assert!(!compressed.bytes().is_empty());
+            }),
+        )?
+        .try_into_value()
+        .expect("fixture must return normally");
     Ok(())
 }

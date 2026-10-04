@@ -62,19 +62,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         .initialize()?;
         let mut echo = Vec::new();
-        executor.block_on(module.with_execution(
-            &host,
-            &mut state,
-            &mut echo,
-            async |scope| {
-                scope
-                    .call(
-                        &functions.verify,
-                        (certificate.clone().into(), key.clone().into()),
-                    )
-                    .await
-            },
-        ))??;
+        executor
+            .block_on(
+                module.with_execution(&host, &mut state, &mut echo, async |scope| {
+                    scope
+                        .call(
+                            &functions.verify,
+                            (certificate.clone().into(), key.clone().into()),
+                        )
+                        .await
+                }),
+            )?
+            .try_into_value()
+            .expect("fixture must return normally")?;
         assert!(echo.is_empty());
     }
     Ok(())

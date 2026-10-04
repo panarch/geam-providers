@@ -30,6 +30,9 @@ fn original_package_and_native_signatures_plan_and_execute() {
     let host = execution_fixture::TestHost::default();
     assert_eq!(
         host.block_on(execution.run_main(&host, &mut state, &mut Vec::new()))
+            .map(|outcome| outcome
+                .try_into_value()
+                .expect("fixture must return normally"))
             .unwrap(),
         Value::Nil
     );

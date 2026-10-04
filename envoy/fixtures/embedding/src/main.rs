@@ -23,41 +23,50 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut echo = Vec::new();
 
     for _ in 0..2 {
-        executor.block_on(
+        executor
+            .block_on(
+                module.with_execution(&host, &mut state, &mut echo, async |scope| {
+                    assert!(
+                        scope
+                            .call(&functions.verify, ())
+                            .await
+                            .expect("original envoy contract")
+                    );
+                }),
+            )?
+            .try_into_value()
+            .expect("fixture must return normally");
+    }
+    executor
+        .block_on(
+            module.with_execution(&host, &mut state, &mut echo, async |scope| {
+                scope
+                    .call(&functions.write, ("PERSIST".into(), "visible".into()))
+                    .await
+                    .expect("write provider state");
+            }),
+        )?
+        .try_into_value()
+        .expect("fixture must return normally");
+    executor
+        .block_on(
             module.with_execution(&host, &mut state, &mut echo, async |scope| {
                 assert!(
                     scope
-                        .call(&functions.verify, ())
+                        .call(&functions.contains, ("PERSIST".into(), "visible".into()))
                         .await
-                        .expect("original envoy contract")
+                        .expect("read provider state across executions")
+                );
+                assert!(
+                    scope
+                        .call(&functions.clear, ("PERSIST".into(),))
+                        .await
+                        .expect("clear provider state")
                 );
             }),
-        )?;
-    }
-    executor.block_on(
-        module.with_execution(&host, &mut state, &mut echo, async |scope| {
-            scope
-                .call(&functions.write, ("PERSIST".into(), "visible".into()))
-                .await
-                .expect("write provider state");
-        }),
-    )?;
-    executor.block_on(
-        module.with_execution(&host, &mut state, &mut echo, async |scope| {
-            assert!(
-                scope
-                    .call(&functions.contains, ("PERSIST".into(), "visible".into()))
-                    .await
-                    .expect("read provider state across executions")
-            );
-            assert!(
-                scope
-                    .call(&functions.clear, ("PERSIST".into(),))
-                    .await
-                    .expect("clear provider state")
-            );
-        }),
-    )?;
+        )?
+        .try_into_value()
+        .expect("fixture must return normally");
     assert!(echo.is_empty());
     Ok(())
 }

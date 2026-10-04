@@ -13,7 +13,7 @@ run the example:
 
 ```sh
 git init -q target/geam-source
-git -C target/geam-source fetch --depth=1 https://github.com/panarch/geam.git 5ad13b7a78652f95b6801e8bf836b9a1fb3ec789
+git -C target/geam-source fetch --depth=1 https://github.com/panarch/geam.git e5e1f5f772c6f48369050bdf3ee35c7a324277e2
 git -C target/geam-source checkout --detach -q FETCH_HEAD
 CARGO_TARGET_DIR="$PWD/target/geam-cli-build" \
   cargo build --manifest-path "$PWD/target/geam-source/Cargo.toml" \

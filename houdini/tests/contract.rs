@@ -80,6 +80,11 @@ fn original_houdini_runs_through_the_public_host_boundary() {
                 }
             }),
         )
+        .map(|outcome| {
+            outcome
+                .try_into_value()
+                .expect("fixture must return normally")
+        })
         .expect("host execution completes");
 }
 
@@ -145,6 +150,11 @@ pub fn bad_slice() -> BitArray { slice(<<1, 2>>, -1, 1) }
                 (coerce_error, slice_error)
             }),
         )
+        .map(|outcome| {
+            outcome
+                .try_into_value()
+                .expect("fixture must return normally")
+        })
         .expect("host execution completes");
     assert_eq!(
         coerce_error,

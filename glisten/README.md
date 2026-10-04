@@ -7,7 +7,7 @@ connection handlers, selectors, and supervision run as upstream source. The
 supported package range is limited to 9.0.1 until other versions are tested.
 
 Geam is pinned to `main` commit
-`5ad13b7a78652f95b6801e8bf836b9a1fb3ec789`. The
+`e5e1f5f772c6f48369050bdf3ee35c7a324277e2`. The
 [standalone fixture](fixtures/gleam/) selects `geam-glisten`, `geam-otp`,
 `geam-logging`, and `geam-argv` explicitly. The
 [embedding fixture](fixtures/embedding/) composes the same providers with
@@ -26,8 +26,8 @@ another implementation of the public listener and connection contracts.
 
 Listeners and connections belong to the execution domain. Socket values retain
 logical identity, not live IO. Aliases keep their equality and hash after close;
-owner exit, kill, execution cancellation, or domain shutdown closes resources
-and wakes pending IO. Ownership transfer pauses active delivery, forwards only
+owner exit, kill, application exit, execution cancellation, or domain shutdown
+closes resources and wakes pending IO. Ownership transfer pauses active delivery, forwards only
 that socket's queued records in order, then changes the owner. Unrelated mailbox
 messages retain their order. A cancelled transfer restores delivery.
 
@@ -70,8 +70,11 @@ its documented TCP negotiation error before calling that external.
 
 The original handler `rescue` catches Erlang `throw` only. Geam source execution
 has no throw class: successful generic callbacks return `Ok`, while source
-panics, host failures, and execution cancellation retain their original
-identity. They are not converted into a socket error or a successful result.
+panics, host failures, execution cancellation, and intentional application exit
+retain their original identity. They are not converted into a socket error or
+a successful result. Application exit closes the domain and pending IO before
+the embedding caller receives `ExecutionOutcome::Exited(status)`, while the
+embedding process stays alive.
 
 TLS listeners have no public close function in the original typed API. The
 fixtures give them a process owner and verify cleanup on that owner's exit.
