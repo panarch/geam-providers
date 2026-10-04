@@ -25,12 +25,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
         .initialize()?;
         let mut echo = Vec::new();
-        executor.block_on(module.with_execution(
-            &host,
-            &mut state,
-            &mut echo,
-            async |scope| scope.call(&functions.main, ()).await,
-        ))??;
+        executor
+            .block_on(
+                module.with_execution(&host, &mut state, &mut echo, async |scope| {
+                    scope.call(&functions.main, ()).await
+                }),
+            )?
+            .try_into_value()
+            .map_err(|status| format!("unexpected application exit {status}"))??;
         assert!(echo.is_empty());
         assert_eq!(state.stdlib().io_outputs().len(), 3);
         for output in state.stdlib_mut().take_io_outputs() {

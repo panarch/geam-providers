@@ -15,22 +15,25 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     .initialize()?;
     let mut echo = Vec::new();
 
-    executor.block_on(
-        module.with_execution(&host, &mut state, &mut echo, async |scope| {
-            let _ = scope
-                .call(&functions.get_size, ())
-                .await
-                .expect("source get call");
-            let _ = scope
-                .call(&functions.row_count, ())
-                .await
-                .expect("source rows call");
-            let _ = scope
-                .call(&functions.column_count, ())
-                .await
-                .expect("source columns call");
-        }),
-    )?;
+    executor
+        .block_on(
+            module.with_execution(&host, &mut state, &mut echo, async |scope| {
+                let _ = scope
+                    .call(&functions.get_size, ())
+                    .await
+                    .expect("source get call");
+                let _ = scope
+                    .call(&functions.row_count, ())
+                    .await
+                    .expect("source rows call");
+                let _ = scope
+                    .call(&functions.column_count, ())
+                    .await
+                    .expect("source columns call");
+            }),
+        )?
+        .try_into_value()
+        .map_err(|status| format!("unexpected application exit {status}"))?;
     assert!(echo.is_empty());
     Ok(())
 }

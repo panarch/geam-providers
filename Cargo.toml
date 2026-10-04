@@ -8,8 +8,8 @@ rust-version = "1.96"
 license = "Apache-2.0"
 
 [workspace.dependencies]
-geam = { git = "https://github.com/panarch/geam.git", rev = "5adbf4e654c6e4ca518e60babe19c3dc88532d4d", default-features = false, features = ["provider"] }
-geam-core = { git = "https://github.com/panarch/geam.git", rev = "5adbf4e654c6e4ca518e60babe19c3dc88532d4d" }
+geam = { git = "https://github.com/panarch/geam.git", rev = "e5e1f5f772c6f48369050bdf3ee35c7a324277e2", default-features = false, features = ["provider"] }
+geam-core = { git = "https://github.com/panarch/geam.git", rev = "e5e1f5f772c6f48369050bdf3ee35c7a324277e2" }
 regex = "1.12"
 regex-syntax = "0.8"
 sha2 = "0.10"

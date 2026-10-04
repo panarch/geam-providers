@@ -16,13 +16,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     .initialize()?;
     let mut echo = Vec::new();
 
-    executor.block_on(
-        module.with_execution(&host, &mut state, &mut echo, async |scope| {
-            scope
-                .call(&functions.filter_and_reset, ())
-                .await
-                .expect("original logging contract");
-        }),
-    )?;
+    executor
+        .block_on(
+            module.with_execution(&host, &mut state, &mut echo, async |scope| {
+                scope
+                    .call(&functions.filter_and_reset, ())
+                    .await
+                    .expect("original logging contract");
+            }),
+        )?
+        .try_into_value()
+        .map_err(|status| format!("unexpected application exit {status}"))?;
     Ok(())
 }

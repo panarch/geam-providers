@@ -21,7 +21,8 @@ requires-services = ["gleam_erlang"]
 
 [package.metadata.geam.ci]
 fixture-bin = "geam_httpc_fixture"
-integration-case = "httpc"
+script = "fixtures/ci.sh"
+script-phases = ["standalone", "executable"]
 runners = ["ubuntu-24.04", "macos-15", "windows-2025"]
 
 [dependencies]

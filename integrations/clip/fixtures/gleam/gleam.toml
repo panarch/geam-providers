@@ -1,0 +1,9 @@
+name = "geam_clip_fixture"
+version = "0.1.0"
+target = "erlang"
+description = "Unmodified clip 1.2.2 contract integration"
+licences = ["Apache-2.0"]
+
+[dependencies]
+clip = ">= 1.2.2 and < 1.2.3"
+gleam_stdlib = ">= 1.0.3 and < 1.0.4"

@@ -45,5 +45,7 @@ fn original_gleam_package_calls_all_three_private_externals() {
                 );
             }),
         )
-        .expect("host execution completes");
+        .expect("host execution completes")
+        .try_into_value()
+        .expect("source execution returns normally");
 }
