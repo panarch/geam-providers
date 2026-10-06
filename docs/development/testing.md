@@ -74,7 +74,7 @@ output before exit, prevented continuation, and fresh scopes after exit.
 ## Dependency Preparation
 
 The Rust workspace, fixture consumers, and report service example use Geam
-`main` commit `e5e1f5f772c6f48369050bdf3ee35c7a324277e2`. Houdini also
+`main` commit `6a6cf4624447b53362bf394513578d708682f0e5`. Houdini also
 uses the public `geam-core` byte-slice helper from that commit. The Gleam
 projects resolve the unmodified `filepath` 1.1.2, `gleam_regexp` 1.1.1,
 `gleam_otp` 1.3.0, `houdini` 1.2.0, `gzlib` 2.0.0, `gleam_crypto` 1.6.0,
@@ -182,12 +182,13 @@ Rust tests:
 ```
 
 When updating the common Geam revision, rebuild the pinned CLI and synchronize
-the OTP and httpc prepared embedding data before running the Rust workspace
+the OTP, httpc, and Glisten prepared embedding data before running the Rust workspace
 checks. These generated programs target that commit's prepared representation:
 
 ```sh
 (cd gleam-otp/fixtures/embedding && "$GEAM_BIN" embedding sync)
 (cd gleam-httpc/fixtures/embedding && "$GEAM_BIN" embedding sync)
+(cd glisten/fixtures/embedding && "$GEAM_BIN" embedding sync)
 ```
 
 Commit the generated changes together with the pin; use `embedding check` to
@@ -216,13 +217,13 @@ commit (a Git-package `cargo install` can resolve a published `geam-core`):
 
 ```sh
 git init -q target/geam-source
-git -C target/geam-source fetch --depth=1 https://github.com/panarch/geam.git e5e1f5f772c6f48369050bdf3ee35c7a324277e2
+git -C target/geam-source fetch --depth=1 https://github.com/panarch/geam.git 6a6cf4624447b53362bf394513578d708682f0e5
 git -C target/geam-source checkout --detach -q FETCH_HEAD
 CARGO_TARGET_DIR="$PWD/target/geam-cli-build" \
   cargo build --manifest-path "$PWD/target/geam-source/Cargo.toml" \
   --locked --release --bin geam
 export GEAM_BIN="$PWD/target/geam-cli-build/release/geam"
-export GEAM_REV=e5e1f5f772c6f48369050bdf3ee35c7a324277e2
+export GEAM_REV=6a6cf4624447b53362bf394513578d708682f0e5
 ```
 
 ## Standard Verification

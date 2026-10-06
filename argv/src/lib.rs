@@ -139,11 +139,22 @@ mod tests {
     fn values(state: &RunState) -> (String, String, Vec<String>) {
         let (runtime, program, arguments) = state.load();
         (
-            runtime.as_str().to_owned(),
-            program.as_str().to_owned(),
+            runtime
+                .as_str()
+                .expect("Unicode argument fixture")
+                .to_owned(),
+            program
+                .as_str()
+                .expect("Unicode argument fixture")
+                .to_owned(),
             arguments
                 .into_iter()
-                .map(|argument| argument.as_str().to_owned())
+                .map(|argument| {
+                    argument
+                        .as_str()
+                        .expect("Unicode argument fixture")
+                        .to_owned()
+                })
                 .collect(),
         )
     }

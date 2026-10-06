@@ -176,7 +176,11 @@ The original pool, user-selector and TLS scenarios execute normal handoff.
 ## Options
 
 All 13 TcpOption constructors retain their exact source schema. ALPN List input
-stays retained and is decoded on demand. Conversion maps active/IP/TLS options
+stays retained and its opaque bytes are decoded on demand. Certificate and key
+paths require UTF-8 and fail with `Badarg` before IO. Owner tests
+`raw_tls_options_preserve_alpn_and_reject_paths_before_host_io` and
+`non_utf8_tls_paths_preserve_the_previous_credentials` check these boundaries.
+Conversion maps active/IP/TLS options
 to native views; equality, hashing, inspection, and views agree. Generic merge
 uses the original type key and override order; unsupported native keys fail at
 the host boundary. Creation-only options are validated at listen and return `Einval` when supplied
@@ -241,12 +245,13 @@ fatal ALPN mismatch at both endpoints.
 ## Protocol
 
 TLS returns the negotiated protocol as String or the normalized
-`Error("Socket not negotiated")`. Invalid UTF-8 from a custom host capability
-fails at the String boundary. A direct call to the original undefined TCP
+`Error("Socket not negotiated")`. Negotiated opaque bytes, including non-UTF-8
+bytes, are preserved in the String result. A direct call to the original undefined TCP
 external remains a host failure; the transport's TCP wrapper returns
 `Error("Can't negotiate protocol on tcp")` without calling it.
 
 Owner tests: `tls_native_calls_preserve_handshake_alias_protocol_and_mapped_addresses`,
+`negotiated_alpn_preserves_non_utf8_protocol_bytes`,
 `native_fatal_boundaries_preserve_the_operation_and_actual_specialization`, and
 `original_tcp_controls_preserve_typed_results_values_and_effect_order`.
 The original ALPN FFI's charlist error is a representation bug, documented in

@@ -13,3 +13,7 @@ pub fn second() -> Int {
 pub fn other() -> Int {
   global_value.create_with_unique_name("embedding.other", fn() { 7 })
 }
+
+pub fn named(name: String, value: Int) -> Int {
+  global_value.create_with_unique_name(name, fn() { value })
+}

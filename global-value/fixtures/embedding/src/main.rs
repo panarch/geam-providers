@@ -35,6 +35,29 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                         scope.call(&functions.other, ()).await.expect("other"),
                         7.into()
                     );
+                    let first = geam::StringValue::from_bytes(vec![b'n', 255]);
+                    let second = geam::StringValue::from_bytes(vec![b'n', 254]);
+                    assert_eq!(
+                        scope
+                            .call(&functions.named, (first.clone(), initial_value.into()))
+                            .await
+                            .expect("first raw name"),
+                        initial_value.into()
+                    );
+                    assert_eq!(
+                        scope
+                            .call(&functions.named, (first, 0.into()))
+                            .await
+                            .expect("equal raw name reuses value"),
+                        initial_value.into()
+                    );
+                    assert_eq!(
+                        scope
+                            .call(&functions.named, (second, 7.into()))
+                            .await
+                            .expect("distinct raw name"),
+                        7.into()
+                    );
                 }),
             )?
             .try_into_value()

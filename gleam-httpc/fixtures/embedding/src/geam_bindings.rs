@@ -256,16 +256,17 @@ where
 pub struct Functions {
     pub verify: Function<(StringValue,), bool, Function0Input>,
     pub methods: Function<(StringValue,), bool, Function1Input>,
-    pub options_and_headers: Function<(StringValue,), bool, Function2Input>,
-    pub binary_response: Function<(StringValue,), bool, Function3Input>,
-    pub invalid_utf8: Function<(StringValue,), bool, Function4Input>,
-    pub timeout: Function<(StringValue,), bool, Function5Input>,
-    pub posix_error: Function<(StringValue,), bool, Function6Input>,
-    pub tls_error: Function<(StringValue,), bool, Function7Input>,
-    pub negative_timeout: Function<(StringValue,), bool, Function8Input>,
-    pub negative_timeout_body: Function<(StringValue,), bool, Function9Input>,
-    pub unaligned_request: Function<(StringValue,), bool, Function10Input>,
-    pub invalid_method: Function<(StringValue,), bool, Function11Input>,
+    pub custom_method: Function<(StringValue, StringValue), bool, Function2Input>,
+    pub options_and_headers: Function<(StringValue,), bool, Function3Input>,
+    pub binary_response: Function<(StringValue,), bool, Function4Input>,
+    pub invalid_utf8: Function<(StringValue,), bool, Function5Input>,
+    pub timeout: Function<(StringValue,), bool, Function6Input>,
+    pub posix_error: Function<(StringValue,), bool, Function7Input>,
+    pub tls_error: Function<(StringValue,), bool, Function8Input>,
+    pub negative_timeout: Function<(StringValue,), bool, Function9Input>,
+    pub negative_timeout_body: Function<(StringValue,), bool, Function10Input>,
+    pub unaligned_request: Function<(StringValue,), bool, Function11Input>,
+    pub invalid_method: Function<(StringValue,), bool, Function12Input>,
 }
 
 pub struct Function0Input;
@@ -278,7 +279,7 @@ impl InputShape<(StringValue,)> for Function1Input {}
 
 pub struct Function2Input;
 
-impl InputShape<(StringValue,)> for Function2Input {}
+impl InputShape<(StringValue, StringValue)> for Function2Input {}
 
 pub struct Function3Input;
 
@@ -316,6 +317,10 @@ pub struct Function11Input;
 
 impl InputShape<(StringValue,)> for Function11Input {}
 
+pub struct Function12Input;
+
+impl InputShape<(StringValue,)> for Function12Input {}
+
 #[allow(dead_code)]
 pub fn bind<Io>(
     builder: HostedModuleBuilder<Profile<Io>>,
@@ -325,31 +330,33 @@ where
 {
     let (mut bindings, function_0) = builder.function(FunctionDeclaration::new("verify"))?;
     let function_1 = bindings.function(FunctionDeclaration::new("methods"))?;
-    let function_2 = bindings.function(FunctionDeclaration::new("options_and_headers"))?;
-    let function_3 = bindings.function(FunctionDeclaration::new("binary_response"))?;
-    let function_4 = bindings.function(FunctionDeclaration::new("invalid_utf8"))?;
-    let function_5 = bindings.function(FunctionDeclaration::new("timeout"))?;
-    let function_6 = bindings.function(FunctionDeclaration::new("posix_error"))?;
-    let function_7 = bindings.function(FunctionDeclaration::new("tls_error"))?;
-    let function_8 = bindings.function(FunctionDeclaration::new("negative_timeout"))?;
-    let function_9 = bindings.function(FunctionDeclaration::new("negative_timeout_body"))?;
-    let function_10 = bindings.function(FunctionDeclaration::new("unaligned_request"))?;
-    let function_11 = bindings.function(FunctionDeclaration::new("invalid_method"))?;
+    let function_2 = bindings.function(FunctionDeclaration::new("custom_method"))?;
+    let function_3 = bindings.function(FunctionDeclaration::new("options_and_headers"))?;
+    let function_4 = bindings.function(FunctionDeclaration::new("binary_response"))?;
+    let function_5 = bindings.function(FunctionDeclaration::new("invalid_utf8"))?;
+    let function_6 = bindings.function(FunctionDeclaration::new("timeout"))?;
+    let function_7 = bindings.function(FunctionDeclaration::new("posix_error"))?;
+    let function_8 = bindings.function(FunctionDeclaration::new("tls_error"))?;
+    let function_9 = bindings.function(FunctionDeclaration::new("negative_timeout"))?;
+    let function_10 = bindings.function(FunctionDeclaration::new("negative_timeout_body"))?;
+    let function_11 = bindings.function(FunctionDeclaration::new("unaligned_request"))?;
+    let function_12 = bindings.function(FunctionDeclaration::new("invalid_method"))?;
     Ok((
         bindings,
         Functions {
             verify: function_0.with_input_shape(),
             methods: function_1.with_input_shape(),
-            options_and_headers: function_2.with_input_shape(),
-            binary_response: function_3.with_input_shape(),
-            invalid_utf8: function_4.with_input_shape(),
-            timeout: function_5.with_input_shape(),
-            posix_error: function_6.with_input_shape(),
-            tls_error: function_7.with_input_shape(),
-            negative_timeout: function_8.with_input_shape(),
-            negative_timeout_body: function_9.with_input_shape(),
-            unaligned_request: function_10.with_input_shape(),
-            invalid_method: function_11.with_input_shape(),
+            custom_method: function_2.with_input_shape(),
+            options_and_headers: function_3.with_input_shape(),
+            binary_response: function_4.with_input_shape(),
+            invalid_utf8: function_5.with_input_shape(),
+            timeout: function_6.with_input_shape(),
+            posix_error: function_7.with_input_shape(),
+            tls_error: function_8.with_input_shape(),
+            negative_timeout: function_9.with_input_shape(),
+            negative_timeout_body: function_10.with_input_shape(),
+            unaligned_request: function_11.with_input_shape(),
+            invalid_method: function_12.with_input_shape(),
         },
     ))
 }
@@ -362,31 +369,33 @@ where
     let mut bindings = program::PROGRAM.load(host_providers::<Io>()?)?;
     let function_0 = bindings.function(FunctionDeclaration::new("verify"))?;
     let function_1 = bindings.function(FunctionDeclaration::new("methods"))?;
-    let function_2 = bindings.function(FunctionDeclaration::new("options_and_headers"))?;
-    let function_3 = bindings.function(FunctionDeclaration::new("binary_response"))?;
-    let function_4 = bindings.function(FunctionDeclaration::new("invalid_utf8"))?;
-    let function_5 = bindings.function(FunctionDeclaration::new("timeout"))?;
-    let function_6 = bindings.function(FunctionDeclaration::new("posix_error"))?;
-    let function_7 = bindings.function(FunctionDeclaration::new("tls_error"))?;
-    let function_8 = bindings.function(FunctionDeclaration::new("negative_timeout"))?;
-    let function_9 = bindings.function(FunctionDeclaration::new("negative_timeout_body"))?;
-    let function_10 = bindings.function(FunctionDeclaration::new("unaligned_request"))?;
-    let function_11 = bindings.function(FunctionDeclaration::new("invalid_method"))?;
+    let function_2 = bindings.function(FunctionDeclaration::new("custom_method"))?;
+    let function_3 = bindings.function(FunctionDeclaration::new("options_and_headers"))?;
+    let function_4 = bindings.function(FunctionDeclaration::new("binary_response"))?;
+    let function_5 = bindings.function(FunctionDeclaration::new("invalid_utf8"))?;
+    let function_6 = bindings.function(FunctionDeclaration::new("timeout"))?;
+    let function_7 = bindings.function(FunctionDeclaration::new("posix_error"))?;
+    let function_8 = bindings.function(FunctionDeclaration::new("tls_error"))?;
+    let function_9 = bindings.function(FunctionDeclaration::new("negative_timeout"))?;
+    let function_10 = bindings.function(FunctionDeclaration::new("negative_timeout_body"))?;
+    let function_11 = bindings.function(FunctionDeclaration::new("unaligned_request"))?;
+    let function_12 = bindings.function(FunctionDeclaration::new("invalid_method"))?;
     Ok((
         bindings.seal(),
         Functions {
             verify: function_0.with_input_shape(),
             methods: function_1.with_input_shape(),
-            options_and_headers: function_2.with_input_shape(),
-            binary_response: function_3.with_input_shape(),
-            invalid_utf8: function_4.with_input_shape(),
-            timeout: function_5.with_input_shape(),
-            posix_error: function_6.with_input_shape(),
-            tls_error: function_7.with_input_shape(),
-            negative_timeout: function_8.with_input_shape(),
-            negative_timeout_body: function_9.with_input_shape(),
-            unaligned_request: function_10.with_input_shape(),
-            invalid_method: function_11.with_input_shape(),
+            custom_method: function_2.with_input_shape(),
+            options_and_headers: function_3.with_input_shape(),
+            binary_response: function_4.with_input_shape(),
+            invalid_utf8: function_5.with_input_shape(),
+            timeout: function_6.with_input_shape(),
+            posix_error: function_7.with_input_shape(),
+            tls_error: function_8.with_input_shape(),
+            negative_timeout: function_9.with_input_shape(),
+            negative_timeout_body: function_10.with_input_shape(),
+            unaligned_request: function_11.with_input_shape(),
+            invalid_method: function_12.with_input_shape(),
         },
     ))
 }

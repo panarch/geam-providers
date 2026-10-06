@@ -59,7 +59,10 @@ fn verify() -> Result<(), Box<dyn std::error::Error>> {
                 );
                 let identity = scope.call(&functions.identity, ()).await?;
                 assert_eq!(
-                    (identity.0.as_str(), identity.1.as_str()),
+                    (
+                        identity.0.as_str().expect("Unicode argv identity"),
+                        identity.1.as_str().expect("Unicode argv identity")
+                    ),
                     ("embedded runtime", "clip-search host")
                 );
                 Ok::<(), Box<dyn std::error::Error>>(())
@@ -126,7 +129,10 @@ fn verify() -> Result<(), Box<dyn std::error::Error>> {
             module.with_execution(&host, &mut fresh, &mut echo, async |scope| {
                 let identity = scope.call(&functions.identity, ()).await?;
                 assert_eq!(
-                    (identity.0.as_str(), identity.1.as_str()),
+                    (
+                        identity.0.as_str().expect("Unicode argv identity"),
+                        identity.1.as_str().expect("Unicode argv identity")
+                    ),
                     ("fresh runtime", "fresh program")
                 );
                 assert_eq!(
@@ -417,7 +423,9 @@ fn strings(values: &SharedList<StringValue>) -> Vec<String> {
     (0..values.len())
         .map(|index| {
             values
-                .read_item(index, |value| value.as_str().to_owned())
+                .read_item(index, |value| {
+                    value.as_str().expect("Unicode search result").to_owned()
+                })
                 .expect("in-bounds source list item")
         })
         .collect()
@@ -427,7 +435,12 @@ fn assert_outputs(state: &mut State, stream: IoStream, lines: &[String]) {
     let outputs = state.stdlib_mut().take_io_outputs();
     let actual: Vec<_> = outputs
         .iter()
-        .map(|output| (output.stream(), output.text().as_str()))
+        .map(|output| {
+            (
+                output.stream(),
+                output.text().as_str().expect("Unicode fixture output"),
+            )
+        })
         .collect();
     let text: Vec<_> = lines.iter().map(|line| format!("{line}\n")).collect();
     let expected: Vec<_> = text.iter().map(|line| (stream, line.as_str())).collect();

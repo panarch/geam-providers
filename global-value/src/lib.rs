@@ -16,7 +16,7 @@ use tokio::sync::Mutex;
 /// Values and per-name transactions shared by processes in one Geam execution.
 #[derive(Default)]
 pub struct Cache {
-    names: BTreeMap<String, BigInt>,
+    names: BTreeMap<geam::StringValue, BigInt>,
     next_key: BigInt,
     values: BTreeMap<BigInt, NativeValue>,
     locks: BTreeMap<BigInt, Arc<Mutex<()>>>,
@@ -97,12 +97,12 @@ fn name_key(cache: &mut Cache, native: &NativeValue) -> HostResult<BigInt> {
     let name = native
         .as_string()
         .ok_or_else(|| HostFailure::new("global_value name must be a String"))?;
-    if let Some(key) = cache.names.get(name.as_str()) {
+    if let Some(key) = cache.names.get(name.as_bytes()) {
         return Ok(key.clone());
     }
     cache.next_key += 1u8;
     let key = cache.next_key.clone();
-    cache.names.insert(name.as_str().to_owned(), key.clone());
+    cache.names.insert(name, key.clone());
     Ok(key)
 }
 
@@ -314,7 +314,7 @@ mod tests {
     #[test]
     fn closing_a_domain_releases_its_names_and_locks() {
         let mut cache = Cache::default();
-        cache.names.insert("one".to_owned(), 1u8.into());
+        cache.names.insert("one".into(), 1u8.into());
         cache
             .values
             .insert(1u8.into(), NativeValue::symbol("retained value"));

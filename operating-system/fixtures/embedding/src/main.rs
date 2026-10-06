@@ -28,7 +28,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     .call(&functions.name, ())
                     .await
                     .expect("original operating_system.name contract");
-                assert_eq!(actual.as_str(), expected);
+                assert_eq!(actual.as_str(), Ok(expected));
             }),
         )?
         .try_into_value()

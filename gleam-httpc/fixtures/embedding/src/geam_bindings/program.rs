@@ -5,7 +5,7 @@ use geam::__prepared_support as data;
 #[rustfmt::skip]
 pub(super) static PROGRAM: data::HostedModuleArtifact = data::HostedModuleArtifact {
     module: data::ModuleArtifact {
-        format: 16,
+        format: 23,
         program: data::ProgramTables {
             root: data::source::module_id(19),
             modules: data::Storage::Static(&[
@@ -8489,6 +8489,13 @@ pub fn methods(url: String) -> Bool {
   && other.status == 200
 }
 
+pub fn custom_method(url: String, method: String) -> Bool {
+  let assert Ok(base) = request.to(url)
+  let assert Ok(response) =
+    httpc.send(request.set_method(base, http.Other(method)))
+  response.status == 200
+}
+
 pub fn options_and_headers(url: String) -> Bool {
   let assert Ok(base) = request.to(url)
   let request =
@@ -13283,7 +13290,7 @@ pub fn invalid_method(url: String) -> Bool {
                                                 shape: data::type_::ValueShapeId(8),
                                             },
                                             kind: data::graph::ProfiledInstructionKind::Bool(data::graph::BoolInstruction::Call {
-                                                function: data::function::BoolFunctionId(12),
+                                                function: data::function::BoolFunctionId(13),
                                                 args: data::Storage::Static(&[
                                                     data::graph::ParamLocal::String(data::graph::StringLocalId(1)),
                                                     data::graph::ParamLocal::String(data::graph::StringLocalId(2)),
@@ -26429,7 +26436,7 @@ pub fn invalid_method(url: String) -> Bool {
                                                     shape: data::type_::ValueShapeId(8),
                                                 },
                                                 kind: data::graph::ProfiledInstructionKind::Bool(data::graph::BoolInstruction::Call {
-                                                    function: data::function::BoolFunctionId(13),
+                                                    function: data::function::BoolFunctionId(14),
                                                     args: data::Storage::Static(&[
                                                         data::graph::ParamLocal::BitArray(data::graph::BitArrayLocalId(0)),
                                                     ]),
@@ -39394,7 +39401,7 @@ pub fn invalid_method(url: String) -> Bool {
                                                     shape: data::type_::ValueShapeId(8),
                                                 },
                                                 kind: data::graph::ProfiledInstructionKind::Bool(data::graph::BoolInstruction::Call {
-                                                    function: data::function::BoolFunctionId(15),
+                                                    function: data::function::BoolFunctionId(16),
                                                     args: data::Storage::Static(&[
                                                         data::graph::ParamLocal::Int(data::graph::IntLocalId(1)),
                                                     ]),
@@ -50296,6 +50303,417 @@ pub fn invalid_method(url: String) -> Bool {
                         })),
                         data::function::ValueFunctionEntry::Graph(data::Storage::Static(&data::function::ExecutableFunction {
                             entry: data::function::FunctionEntry {
+                                parameter_count: 2,
+                            },
+                            body: data::function::ProfiledFunctionBody {
+                                block_graph: data::graph::ProfiledBlockGraph {
+                                    entry: data::graph::BlockId(0),
+                                    blocks: data::Storage::Static(&[
+                                        data::graph::BlockHeader {
+                                            params: 0..2,
+                                            instructions: 0..1,
+                                            terminator: data::graph::Terminator::Match(data::graph::Match {
+                                                subject: data::graph::ParamLocal::Custom(data::graph::CustomLocal {
+                                                    id: data::graph::CustomLocalId(0),
+                                                    shape: data::type_::CustomValueShape {
+                                                        type_id: data::type_::CustomTypeId(0),
+                                                        shape_id: data::type_::CustomValueShapeId(1),
+                                                    },
+                                                }),
+                                                pattern: data::graph::MatchPattern::Custom {
+                                                    constructor: data::type_::CustomConstructorId {
+                                                        type_id: data::type_::CustomTypeId(0),
+                                                        index: 0,
+                                                    },
+                                                    fields: data::Storage::Static(&[
+                                                        data::graph::MatchPattern::Bind(data::graph::MatchPatternBinding {
+                                                            index: 0,
+                                                        }),
+                                                    ]),
+                                                },
+                                                success: data::graph::MatchEdge {
+                                                    target: data::graph::BlockId(1),
+                                                    args: data::Storage::Static(&[
+                                                        data::graph::MatchEdgeArgument::Binding(0),
+                                                        data::graph::MatchEdgeArgument::Value(data::graph::ParamLocal::String(data::graph::StringLocalId(1))),
+                                                    ]),
+                                                    bindings: data::Storage::Static(&[
+                                                        0,
+                                                    ]),
+                                                    transfer: data::graph::Transfer {
+                                                        families: data::Storage::Static(&[
+                                                            data::graph::FamilyTransfer {
+                                                                family: data::graph::StorageFamily::String,
+                                                                length: 1,
+                                                                steps: data::Storage::Static(&[
+                                                                    data::graph::TransferStep {
+                                                                        source: 1,
+                                                                        destination: 0,
+                                                                    },
+                                                                ]),
+                                                            },
+                                                            data::graph::FamilyTransfer {
+                                                                family: data::graph::StorageFamily::Custom,
+                                                                length: 1,
+                                                                steps: data::Storage::Static(&[
+                                                                    data::graph::TransferStep {
+                                                                        source: 1,
+                                                                        destination: 0,
+                                                                    },
+                                                                ]),
+                                                            },
+                                                        ]),
+                                                    },
+                                                },
+                                                failure: data::graph::Edge {
+                                                    target: data::graph::BlockId(4),
+                                                    args: data::Storage::Static(&[
+                                                        data::graph::ParamLocal::Custom(data::graph::CustomLocal {
+                                                            id: data::graph::CustomLocalId(0),
+                                                            shape: data::type_::CustomValueShape {
+                                                                type_id: data::type_::CustomTypeId(0),
+                                                                shape_id: data::type_::CustomValueShapeId(1),
+                                                            },
+                                                        }),
+                                                    ]),
+                                                    transfer: data::graph::Transfer {
+                                                        families: data::Storage::Static(&[
+                                                            data::graph::FamilyTransfer {
+                                                                family: data::graph::StorageFamily::String,
+                                                                length: 0,
+                                                                steps: data::Storage::Static(&[]),
+                                                            },
+                                                        ]),
+                                                    },
+                                                },
+                                            }),
+                                        },
+                                        data::graph::BlockHeader {
+                                            params: 2..4,
+                                            instructions: 1..4,
+                                            terminator: data::graph::Terminator::Match(data::graph::Match {
+                                                subject: data::graph::ParamLocal::Custom(data::graph::CustomLocal {
+                                                    id: data::graph::CustomLocalId(3),
+                                                    shape: data::type_::CustomValueShape {
+                                                        type_id: data::type_::CustomTypeId(2),
+                                                        shape_id: data::type_::CustomValueShapeId(4),
+                                                    },
+                                                }),
+                                                pattern: data::graph::MatchPattern::Custom {
+                                                    constructor: data::type_::CustomConstructorId {
+                                                        type_id: data::type_::CustomTypeId(2),
+                                                        index: 0,
+                                                    },
+                                                    fields: data::Storage::Static(&[
+                                                        data::graph::MatchPattern::Bind(data::graph::MatchPatternBinding {
+                                                            index: 0,
+                                                        }),
+                                                    ]),
+                                                },
+                                                success: data::graph::MatchEdge {
+                                                    target: data::graph::BlockId(2),
+                                                    args: data::Storage::Static(&[
+                                                        data::graph::MatchEdgeArgument::Binding(0),
+                                                    ]),
+                                                    bindings: data::Storage::Static(&[
+                                                        0,
+                                                    ]),
+                                                    transfer: data::graph::Transfer {
+                                                        families: data::Storage::Static(&[
+                                                            data::graph::FamilyTransfer {
+                                                                family: data::graph::StorageFamily::String,
+                                                                length: 0,
+                                                                steps: data::Storage::Static(&[]),
+                                                            },
+                                                            data::graph::FamilyTransfer {
+                                                                family: data::graph::StorageFamily::Custom,
+                                                                length: 1,
+                                                                steps: data::Storage::Static(&[
+                                                                    data::graph::TransferStep {
+                                                                        source: 4,
+                                                                        destination: 0,
+                                                                    },
+                                                                ]),
+                                                            },
+                                                        ]),
+                                                    },
+                                                },
+                                                failure: data::graph::Edge {
+                                                    target: data::graph::BlockId(3),
+                                                    args: data::Storage::Static(&[
+                                                        data::graph::ParamLocal::Custom(data::graph::CustomLocal {
+                                                            id: data::graph::CustomLocalId(3),
+                                                            shape: data::type_::CustomValueShape {
+                                                                type_id: data::type_::CustomTypeId(2),
+                                                                shape_id: data::type_::CustomValueShapeId(4),
+                                                            },
+                                                        }),
+                                                    ]),
+                                                    transfer: data::graph::Transfer {
+                                                        families: data::Storage::Static(&[
+                                                            data::graph::FamilyTransfer {
+                                                                family: data::graph::StorageFamily::String,
+                                                                length: 0,
+                                                                steps: data::Storage::Static(&[]),
+                                                            },
+                                                            data::graph::FamilyTransfer {
+                                                                family: data::graph::StorageFamily::Custom,
+                                                                length: 1,
+                                                                steps: data::Storage::Static(&[
+                                                                    data::graph::TransferStep {
+                                                                        source: 3,
+                                                                        destination: 0,
+                                                                    },
+                                                                ]),
+                                                            },
+                                                        ]),
+                                                    },
+                                                },
+                                            }),
+                                        },
+                                        data::graph::BlockHeader {
+                                            params: 4..5,
+                                            instructions: 4..6,
+                                            terminator: data::graph::Terminator::Exit(data::graph::BlockGraphExitId(0)),
+                                        },
+                                        data::graph::BlockHeader {
+                                            params: 5..6,
+                                            instructions: 6..6,
+                                            terminator: data::graph::Terminator::LetAssertPanic(data::graph::LetAssertPanic {
+                                                subject: data::graph::ParamLocal::Custom(data::graph::CustomLocal {
+                                                    id: data::graph::CustomLocalId(0),
+                                                    shape: data::type_::CustomValueShape {
+                                                        type_id: data::type_::CustomTypeId(2),
+                                                        shape_id: data::type_::CustomValueShapeId(4),
+                                                    },
+                                                }),
+                                                message: None,
+                                                site: data::source::PanicSite::from_static("geam_httpc_embedding", "custom_method", data::source::SourceSpan::new(1500, 1510)),
+                                                pattern_span: data::source::SourceSpan::new(1511, 1523),
+                                            }),
+                                        },
+                                        data::graph::BlockHeader {
+                                            params: 6..7,
+                                            instructions: 6..6,
+                                            terminator: data::graph::Terminator::LetAssertPanic(data::graph::LetAssertPanic {
+                                                subject: data::graph::ParamLocal::Custom(data::graph::CustomLocal {
+                                                    id: data::graph::CustomLocalId(0),
+                                                    shape: data::type_::CustomValueShape {
+                                                        type_id: data::type_::CustomTypeId(0),
+                                                        shape_id: data::type_::CustomValueShapeId(1),
+                                                    },
+                                                }),
+                                                message: None,
+                                                site: data::source::PanicSite::from_static("geam_httpc_embedding", "custom_method", data::source::SourceSpan::new(1460, 1470)),
+                                                pattern_span: data::source::SourceSpan::new(1471, 1479),
+                                            }),
+                                        },
+                                    ]),
+                                    params: data::Storage::Static(&[
+                                        data::graph::ParamSlot {
+                                            local: data::graph::ParamLocal::String(data::graph::StringLocalId(0)),
+                                            shape: data::type_::ValueShapeId(0),
+                                        },
+                                        data::graph::ParamSlot {
+                                            local: data::graph::ParamLocal::String(data::graph::StringLocalId(1)),
+                                            shape: data::type_::ValueShapeId(0),
+                                        },
+                                        data::graph::ParamSlot {
+                                            local: data::graph::ParamLocal::Custom(data::graph::CustomLocal {
+                                                id: data::graph::CustomLocalId(0),
+                                                shape: data::type_::CustomValueShape {
+                                                    type_id: data::type_::CustomTypeId(1),
+                                                    shape_id: data::type_::CustomValueShapeId(0),
+                                                },
+                                            }),
+                                            shape: data::type_::ValueShapeId(1),
+                                        },
+                                        data::graph::ParamSlot {
+                                            local: data::graph::ParamLocal::String(data::graph::StringLocalId(0)),
+                                            shape: data::type_::ValueShapeId(0),
+                                        },
+                                        data::graph::ParamSlot {
+                                            local: data::graph::ParamLocal::Custom(data::graph::CustomLocal {
+                                                id: data::graph::CustomLocalId(0),
+                                                shape: data::type_::CustomValueShape {
+                                                    type_id: data::type_::CustomTypeId(3),
+                                                    shape_id: data::type_::CustomValueShapeId(2),
+                                                },
+                                            }),
+                                            shape: data::type_::ValueShapeId(3),
+                                        },
+                                        data::graph::ParamSlot {
+                                            local: data::graph::ParamLocal::Custom(data::graph::CustomLocal {
+                                                id: data::graph::CustomLocalId(0),
+                                                shape: data::type_::CustomValueShape {
+                                                    type_id: data::type_::CustomTypeId(2),
+                                                    shape_id: data::type_::CustomValueShapeId(4),
+                                                },
+                                            }),
+                                            shape: data::type_::ValueShapeId(6),
+                                        },
+                                        data::graph::ParamSlot {
+                                            local: data::graph::ParamLocal::Custom(data::graph::CustomLocal {
+                                                id: data::graph::CustomLocalId(0),
+                                                shape: data::type_::CustomValueShape {
+                                                    type_id: data::type_::CustomTypeId(0),
+                                                    shape_id: data::type_::CustomValueShapeId(1),
+                                                },
+                                            }),
+                                            shape: data::type_::ValueShapeId(5),
+                                        },
+                                    ]),
+                                    instructions: data::Storage::Static(&[
+                                        data::graph::ProfiledInstruction::Value(data::graph::ProfiledValueInstruction {
+                                            output: data::graph::ParamSlot {
+                                                local: data::graph::ParamLocal::Custom(data::graph::CustomLocal {
+                                                    id: data::graph::CustomLocalId(0),
+                                                    shape: data::type_::CustomValueShape {
+                                                        type_id: data::type_::CustomTypeId(0),
+                                                        shape_id: data::type_::CustomValueShapeId(1),
+                                                    },
+                                                }),
+                                                shape: data::type_::ValueShapeId(5),
+                                            },
+                                            kind: data::graph::ProfiledInstructionKind::Custom(data::graph::CustomInstruction::Call {
+                                                function: data::function::CustomFunctionId {
+                                                    index: 0,
+                                                    return_shape: data::type_::CustomValueShape {
+                                                        type_id: data::type_::CustomTypeId(0),
+                                                        shape_id: data::type_::CustomValueShapeId(1),
+                                                    },
+                                                },
+                                                args: data::Storage::Static(&[
+                                                    data::graph::ParamLocal::String(data::graph::StringLocalId(0)),
+                                                ]),
+                                                site: data::source::HostCallSite::from_static("geam_httpc_embedding", "custom_method", data::source::SourceSpan::new(1482, 1497)),
+                                            }),
+                                        }),
+                                        data::graph::ProfiledInstruction::Value(data::graph::ProfiledValueInstruction {
+                                            output: data::graph::ParamSlot {
+                                                local: data::graph::ParamLocal::Custom(data::graph::CustomLocal {
+                                                    id: data::graph::CustomLocalId(1),
+                                                    shape: data::type_::CustomValueShape {
+                                                        type_id: data::type_::CustomTypeId(5),
+                                                        shape_id: data::type_::CustomValueShapeId(13),
+                                                    },
+                                                }),
+                                                shape: data::type_::ValueShapeId(17),
+                                            },
+                                            kind: data::graph::ProfiledInstructionKind::Custom(data::graph::CustomInstruction::Construct {
+                                                constructor: data::type_::CustomConstructorId {
+                                                    type_id: data::type_::CustomTypeId(5),
+                                                    index: 9,
+                                                },
+                                                fields: data::Storage::Static(&[
+                                                    data::graph::ParamLocal::String(data::graph::StringLocalId(0)),
+                                                ]),
+                                            }),
+                                        }),
+                                        data::graph::ProfiledInstruction::Value(data::graph::ProfiledValueInstruction {
+                                            output: data::graph::ParamSlot {
+                                                local: data::graph::ParamLocal::Custom(data::graph::CustomLocal {
+                                                    id: data::graph::CustomLocalId(2),
+                                                    shape: data::type_::CustomValueShape {
+                                                        type_id: data::type_::CustomTypeId(1),
+                                                        shape_id: data::type_::CustomValueShapeId(0),
+                                                    },
+                                                }),
+                                                shape: data::type_::ValueShapeId(1),
+                                            },
+                                            kind: data::graph::ProfiledInstructionKind::Custom(data::graph::CustomInstruction::Call {
+                                                function: data::function::CustomFunctionId {
+                                                    index: 3,
+                                                    return_shape: data::type_::CustomValueShape {
+                                                        type_id: data::type_::CustomTypeId(1),
+                                                        shape_id: data::type_::CustomValueShapeId(0),
+                                                    },
+                                                },
+                                                args: data::Storage::Static(&[
+                                                    data::graph::ParamLocal::Custom(data::graph::CustomLocal {
+                                                        id: data::graph::CustomLocalId(0),
+                                                        shape: data::type_::CustomValueShape {
+                                                            type_id: data::type_::CustomTypeId(1),
+                                                            shape_id: data::type_::CustomValueShapeId(0),
+                                                        },
+                                                    }),
+                                                    data::graph::ParamLocal::Custom(data::graph::CustomLocal {
+                                                        id: data::graph::CustomLocalId(1),
+                                                        shape: data::type_::CustomValueShape {
+                                                            type_id: data::type_::CustomTypeId(5),
+                                                            shape_id: data::type_::CustomValueShapeId(13),
+                                                        },
+                                                    }),
+                                                ]),
+                                                site: data::source::HostCallSite::from_static("geam_httpc_embedding", "custom_method", data::source::SourceSpan::new(1541, 1585)),
+                                            }),
+                                        }),
+                                        data::graph::ProfiledInstruction::Value(data::graph::ProfiledValueInstruction {
+                                            output: data::graph::ParamSlot {
+                                                local: data::graph::ParamLocal::Custom(data::graph::CustomLocal {
+                                                    id: data::graph::CustomLocalId(3),
+                                                    shape: data::type_::CustomValueShape {
+                                                        type_id: data::type_::CustomTypeId(2),
+                                                        shape_id: data::type_::CustomValueShapeId(4),
+                                                    },
+                                                }),
+                                                shape: data::type_::ValueShapeId(6),
+                                            },
+                                            kind: data::graph::ProfiledInstructionKind::Custom(data::graph::CustomInstruction::Call {
+                                                function: data::function::CustomFunctionId {
+                                                    index: 1,
+                                                    return_shape: data::type_::CustomValueShape {
+                                                        type_id: data::type_::CustomTypeId(2),
+                                                        shape_id: data::type_::CustomValueShapeId(4),
+                                                    },
+                                                },
+                                                args: data::Storage::Static(&[
+                                                    data::graph::ParamLocal::Custom(data::graph::CustomLocal {
+                                                        id: data::graph::CustomLocalId(2),
+                                                        shape: data::type_::CustomValueShape {
+                                                            type_id: data::type_::CustomTypeId(1),
+                                                            shape_id: data::type_::CustomValueShapeId(0),
+                                                        },
+                                                    }),
+                                                ]),
+                                                site: data::source::HostCallSite::from_static("geam_httpc_embedding", "custom_method", data::source::SourceSpan::new(1530, 1586)),
+                                            }),
+                                        }),
+                                        data::graph::ProfiledInstruction::Value(data::graph::ProfiledValueInstruction {
+                                            output: data::graph::ParamSlot {
+                                                local: data::graph::ParamLocal::Int(data::graph::IntLocalId(0)),
+                                                shape: data::type_::ValueShapeId(7),
+                                            },
+                                            kind: data::graph::ProfiledInstructionKind::Int(data::graph::IntInstruction::CustomField {
+                                                source: data::graph::CustomLocal {
+                                                    id: data::graph::CustomLocalId(0),
+                                                    shape: data::type_::CustomValueShape {
+                                                        type_id: data::type_::CustomTypeId(3),
+                                                        shape_id: data::type_::CustomValueShapeId(2),
+                                                    },
+                                                },
+                                                index: 0,
+                                            }),
+                                        }),
+                                        data::graph::ProfiledInstruction::Value(data::graph::ProfiledValueInstruction {
+                                            output: data::graph::ParamSlot {
+                                                local: data::graph::ParamLocal::Bool(data::graph::BoolLocalId(0)),
+                                                shape: data::type_::ValueShapeId(8),
+                                            },
+                                            kind: data::graph::ProfiledInstructionKind::Bool(data::graph::BoolInstruction::Test(data::graph::BoolTest::EqualInt {
+                                                left: data::graph::IntegerOperand::Local(data::graph::IntLocalId(0)),
+                                                right: data::graph::IntegerOperand::Immediate(200),
+                                            })),
+                                        }),
+                                    ]),
+                                },
+                                exits: data::Storage::Static(&[
+                                    data::function::FunctionExit::Return(data::graph::BoolLocalId(0)),
+                                ]),
+                            },
+                        })),
+                        data::function::ValueFunctionEntry::Graph(data::Storage::Static(&data::function::ExecutableFunction {
+                            entry: data::function::FunctionEntry {
                                 parameter_count: 1,
                             },
                             body: data::function::ProfiledFunctionBody {
@@ -50753,8 +51171,8 @@ pub fn invalid_method(url: String) -> Bool {
                                                     },
                                                 }),
                                                 message: None,
-                                                site: data::source::PanicSite::from_static("geam_httpc_embedding", "options_and_headers", data::source::SourceSpan::new(1946, 1956)),
-                                                pattern_span: data::source::SourceSpan::new(1957, 1966),
+                                                site: data::source::PanicSite::from_static("geam_httpc_embedding", "options_and_headers", data::source::SourceSpan::new(2163, 2173)),
+                                                pattern_span: data::source::SourceSpan::new(2174, 2183),
                                             }),
                                         },
                                         data::graph::BlockHeader {
@@ -50769,8 +51187,8 @@ pub fn invalid_method(url: String) -> Bool {
                                                     },
                                                 }),
                                                 message: None,
-                                                site: data::source::PanicSite::from_static("geam_httpc_embedding", "options_and_headers", data::source::SourceSpan::new(1450, 1460)),
-                                                pattern_span: data::source::SourceSpan::new(1461, 1469),
+                                                site: data::source::PanicSite::from_static("geam_httpc_embedding", "options_and_headers", data::source::SourceSpan::new(1667, 1677)),
+                                                pattern_span: data::source::SourceSpan::new(1678, 1686),
                                             }),
                                         },
                                     ]),
@@ -50867,7 +51285,7 @@ pub fn invalid_method(url: String) -> Bool {
                                                 args: data::Storage::Static(&[
                                                     data::graph::ParamLocal::String(data::graph::StringLocalId(0)),
                                                 ]),
-                                                site: data::source::HostCallSite::from_static("geam_httpc_embedding", "options_and_headers", data::source::SourceSpan::new(1472, 1487)),
+                                                site: data::source::HostCallSite::from_static("geam_httpc_embedding", "options_and_headers", data::source::SourceSpan::new(1689, 1704)),
                                             }),
                                         }),
                                         data::graph::ProfiledInstruction::Value(data::graph::ProfiledValueInstruction {
@@ -50924,7 +51342,7 @@ pub fn invalid_method(url: String) -> Bool {
                                                         },
                                                     }),
                                                 ]),
-                                                site: data::source::HostCallSite::from_static("geam_httpc_embedding", "options_and_headers", data::source::SourceSpan::new(1520, 1549)),
+                                                site: data::source::HostCallSite::from_static("geam_httpc_embedding", "options_and_headers", data::source::SourceSpan::new(1737, 1766)),
                                             }),
                                         }),
                                         data::graph::ProfiledInstruction::Value(data::graph::ProfiledValueInstruction {
@@ -50963,7 +51381,7 @@ pub fn invalid_method(url: String) -> Bool {
                                                     }),
                                                     data::graph::ParamLocal::String(data::graph::StringLocalId(0)),
                                                 ]),
-                                                site: data::source::HostCallSite::from_static("geam_httpc_embedding", "options_and_headers", data::source::SourceSpan::new(1557, 1584)),
+                                                site: data::source::HostCallSite::from_static("geam_httpc_embedding", "options_and_headers", data::source::SourceSpan::new(1774, 1801)),
                                             }),
                                         }),
                                         data::graph::ProfiledInstruction::Value(data::graph::ProfiledValueInstruction {
@@ -51010,7 +51428,7 @@ pub fn invalid_method(url: String) -> Bool {
                                                     data::graph::ParamLocal::String(data::graph::StringLocalId(1)),
                                                     data::graph::ParamLocal::String(data::graph::StringLocalId(2)),
                                                 ]),
-                                                site: data::source::HostCallSite::from_static("geam_httpc_embedding", "options_and_headers", data::source::SourceSpan::new(1592, 1641)),
+                                                site: data::source::HostCallSite::from_static("geam_httpc_embedding", "options_and_headers", data::source::SourceSpan::new(1809, 1858)),
                                             }),
                                         }),
                                         data::graph::ProfiledInstruction::Value(data::graph::ProfiledValueInstruction {
@@ -51057,7 +51475,7 @@ pub fn invalid_method(url: String) -> Bool {
                                                     data::graph::ParamLocal::String(data::graph::StringLocalId(3)),
                                                     data::graph::ParamLocal::String(data::graph::StringLocalId(4)),
                                                 ]),
-                                                site: data::source::HostCallSite::from_static("geam_httpc_embedding", "options_and_headers", data::source::SourceSpan::new(1649, 1697)),
+                                                site: data::source::HostCallSite::from_static("geam_httpc_embedding", "options_and_headers", data::source::SourceSpan::new(1866, 1914)),
                                             }),
                                         }),
                                         data::graph::ProfiledInstruction::Value(data::graph::ProfiledValueInstruction {
@@ -51104,7 +51522,7 @@ pub fn invalid_method(url: String) -> Bool {
                                                     data::graph::ParamLocal::String(data::graph::StringLocalId(5)),
                                                     data::graph::ParamLocal::String(data::graph::StringLocalId(6)),
                                                 ]),
-                                                site: data::source::HostCallSite::from_static("geam_httpc_embedding", "options_and_headers", data::source::SourceSpan::new(1705, 1751)),
+                                                site: data::source::HostCallSite::from_static("geam_httpc_embedding", "options_and_headers", data::source::SourceSpan::new(1922, 1968)),
                                             }),
                                         }),
                                         data::graph::ProfiledInstruction::Value(data::graph::ProfiledValueInstruction {
@@ -51151,7 +51569,7 @@ pub fn invalid_method(url: String) -> Bool {
                                                     data::graph::ParamLocal::String(data::graph::StringLocalId(7)),
                                                     data::graph::ParamLocal::String(data::graph::StringLocalId(8)),
                                                 ]),
-                                                site: data::source::HostCallSite::from_static("geam_httpc_embedding", "options_and_headers", data::source::SourceSpan::new(1759, 1806)),
+                                                site: data::source::HostCallSite::from_static("geam_httpc_embedding", "options_and_headers", data::source::SourceSpan::new(1976, 2023)),
                                             }),
                                         }),
                                         data::graph::ProfiledInstruction::Value(data::graph::ProfiledValueInstruction {
@@ -51174,7 +51592,7 @@ pub fn invalid_method(url: String) -> Bool {
                                                     },
                                                 },
                                                 args: data::Storage::Static(&[]),
-                                                site: data::source::HostCallSite::from_static("geam_httpc_embedding", "options_and_headers", data::source::SourceSpan::new(1833, 1850)),
+                                                site: data::source::HostCallSite::from_static("geam_httpc_embedding", "options_and_headers", data::source::SourceSpan::new(2050, 2067)),
                                             }),
                                         }),
                                         data::graph::ProfiledInstruction::Value(data::graph::ProfiledValueInstruction {
@@ -51213,7 +51631,7 @@ pub fn invalid_method(url: String) -> Bool {
                                                     }),
                                                     data::graph::ParamLocal::Bool(data::graph::BoolLocalId(0)),
                                                 ]),
-                                                site: data::source::HostCallSite::from_static("geam_httpc_embedding", "options_and_headers", data::source::SourceSpan::new(1858, 1881)),
+                                                site: data::source::HostCallSite::from_static("geam_httpc_embedding", "options_and_headers", data::source::SourceSpan::new(2075, 2098)),
                                             }),
                                         }),
                                         data::graph::ProfiledInstruction::Value(data::graph::ProfiledValueInstruction {
@@ -51252,7 +51670,7 @@ pub fn invalid_method(url: String) -> Bool {
                                                     }),
                                                     data::graph::ParamLocal::Bool(data::graph::BoolLocalId(1)),
                                                 ]),
-                                                site: data::source::HostCallSite::from_static("geam_httpc_embedding", "options_and_headers", data::source::SourceSpan::new(1889, 1917)),
+                                                site: data::source::HostCallSite::from_static("geam_httpc_embedding", "options_and_headers", data::source::SourceSpan::new(2106, 2134)),
                                             }),
                                         }),
                                         data::graph::ProfiledInstruction::Value(data::graph::ProfiledValueInstruction {
@@ -51296,7 +51714,7 @@ pub fn invalid_method(url: String) -> Bool {
                                                     }),
                                                     data::graph::ParamLocal::Int(data::graph::IntLocalId(0)),
                                                 ]),
-                                                site: data::source::HostCallSite::from_static("geam_httpc_embedding", "options_and_headers", data::source::SourceSpan::new(1925, 1943)),
+                                                site: data::source::HostCallSite::from_static("geam_httpc_embedding", "options_and_headers", data::source::SourceSpan::new(2142, 2160)),
                                             }),
                                         }),
                                         data::graph::ProfiledInstruction::Value(data::graph::ProfiledValueInstruction {
@@ -51334,7 +51752,7 @@ pub fn invalid_method(url: String) -> Bool {
                                                         },
                                                     }),
                                                 ]),
-                                                site: data::source::HostCallSite::from_static("geam_httpc_embedding", "options_and_headers", data::source::SourceSpan::new(1969, 2007)),
+                                                site: data::source::HostCallSite::from_static("geam_httpc_embedding", "options_and_headers", data::source::SourceSpan::new(2186, 2224)),
                                             }),
                                         }),
                                         data::graph::ProfiledInstruction::Value(data::graph::ProfiledValueInstruction {
@@ -51692,8 +52110,8 @@ pub fn invalid_method(url: String) -> Bool {
                                                     },
                                                 }),
                                                 message: None,
-                                                site: data::source::PanicSite::from_static("geam_httpc_embedding", "binary_response", data::source::SourceSpan::new(2324, 2334)),
-                                                pattern_span: data::source::SourceSpan::new(2335, 2344),
+                                                site: data::source::PanicSite::from_static("geam_httpc_embedding", "binary_response", data::source::SourceSpan::new(2541, 2551)),
+                                                pattern_span: data::source::SourceSpan::new(2552, 2561),
                                             }),
                                         },
                                         data::graph::BlockHeader {
@@ -51708,8 +52126,8 @@ pub fn invalid_method(url: String) -> Bool {
                                                     },
                                                 }),
                                                 message: None,
-                                                site: data::source::PanicSite::from_static("geam_httpc_embedding", "binary_response", data::source::SourceSpan::new(2186, 2196)),
-                                                pattern_span: data::source::SourceSpan::new(2197, 2205),
+                                                site: data::source::PanicSite::from_static("geam_httpc_embedding", "binary_response", data::source::SourceSpan::new(2403, 2413)),
+                                                pattern_span: data::source::SourceSpan::new(2414, 2422),
                                             }),
                                         },
                                     ]),
@@ -51782,7 +52200,7 @@ pub fn invalid_method(url: String) -> Bool {
                                                 args: data::Storage::Static(&[
                                                     data::graph::ParamLocal::String(data::graph::StringLocalId(0)),
                                                 ]),
-                                                site: data::source::HostCallSite::from_static("geam_httpc_embedding", "binary_response", data::source::SourceSpan::new(2208, 2223)),
+                                                site: data::source::HostCallSite::from_static("geam_httpc_embedding", "binary_response", data::source::SourceSpan::new(2425, 2440)),
                                             }),
                                         }),
                                         data::graph::ProfiledInstruction::Value(data::graph::ProfiledValueInstruction {
@@ -51839,7 +52257,7 @@ pub fn invalid_method(url: String) -> Bool {
                                                         },
                                                     }),
                                                 ]),
-                                                site: data::source::HostCallSite::from_static("geam_httpc_embedding", "binary_response", data::source::SourceSpan::new(2256, 2285)),
+                                                site: data::source::HostCallSite::from_static("geam_httpc_embedding", "binary_response", data::source::SourceSpan::new(2473, 2502)),
                                             }),
                                         }),
                                         data::graph::ProfiledInstruction::Value(data::graph::ProfiledValueInstruction {
@@ -51911,7 +52329,7 @@ pub fn invalid_method(url: String) -> Bool {
                                                     }),
                                                     data::graph::ParamLocal::BitArray(data::graph::BitArrayLocalId(0)),
                                                 ]),
-                                                site: data::source::HostCallSite::from_static("geam_httpc_embedding", "binary_response", data::source::SourceSpan::new(2293, 2321)),
+                                                site: data::source::HostCallSite::from_static("geam_httpc_embedding", "binary_response", data::source::SourceSpan::new(2510, 2538)),
                                             }),
                                         }),
                                         data::graph::ProfiledInstruction::Value(data::graph::ProfiledValueInstruction {
@@ -51942,7 +52360,7 @@ pub fn invalid_method(url: String) -> Bool {
                                                         },
                                                     }),
                                                 ]),
-                                                site: data::source::HostCallSite::from_static("geam_httpc_embedding", "binary_response", data::source::SourceSpan::new(2347, 2371)),
+                                                site: data::source::HostCallSite::from_static("geam_httpc_embedding", "binary_response", data::source::SourceSpan::new(2564, 2588)),
                                             }),
                                         }),
                                         data::graph::ProfiledInstruction::Value(data::graph::ProfiledValueInstruction {
@@ -52176,8 +52594,8 @@ pub fn invalid_method(url: String) -> Bool {
                                                     },
                                                 }),
                                                 message: None,
-                                                site: data::source::PanicSite::from_static("geam_httpc_embedding", "invalid_utf8", data::source::SourceSpan::new(2447, 2457)),
-                                                pattern_span: data::source::SourceSpan::new(2458, 2469),
+                                                site: data::source::PanicSite::from_static("geam_httpc_embedding", "invalid_utf8", data::source::SourceSpan::new(2664, 2674)),
+                                                pattern_span: data::source::SourceSpan::new(2675, 2686),
                                             }),
                                         },
                                     ]),
@@ -52230,7 +52648,7 @@ pub fn invalid_method(url: String) -> Bool {
                                                 args: data::Storage::Static(&[
                                                     data::graph::ParamLocal::String(data::graph::StringLocalId(0)),
                                                 ]),
-                                                site: data::source::HostCallSite::from_static("geam_httpc_embedding", "invalid_utf8", data::source::SourceSpan::new(2472, 2487)),
+                                                site: data::source::HostCallSite::from_static("geam_httpc_embedding", "invalid_utf8", data::source::SourceSpan::new(2689, 2704)),
                                             }),
                                         }),
                                         data::graph::ProfiledInstruction::Value(data::graph::ProfiledValueInstruction {
@@ -52261,7 +52679,7 @@ pub fn invalid_method(url: String) -> Bool {
                                                         },
                                                     }),
                                                 ]),
-                                                site: data::source::HostCallSite::from_static("geam_httpc_embedding", "invalid_utf8", data::source::SourceSpan::new(2495, 2514)),
+                                                site: data::source::HostCallSite::from_static("geam_httpc_embedding", "invalid_utf8", data::source::SourceSpan::new(2712, 2731)),
                                             }),
                                         }),
                                         data::graph::ProfiledInstruction::Value(data::graph::ProfiledValueInstruction {
@@ -52444,8 +52862,8 @@ pub fn invalid_method(url: String) -> Bool {
                                                     },
                                                 }),
                                                 message: None,
-                                                site: data::source::PanicSite::from_static("geam_httpc_embedding", "timeout", data::source::SourceSpan::new(2624, 2634)),
-                                                pattern_span: data::source::SourceSpan::new(2635, 2646),
+                                                site: data::source::PanicSite::from_static("geam_httpc_embedding", "timeout", data::source::SourceSpan::new(2841, 2851)),
+                                                pattern_span: data::source::SourceSpan::new(2852, 2863),
                                             }),
                                         },
                                     ]),
@@ -52498,7 +52916,7 @@ pub fn invalid_method(url: String) -> Bool {
                                                 args: data::Storage::Static(&[
                                                     data::graph::ParamLocal::String(data::graph::StringLocalId(0)),
                                                 ]),
-                                                site: data::source::HostCallSite::from_static("geam_httpc_embedding", "timeout", data::source::SourceSpan::new(2649, 2664)),
+                                                site: data::source::HostCallSite::from_static("geam_httpc_embedding", "timeout", data::source::SourceSpan::new(2866, 2881)),
                                             }),
                                         }),
                                         data::graph::ProfiledInstruction::Value(data::graph::ProfiledValueInstruction {
@@ -52529,7 +52947,7 @@ pub fn invalid_method(url: String) -> Bool {
                                                         },
                                                     }),
                                                 ]),
-                                                site: data::source::HostCallSite::from_static("geam_httpc_embedding", "timeout", data::source::SourceSpan::new(2672, 2691)),
+                                                site: data::source::HostCallSite::from_static("geam_httpc_embedding", "timeout", data::source::SourceSpan::new(2889, 2908)),
                                             }),
                                         }),
                                         data::graph::ProfiledInstruction::Value(data::graph::ProfiledValueInstruction {
@@ -52731,8 +53149,8 @@ pub fn invalid_method(url: String) -> Bool {
                                                     },
                                                 }),
                                                 message: None,
-                                                site: data::source::PanicSite::from_static("geam_httpc_embedding", "posix_error", data::source::SourceSpan::new(2801, 2811)),
-                                                pattern_span: data::source::SourceSpan::new(2812, 2823),
+                                                site: data::source::PanicSite::from_static("geam_httpc_embedding", "posix_error", data::source::SourceSpan::new(3018, 3028)),
+                                                pattern_span: data::source::SourceSpan::new(3029, 3040),
                                             }),
                                         },
                                     ]),
@@ -52785,7 +53203,7 @@ pub fn invalid_method(url: String) -> Bool {
                                                 args: data::Storage::Static(&[
                                                     data::graph::ParamLocal::String(data::graph::StringLocalId(0)),
                                                 ]),
-                                                site: data::source::HostCallSite::from_static("geam_httpc_embedding", "posix_error", data::source::SourceSpan::new(2826, 2841)),
+                                                site: data::source::HostCallSite::from_static("geam_httpc_embedding", "posix_error", data::source::SourceSpan::new(3043, 3058)),
                                             }),
                                         }),
                                         data::graph::ProfiledInstruction::Value(data::graph::ProfiledValueInstruction {
@@ -52816,7 +53234,7 @@ pub fn invalid_method(url: String) -> Bool {
                                                         },
                                                     }),
                                                 ]),
-                                                site: data::source::HostCallSite::from_static("geam_httpc_embedding", "posix_error", data::source::SourceSpan::new(2849, 2868)),
+                                                site: data::source::HostCallSite::from_static("geam_httpc_embedding", "posix_error", data::source::SourceSpan::new(3066, 3085)),
                                             }),
                                         }),
                                         data::graph::ProfiledInstruction::Value(data::graph::ProfiledValueInstruction {
@@ -53020,8 +53438,8 @@ pub fn invalid_method(url: String) -> Bool {
                                                     },
                                                 }),
                                                 message: None,
-                                                site: data::source::PanicSite::from_static("geam_httpc_embedding", "tls_error", data::source::SourceSpan::new(3052, 3062)),
-                                                pattern_span: data::source::SourceSpan::new(3063, 3074),
+                                                site: data::source::PanicSite::from_static("geam_httpc_embedding", "tls_error", data::source::SourceSpan::new(3269, 3279)),
+                                                pattern_span: data::source::SourceSpan::new(3280, 3291),
                                             }),
                                         },
                                     ]),
@@ -53074,7 +53492,7 @@ pub fn invalid_method(url: String) -> Bool {
                                                 args: data::Storage::Static(&[
                                                     data::graph::ParamLocal::String(data::graph::StringLocalId(0)),
                                                 ]),
-                                                site: data::source::HostCallSite::from_static("geam_httpc_embedding", "tls_error", data::source::SourceSpan::new(3077, 3092)),
+                                                site: data::source::HostCallSite::from_static("geam_httpc_embedding", "tls_error", data::source::SourceSpan::new(3294, 3309)),
                                             }),
                                         }),
                                         data::graph::ProfiledInstruction::Value(data::graph::ProfiledValueInstruction {
@@ -53105,7 +53523,7 @@ pub fn invalid_method(url: String) -> Bool {
                                                         },
                                                     }),
                                                 ]),
-                                                site: data::source::HostCallSite::from_static("geam_httpc_embedding", "tls_error", data::source::SourceSpan::new(3100, 3119)),
+                                                site: data::source::HostCallSite::from_static("geam_httpc_embedding", "tls_error", data::source::SourceSpan::new(3317, 3336)),
                                             }),
                                         }),
                                         data::graph::ProfiledInstruction::Value(data::graph::ProfiledValueInstruction {
@@ -53228,8 +53646,8 @@ pub fn invalid_method(url: String) -> Bool {
                                                     },
                                                 }),
                                                 message: None,
-                                                site: data::source::PanicSite::from_static("geam_httpc_embedding", "negative_timeout", data::source::SourceSpan::new(3361, 3371)),
-                                                pattern_span: data::source::SourceSpan::new(3372, 3383),
+                                                site: data::source::PanicSite::from_static("geam_httpc_embedding", "negative_timeout", data::source::SourceSpan::new(3578, 3588)),
+                                                pattern_span: data::source::SourceSpan::new(3589, 3600),
                                             }),
                                         },
                                     ]),
@@ -53282,7 +53700,7 @@ pub fn invalid_method(url: String) -> Bool {
                                                 args: data::Storage::Static(&[
                                                     data::graph::ParamLocal::String(data::graph::StringLocalId(0)),
                                                 ]),
-                                                site: data::source::HostCallSite::from_static("geam_httpc_embedding", "negative_timeout", data::source::SourceSpan::new(3386, 3401)),
+                                                site: data::source::HostCallSite::from_static("geam_httpc_embedding", "negative_timeout", data::source::SourceSpan::new(3603, 3618)),
                                             }),
                                         }),
                                         data::graph::ProfiledInstruction::Value(data::graph::ProfiledValueInstruction {
@@ -53305,7 +53723,7 @@ pub fn invalid_method(url: String) -> Bool {
                                                     },
                                                 },
                                                 args: data::Storage::Static(&[]),
-                                                site: data::source::HostCallSite::from_static("geam_httpc_embedding", "negative_timeout", data::source::SourceSpan::new(3441, 3458)),
+                                                site: data::source::HostCallSite::from_static("geam_httpc_embedding", "negative_timeout", data::source::SourceSpan::new(3658, 3675)),
                                             }),
                                         }),
                                         data::graph::ProfiledInstruction::Value(data::graph::ProfiledValueInstruction {
@@ -53349,7 +53767,7 @@ pub fn invalid_method(url: String) -> Bool {
                                                     }),
                                                     data::graph::ParamLocal::Int(data::graph::IntLocalId(0)),
                                                 ]),
-                                                site: data::source::HostCallSite::from_static("geam_httpc_embedding", "negative_timeout", data::source::SourceSpan::new(3427, 3463)),
+                                                site: data::source::HostCallSite::from_static("geam_httpc_embedding", "negative_timeout", data::source::SourceSpan::new(3644, 3680)),
                                             }),
                                         }),
                                         data::graph::ProfiledInstruction::Value(data::graph::ProfiledValueInstruction {
@@ -53387,7 +53805,7 @@ pub fn invalid_method(url: String) -> Bool {
                                                         },
                                                     }),
                                                 ]),
-                                                site: data::source::HostCallSite::from_static("geam_httpc_embedding", "negative_timeout", data::source::SourceSpan::new(3412, 3473)),
+                                                site: data::source::HostCallSite::from_static("geam_httpc_embedding", "negative_timeout", data::source::SourceSpan::new(3629, 3690)),
                                             }),
                                         }),
                                         data::graph::ProfiledInstruction::Value(data::graph::ProfiledValueInstruction {
@@ -53502,8 +53920,8 @@ pub fn invalid_method(url: String) -> Bool {
                                                     },
                                                 }),
                                                 message: None,
-                                                site: data::source::PanicSite::from_static("geam_httpc_embedding", "negative_timeout_body", data::source::SourceSpan::new(3538, 3548)),
-                                                pattern_span: data::source::SourceSpan::new(3549, 3560),
+                                                site: data::source::PanicSite::from_static("geam_httpc_embedding", "negative_timeout_body", data::source::SourceSpan::new(3755, 3765)),
+                                                pattern_span: data::source::SourceSpan::new(3766, 3777),
                                             }),
                                         },
                                     ]),
@@ -53556,7 +53974,7 @@ pub fn invalid_method(url: String) -> Bool {
                                                 args: data::Storage::Static(&[
                                                     data::graph::ParamLocal::String(data::graph::StringLocalId(0)),
                                                 ]),
-                                                site: data::source::HostCallSite::from_static("geam_httpc_embedding", "negative_timeout_body", data::source::SourceSpan::new(3563, 3578)),
+                                                site: data::source::HostCallSite::from_static("geam_httpc_embedding", "negative_timeout_body", data::source::SourceSpan::new(3780, 3795)),
                                             }),
                                         }),
                                         data::graph::ProfiledInstruction::Value(data::graph::ProfiledValueInstruction {
@@ -53613,7 +54031,7 @@ pub fn invalid_method(url: String) -> Bool {
                                                         },
                                                     }),
                                                 ]),
-                                                site: data::source::HostCallSite::from_static("geam_httpc_embedding", "negative_timeout_body", data::source::SourceSpan::new(3614, 3643)),
+                                                site: data::source::HostCallSite::from_static("geam_httpc_embedding", "negative_timeout_body", data::source::SourceSpan::new(3831, 3860)),
                                             }),
                                         }),
                                         data::graph::ProfiledInstruction::Value(data::graph::ProfiledValueInstruction {
@@ -53652,7 +54070,7 @@ pub fn invalid_method(url: String) -> Bool {
                                                     }),
                                                     data::graph::ParamLocal::String(data::graph::StringLocalId(0)),
                                                 ]),
-                                                site: data::source::HostCallSite::from_static("geam_httpc_embedding", "negative_timeout_body", data::source::SourceSpan::new(3651, 3678)),
+                                                site: data::source::HostCallSite::from_static("geam_httpc_embedding", "negative_timeout_body", data::source::SourceSpan::new(3868, 3895)),
                                             }),
                                         }),
                                         data::graph::ProfiledInstruction::Value(data::graph::ProfiledValueInstruction {
@@ -53675,7 +54093,7 @@ pub fn invalid_method(url: String) -> Bool {
                                                     },
                                                 },
                                                 args: data::Storage::Static(&[]),
-                                                site: data::source::HostCallSite::from_static("geam_httpc_embedding", "negative_timeout_body", data::source::SourceSpan::new(3718, 3735)),
+                                                site: data::source::HostCallSite::from_static("geam_httpc_embedding", "negative_timeout_body", data::source::SourceSpan::new(3935, 3952)),
                                             }),
                                         }),
                                         data::graph::ProfiledInstruction::Value(data::graph::ProfiledValueInstruction {
@@ -53719,7 +54137,7 @@ pub fn invalid_method(url: String) -> Bool {
                                                     }),
                                                     data::graph::ParamLocal::Int(data::graph::IntLocalId(0)),
                                                 ]),
-                                                site: data::source::HostCallSite::from_static("geam_httpc_embedding", "negative_timeout_body", data::source::SourceSpan::new(3704, 3740)),
+                                                site: data::source::HostCallSite::from_static("geam_httpc_embedding", "negative_timeout_body", data::source::SourceSpan::new(3921, 3957)),
                                             }),
                                         }),
                                         data::graph::ProfiledInstruction::Value(data::graph::ProfiledValueInstruction {
@@ -53757,7 +54175,7 @@ pub fn invalid_method(url: String) -> Bool {
                                                         },
                                                     }),
                                                 ]),
-                                                site: data::source::HostCallSite::from_static("geam_httpc_embedding", "negative_timeout_body", data::source::SourceSpan::new(3689, 3750)),
+                                                site: data::source::HostCallSite::from_static("geam_httpc_embedding", "negative_timeout_body", data::source::SourceSpan::new(3906, 3967)),
                                             }),
                                         }),
                                         data::graph::ProfiledInstruction::Value(data::graph::ProfiledValueInstruction {
@@ -53872,8 +54290,8 @@ pub fn invalid_method(url: String) -> Bool {
                                                     },
                                                 }),
                                                 message: None,
-                                                site: data::source::PanicSite::from_static("geam_httpc_embedding", "unaligned_request", data::source::SourceSpan::new(3811, 3821)),
-                                                pattern_span: data::source::SourceSpan::new(3822, 3833),
+                                                site: data::source::PanicSite::from_static("geam_httpc_embedding", "unaligned_request", data::source::SourceSpan::new(4028, 4038)),
+                                                pattern_span: data::source::SourceSpan::new(4039, 4050),
                                             }),
                                         },
                                     ]),
@@ -53926,7 +54344,7 @@ pub fn invalid_method(url: String) -> Bool {
                                                 args: data::Storage::Static(&[
                                                     data::graph::ParamLocal::String(data::graph::StringLocalId(0)),
                                                 ]),
-                                                site: data::source::HostCallSite::from_static("geam_httpc_embedding", "unaligned_request", data::source::SourceSpan::new(3836, 3851)),
+                                                site: data::source::HostCallSite::from_static("geam_httpc_embedding", "unaligned_request", data::source::SourceSpan::new(4053, 4068)),
                                             }),
                                         }),
                                         data::graph::ProfiledInstruction::Value(data::graph::ProfiledValueInstruction {
@@ -53983,7 +54401,7 @@ pub fn invalid_method(url: String) -> Bool {
                                                         },
                                                     }),
                                                 ]),
-                                                site: data::source::HostCallSite::from_static("geam_httpc_embedding", "unaligned_request", data::source::SourceSpan::new(3887, 3916)),
+                                                site: data::source::HostCallSite::from_static("geam_httpc_embedding", "unaligned_request", data::source::SourceSpan::new(4104, 4133)),
                                             }),
                                         }),
                                         data::graph::ProfiledInstruction::Value(data::graph::ProfiledValueInstruction {
@@ -54040,7 +54458,7 @@ pub fn invalid_method(url: String) -> Bool {
                                                     }),
                                                     data::graph::ParamLocal::BitArray(data::graph::BitArrayLocalId(0)),
                                                 ]),
-                                                site: data::source::HostCallSite::from_static("geam_httpc_embedding", "unaligned_request", data::source::SourceSpan::new(3924, 3949)),
+                                                site: data::source::HostCallSite::from_static("geam_httpc_embedding", "unaligned_request", data::source::SourceSpan::new(4141, 4166)),
                                             }),
                                         }),
                                         data::graph::ProfiledInstruction::Value(data::graph::ProfiledValueInstruction {
@@ -54071,7 +54489,7 @@ pub fn invalid_method(url: String) -> Bool {
                                                         },
                                                     }),
                                                 ]),
-                                                site: data::source::HostCallSite::from_static("geam_httpc_embedding", "unaligned_request", data::source::SourceSpan::new(3960, 3984)),
+                                                site: data::source::HostCallSite::from_static("geam_httpc_embedding", "unaligned_request", data::source::SourceSpan::new(4177, 4201)),
                                             }),
                                         }),
                                         data::graph::ProfiledInstruction::Value(data::graph::ProfiledValueInstruction {
@@ -54186,8 +54604,8 @@ pub fn invalid_method(url: String) -> Bool {
                                                     },
                                                 }),
                                                 message: None,
-                                                site: data::source::PanicSite::from_static("geam_httpc_embedding", "invalid_method", data::source::SourceSpan::new(4042, 4052)),
-                                                pattern_span: data::source::SourceSpan::new(4053, 4064),
+                                                site: data::source::PanicSite::from_static("geam_httpc_embedding", "invalid_method", data::source::SourceSpan::new(4259, 4269)),
+                                                pattern_span: data::source::SourceSpan::new(4270, 4281),
                                             }),
                                         },
                                     ]),
@@ -54240,7 +54658,7 @@ pub fn invalid_method(url: String) -> Bool {
                                                 args: data::Storage::Static(&[
                                                     data::graph::ParamLocal::String(data::graph::StringLocalId(0)),
                                                 ]),
-                                                site: data::source::HostCallSite::from_static("geam_httpc_embedding", "invalid_method", data::source::SourceSpan::new(4067, 4082)),
+                                                site: data::source::HostCallSite::from_static("geam_httpc_embedding", "invalid_method", data::source::SourceSpan::new(4284, 4299)),
                                             }),
                                         }),
                                         data::graph::ProfiledInstruction::Value(data::graph::ProfiledValueInstruction {
@@ -54306,7 +54724,7 @@ pub fn invalid_method(url: String) -> Bool {
                                                         },
                                                     }),
                                                 ]),
-                                                site: data::source::HostCallSite::from_static("geam_httpc_embedding", "invalid_method", data::source::SourceSpan::new(4104, 4147)),
+                                                site: data::source::HostCallSite::from_static("geam_httpc_embedding", "invalid_method", data::source::SourceSpan::new(4321, 4364)),
                                             }),
                                         }),
                                         data::graph::ProfiledInstruction::Value(data::graph::ProfiledValueInstruction {
@@ -54337,7 +54755,7 @@ pub fn invalid_method(url: String) -> Bool {
                                                         },
                                                     }),
                                                 ]),
-                                                site: data::source::HostCallSite::from_static("geam_httpc_embedding", "invalid_method", data::source::SourceSpan::new(4093, 4148)),
+                                                site: data::source::HostCallSite::from_static("geam_httpc_embedding", "invalid_method", data::source::SourceSpan::new(4310, 4365)),
                                             }),
                                         }),
                                         data::graph::ProfiledInstruction::Value(data::graph::ProfiledValueInstruction {
@@ -54384,7 +54802,7 @@ pub fn invalid_method(url: String) -> Bool {
                                 exits: data::Storage::Static(&[
                                     data::function::FunctionExit::TailCall {
                                         function: data::source::FunctionCallTarget {
-                                            function: data::function::BoolFunctionId(14),
+                                            function: data::function::BoolFunctionId(15),
                                             site: data::source::HostCallSite::from_static("gleam/bit_array", "is_utf8", data::source::SourceSpan::new(1920, 1938)),
                                         },
                                         args: data::Storage::Static(&[
@@ -58617,11 +59035,9 @@ pub fn invalid_method(url: String) -> Bool {
                     0..0,
                     12..67,
                     67..68,
-                    68..84,
+                    68..85,
                     0..0,
-                    84..87,
-                    0..0,
-                    0..0,
+                    85..88,
                     0..0,
                     0..0,
                     0..0,
@@ -58630,7 +59046,9 @@ pub fn invalid_method(url: String) -> Bool {
                     0..0,
                     0..0,
                     0..0,
-                    87..95,
+                    0..0,
+                    0..0,
+                    88..96,
                     0..0,
                     0..0,
                     0..0,
@@ -59323,16 +59741,9 @@ pub fn invalid_method(url: String) -> Bool {
                         captures: data::Storage::Static(&[]),
                     },
                     data::function::FunctionContract {
-                        parameters: 133..134,
+                        parameters: 133..135,
                         parameter_shapes: data::Storage::Static(&[
                             data::type_::ValueShapeId(0),
-                        ]),
-                        return_: data::type_::ValueShapeId(8),
-                        captures: data::Storage::Static(&[]),
-                    },
-                    data::function::FunctionContract {
-                        parameters: 134..135,
-                        parameter_shapes: data::Storage::Static(&[
                             data::type_::ValueShapeId(0),
                         ]),
                         return_: data::type_::ValueShapeId(8),
@@ -59403,26 +59814,26 @@ pub fn invalid_method(url: String) -> Bool {
                         captures: data::Storage::Static(&[]),
                     },
                     data::function::FunctionContract {
-                        parameters: 143..145,
+                        parameters: 143..144,
                         parameter_shapes: data::Storage::Static(&[
-                            data::type_::ValueShapeId(0),
                             data::type_::ValueShapeId(0),
                         ]),
                         return_: data::type_::ValueShapeId(8),
                         captures: data::Storage::Static(&[]),
                     },
                     data::function::FunctionContract {
-                        parameters: 145..146,
+                        parameters: 144..145,
                         parameter_shapes: data::Storage::Static(&[
-                            data::type_::ValueShapeId(21),
+                            data::type_::ValueShapeId(0),
                         ]),
                         return_: data::type_::ValueShapeId(8),
                         captures: data::Storage::Static(&[]),
                     },
                     data::function::FunctionContract {
-                        parameters: 146..147,
+                        parameters: 145..147,
                         parameter_shapes: data::Storage::Static(&[
-                            data::type_::ValueShapeId(21),
+                            data::type_::ValueShapeId(0),
+                            data::type_::ValueShapeId(0),
                         ]),
                         return_: data::type_::ValueShapeId(8),
                         captures: data::Storage::Static(&[]),
@@ -59430,7 +59841,7 @@ pub fn invalid_method(url: String) -> Bool {
                     data::function::FunctionContract {
                         parameters: 147..148,
                         parameter_shapes: data::Storage::Static(&[
-                            data::type_::ValueShapeId(7),
+                            data::type_::ValueShapeId(21),
                         ]),
                         return_: data::type_::ValueShapeId(8),
                         captures: data::Storage::Static(&[]),
@@ -59438,13 +59849,29 @@ pub fn invalid_method(url: String) -> Bool {
                     data::function::FunctionContract {
                         parameters: 148..149,
                         parameter_shapes: data::Storage::Static(&[
+                            data::type_::ValueShapeId(21),
+                        ]),
+                        return_: data::type_::ValueShapeId(8),
+                        captures: data::Storage::Static(&[]),
+                    },
+                    data::function::FunctionContract {
+                        parameters: 149..150,
+                        parameter_shapes: data::Storage::Static(&[
+                            data::type_::ValueShapeId(7),
+                        ]),
+                        return_: data::type_::ValueShapeId(8),
+                        captures: data::Storage::Static(&[]),
+                    },
+                    data::function::FunctionContract {
+                        parameters: 150..151,
+                        parameter_shapes: data::Storage::Static(&[
                             data::type_::ValueShapeId(0),
                         ]),
                         return_: data::type_::ValueShapeId(82),
                         captures: data::Storage::Static(&[]),
                     },
                     data::function::FunctionContract {
-                        parameters: 149..150,
+                        parameters: 151..152,
                         parameter_shapes: data::Storage::Static(&[
                             data::type_::ValueShapeId(52),
                         ]),
@@ -59452,13 +59879,13 @@ pub fn invalid_method(url: String) -> Bool {
                         captures: data::Storage::Static(&[]),
                     },
                     data::function::FunctionContract {
-                        parameters: 150..150,
+                        parameters: 152..152,
                         parameter_shapes: data::Storage::Static(&[]),
                         return_: data::type_::ValueShapeId(52),
                         captures: data::Storage::Static(&[]),
                     },
                     data::function::FunctionContract {
-                        parameters: 150..153,
+                        parameters: 152..155,
                         parameter_shapes: data::Storage::Static(&[
                             data::type_::ValueShapeId(20),
                             data::type_::ValueShapeId(0),
@@ -59468,7 +59895,7 @@ pub fn invalid_method(url: String) -> Bool {
                         captures: data::Storage::Static(&[]),
                     },
                     data::function::FunctionContract {
-                        parameters: 153..157,
+                        parameters: 155..159,
                         parameter_shapes: data::Storage::Static(&[
                             data::type_::ValueShapeId(20),
                             data::type_::ValueShapeId(0),
@@ -59479,7 +59906,7 @@ pub fn invalid_method(url: String) -> Bool {
                         captures: data::Storage::Static(&[]),
                     },
                     data::function::FunctionContract {
-                        parameters: 157..158,
+                        parameters: 159..160,
                         parameter_shapes: data::Storage::Static(&[
                             data::type_::ValueShapeId(20),
                         ]),
@@ -59487,7 +59914,7 @@ pub fn invalid_method(url: String) -> Bool {
                         captures: data::Storage::Static(&[]),
                     },
                     data::function::FunctionContract {
-                        parameters: 158..160,
+                        parameters: 160..162,
                         parameter_shapes: data::Storage::Static(&[
                             data::type_::ValueShapeId(20),
                             data::type_::ValueShapeId(20),
@@ -59496,7 +59923,7 @@ pub fn invalid_method(url: String) -> Bool {
                         captures: data::Storage::Static(&[]),
                     },
                     data::function::FunctionContract {
-                        parameters: 160..161,
+                        parameters: 162..163,
                         parameter_shapes: data::Storage::Static(&[
                             data::type_::ValueShapeId(20),
                         ]),
@@ -59504,7 +59931,7 @@ pub fn invalid_method(url: String) -> Bool {
                         captures: data::Storage::Static(&[]),
                     },
                     data::function::FunctionContract {
-                        parameters: 161..164,
+                        parameters: 163..166,
                         parameter_shapes: data::Storage::Static(&[
                             data::type_::ValueShapeId(20),
                             data::type_::ValueShapeId(53),
@@ -59514,7 +59941,7 @@ pub fn invalid_method(url: String) -> Bool {
                         captures: data::Storage::Static(&[]),
                     },
                     data::function::FunctionContract {
-                        parameters: 164..166,
+                        parameters: 166..168,
                         parameter_shapes: data::Storage::Static(&[
                             data::type_::ValueShapeId(53),
                             data::type_::ValueShapeId(92),
@@ -59523,7 +59950,7 @@ pub fn invalid_method(url: String) -> Bool {
                         captures: data::Storage::Static(&[]),
                     },
                     data::function::FunctionContract {
-                        parameters: 166..169,
+                        parameters: 168..171,
                         parameter_shapes: data::Storage::Static(&[
                             data::type_::ValueShapeId(53),
                             data::type_::ValueShapeId(92),
@@ -60194,6 +60621,8 @@ pub fn invalid_method(url: String) -> Bool {
                     data::graph::ParamLocal::String(data::graph::StringLocalId(0)),
                     data::graph::ParamLocal::String(data::graph::StringLocalId(0)),
                     data::graph::ParamLocal::String(data::graph::StringLocalId(0)),
+                    data::graph::ParamLocal::String(data::graph::StringLocalId(0)),
+                    data::graph::ParamLocal::String(data::graph::StringLocalId(1)),
                     data::graph::ParamLocal::String(data::graph::StringLocalId(0)),
                     data::graph::ParamLocal::String(data::graph::StringLocalId(0)),
                     data::graph::ParamLocal::String(data::graph::StringLocalId(0)),
@@ -63750,6 +64179,27 @@ pub fn invalid_method(url: String) -> Bool {
                     },
                     callables: data::Storage::Static(&[]),
                 },
+                data::program::LibraryFunctionEntry {
+                    function: data::function::BoolFunctionId(12),
+                    inputs: data::program::LibraryInputConstructions {
+                        variants: data::Storage::Static(&[]),
+                        lists: data::program::LibraryListConstructions {
+                            ints: data::Storage::Static(&[]),
+                            floats: data::Storage::Static(&[]),
+                            strings: data::Storage::Static(&[]),
+                            bit_arrays: data::Storage::Static(&[]),
+                            utf_codepoints: data::Storage::Static(&[]),
+                            customs: data::Storage::Static(&[]),
+                            externals: data::Storage::Static(&[]),
+                            bools: data::Storage::Static(&[]),
+                            nils: data::Storage::Static(&[]),
+                            tuples: data::Storage::Static(&[]),
+                            lists: data::Storage::Static(&[]),
+                            functions: data::Storage::Static(&[]),
+                        },
+                    },
+                    callables: data::Storage::Static(&[]),
+                },
             ]),
             nils: data::Storage::Static(&[]),
             tuples: data::Storage::Static(&[]),
@@ -63778,9 +64228,10 @@ pub fn invalid_method(url: String) -> Bool {
                 slot: 1,
             },
             data::Export {
-                name: data::Text::Static("options_and_headers"),
+                name: data::Text::Static("custom_method"),
                 signature: data::type_::FunctionMetadata {
                     arguments: data::Storage::Static(&[
+                        data::type_::TypeMetadata::String,
                         data::type_::TypeMetadata::String,
                     ]),
                     return_: data::Storage::Static(&data::type_::TypeMetadata::Bool),
@@ -63788,7 +64239,7 @@ pub fn invalid_method(url: String) -> Bool {
                 slot: 2,
             },
             data::Export {
-                name: data::Text::Static("binary_response"),
+                name: data::Text::Static("options_and_headers"),
                 signature: data::type_::FunctionMetadata {
                     arguments: data::Storage::Static(&[
                         data::type_::TypeMetadata::String,
@@ -63798,7 +64249,7 @@ pub fn invalid_method(url: String) -> Bool {
                 slot: 3,
             },
             data::Export {
-                name: data::Text::Static("invalid_utf8"),
+                name: data::Text::Static("binary_response"),
                 signature: data::type_::FunctionMetadata {
                     arguments: data::Storage::Static(&[
                         data::type_::TypeMetadata::String,
@@ -63808,7 +64259,7 @@ pub fn invalid_method(url: String) -> Bool {
                 slot: 4,
             },
             data::Export {
-                name: data::Text::Static("timeout"),
+                name: data::Text::Static("invalid_utf8"),
                 signature: data::type_::FunctionMetadata {
                     arguments: data::Storage::Static(&[
                         data::type_::TypeMetadata::String,
@@ -63818,7 +64269,7 @@ pub fn invalid_method(url: String) -> Bool {
                 slot: 5,
             },
             data::Export {
-                name: data::Text::Static("posix_error"),
+                name: data::Text::Static("timeout"),
                 signature: data::type_::FunctionMetadata {
                     arguments: data::Storage::Static(&[
                         data::type_::TypeMetadata::String,
@@ -63828,7 +64279,7 @@ pub fn invalid_method(url: String) -> Bool {
                 slot: 6,
             },
             data::Export {
-                name: data::Text::Static("tls_error"),
+                name: data::Text::Static("posix_error"),
                 signature: data::type_::FunctionMetadata {
                     arguments: data::Storage::Static(&[
                         data::type_::TypeMetadata::String,
@@ -63838,7 +64289,7 @@ pub fn invalid_method(url: String) -> Bool {
                 slot: 7,
             },
             data::Export {
-                name: data::Text::Static("negative_timeout"),
+                name: data::Text::Static("tls_error"),
                 signature: data::type_::FunctionMetadata {
                     arguments: data::Storage::Static(&[
                         data::type_::TypeMetadata::String,
@@ -63848,7 +64299,7 @@ pub fn invalid_method(url: String) -> Bool {
                 slot: 8,
             },
             data::Export {
-                name: data::Text::Static("negative_timeout_body"),
+                name: data::Text::Static("negative_timeout"),
                 signature: data::type_::FunctionMetadata {
                     arguments: data::Storage::Static(&[
                         data::type_::TypeMetadata::String,
@@ -63858,7 +64309,7 @@ pub fn invalid_method(url: String) -> Bool {
                 slot: 9,
             },
             data::Export {
-                name: data::Text::Static("unaligned_request"),
+                name: data::Text::Static("negative_timeout_body"),
                 signature: data::type_::FunctionMetadata {
                     arguments: data::Storage::Static(&[
                         data::type_::TypeMetadata::String,
@@ -63868,7 +64319,7 @@ pub fn invalid_method(url: String) -> Bool {
                 slot: 10,
             },
             data::Export {
-                name: data::Text::Static("invalid_method"),
+                name: data::Text::Static("unaligned_request"),
                 signature: data::type_::FunctionMetadata {
                     arguments: data::Storage::Static(&[
                         data::type_::TypeMetadata::String,
@@ -63876,6 +64327,16 @@ pub fn invalid_method(url: String) -> Bool {
                     return_: data::Storage::Static(&data::type_::TypeMetadata::Bool),
                 },
                 slot: 11,
+            },
+            data::Export {
+                name: data::Text::Static("invalid_method"),
+                signature: data::type_::FunctionMetadata {
+                    arguments: data::Storage::Static(&[
+                        data::type_::TypeMetadata::String,
+                    ]),
+                    return_: data::Storage::Static(&data::type_::TypeMetadata::Bool),
+                },
+                slot: 12,
             },
         ]),
     },
@@ -66907,4 +67368,4 @@ pub fn invalid_method(url: String) -> Bool {
     callables: data::Storage::Static(&[]),
 };
 
-// Preparation inputs: sha256:a1ba1fd48aec510f99b5079b2bb961c45172ca79ee619e2a66670c1ab704e6a6
+// Preparation inputs: sha256:15dd9740c3ec8b2b9817d8ed754ab07da1bcdadb9f7fe88e7b417caa294f6ae4

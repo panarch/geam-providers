@@ -5,7 +5,7 @@ use geam::__prepared_support as data;
 #[rustfmt::skip]
 pub(super) static PROGRAM: data::HostedModuleArtifact = data::HostedModuleArtifact {
     module: data::ModuleArtifact {
-        format: 16,
+        format: 23,
         program: data::ProgramTables {
             root: data::source::module_id(25),
             modules: data::Storage::Static(&[
@@ -84506,4 +84506,4 @@ pub fn main() {
     callables: data::Storage::Static(&[]),
 };
 
-// Preparation inputs: sha256:3af511c28b9d177477a8d80ede8052a812899edac7e317721025e0ca14314ae8
+// Preparation inputs: sha256:c611ebdbe73271cb08cbf91ca1eef95cfb72b6ba1699dfe97f9119bc8ed03566

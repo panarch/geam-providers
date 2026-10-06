@@ -9,7 +9,7 @@ publish = false
 generate = "both"
 
 [dependencies]
-geam = { git = "https://github.com/panarch/geam.git", rev = "e5e1f5f772c6f48369050bdf3ee35c7a324277e2", default-features = false, features = ["embedding", "gleam-erlang", "geam-builtin", "tokio", "gleam-stdlib"] }
+geam = { git = "https://github.com/panarch/geam.git", rev = "6a6cf4624447b53362bf394513578d708682f0e5", default-features = false, features = ["embedding", "gleam-erlang", "geam-builtin", "tokio", "gleam-stdlib"] }
 geam-glisten = { path = "../.." }
 geam-otp = { path = "../../../gleam-otp" }
 geam-logging = { path = "../../../logging" }

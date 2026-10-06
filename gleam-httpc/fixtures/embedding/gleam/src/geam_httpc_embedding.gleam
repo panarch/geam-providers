@@ -38,6 +38,13 @@ pub fn methods(url: String) -> Bool {
   && other.status == 200
 }
 
+pub fn custom_method(url: String, method: String) -> Bool {
+  let assert Ok(base) = request.to(url)
+  let assert Ok(response) =
+    httpc.send(request.set_method(base, http.Other(method)))
+  response.status == 200
+}
+
 pub fn options_and_headers(url: String) -> Bool {
   let assert Ok(base) = request.to(url)
   let request =

@@ -22,10 +22,11 @@ values, `=` within values, and Unicode strings are supported. A non-Unicode
 host environment entry makes default initialization fail instead of silently
 dropped data. On Windows, ASCII letter casing in names is treated
 case-insensitively; on Unix names are case-sensitive. Dict iteration order is
-unspecified.
+unspecified. Runtime names and values must be UTF-8; invalid encoding produces
+a host failure before the environment state changes.
 
 Geam is pinned to `main` commit
-`e5e1f5f772c6f48369050bdf3ee35c7a324277e2`. The
+`6a6cf4624447b53362bf394513578d708682f0e5`. The
 [standalone fixture](fixtures/gleam/) and
 [embedding fixture](fixtures/embedding/) resolve the original Hex package
 without editing it. [Source checksums](fixtures/upstream.sha256) cover its

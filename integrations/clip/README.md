@@ -12,7 +12,7 @@ the example's exit request to Geam's public execution API.
 ## Setup
 
 Install Rust 1.96 or newer and Gleam. Build the Geam CLI from main commit
-`e5e1f5f772c6f48369050bdf3ee35c7a324277e2` using the
+`6a6cf4624447b53362bf394513578d708682f0e5` using the
 [testing guide](../../docs/development/testing.md#dependency-preparation), and
 set `GEAM_BIN` to the executable's absolute path. The Rust dependencies in
 this integration use the same commit.
@@ -164,7 +164,7 @@ For the complete check sequence, install Bash, jq and Erlang as well, export
 `GEAM_BIN` and the matching revision, then run from the repository root:
 
 ```sh
-export GEAM_REV=e5e1f5f772c6f48369050bdf3ee35c7a324277e2
+export GEAM_REV=6a6cf4624447b53362bf394513578d708682f0e5
 export GEAM_BIN="$PWD/target/geam-cli-build/release/geam"
 bash .github/scripts/run_ci.sh integration clip
 ```

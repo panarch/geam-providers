@@ -75,14 +75,15 @@ impl ListenBuilder {
             }
             TcpOptionInput::Reuseaddr(value) => self.reuse_address = *value,
             TcpOptionInput::CertKeyConfig(TlsCertsInput::CertKeyFiles { certfile, keyfile }) => {
-                self.credentials =
-                    Some((certfile.as_str().to_owned(), keyfile.as_str().to_owned()));
+                let certfile = certfile.as_str().map_err(|_| "badarg")?;
+                let keyfile = keyfile.as_str().map_err(|_| "badarg")?;
+                self.credentials = Some((certfile.to_owned(), keyfile.to_owned()));
             }
             TcpOptionInput::AlpnPreferredProtocols(protocols) => {
                 self.alpn.clear();
                 let mut index = 0;
                 while let Some(protocol) = protocols.get(index) {
-                    let bytes = protocol.as_str().as_bytes();
+                    let bytes = protocol.as_bytes();
                     if bytes.is_empty() || bytes.len() > 255 {
                         return Err("badarg");
                     }
@@ -279,13 +280,123 @@ fn native_parts<T: Default + Copy + for<'a> TryFrom<&'a geam::provider::BigInt>,
 
 #[cfg(test)]
 mod tests {
+    use super::ListenBuilder;
     use crate::network::Network;
+    use crate::options::types::{TcpOptionInput, TlsCertsInput};
     use crate::test_support::{
         execution_fixture::TestHost, network::ScriptedNetwork, source_project,
     };
     use std::net::{Ipv4Addr, SocketAddr};
     use std::sync::Arc;
     use std::time::Duration;
+
+    #[test]
+    fn raw_tls_options_preserve_alpn_and_reject_paths_before_host_io() {
+        use crate::Component;
+        use crate::test_support::{Profile, source_project_with};
+        use geam::host::HostProviderModule;
+        use geam::provider::StringValue;
+
+        fn raw_value<'call>(
+            call: geam::HostCall<'call, Profile, Component, StringValue>,
+        ) -> Result<geam::HostCallCompletion<'call, StringValue>, geam::HostCallError> {
+            Ok(call.return_value(StringValue::from_bytes(vec![255, 0])))
+        }
+
+        for (options, accepted) in [
+            (
+                "options.CertKeyConfig(options.CertKeyFiles(\"cert.pem\", \"key.pem\")), options.AlpnPreferredProtocols([raw()])",
+                true,
+            ),
+            (
+                "options.CertKeyConfig(options.CertKeyFiles(raw(), \"key.pem\"))",
+                false,
+            ),
+            (
+                "options.CertKeyConfig(options.CertKeyFiles(\"cert.pem\", raw()))",
+                false,
+            ),
+        ] {
+            let raw = HostProviderModule::<Profile>::new("fixture", "fixture")
+                .expect("fixture module")
+                .with_scoped_function::<Component, (), StringValue, _>("raw", raw_value)
+                .expect("typed raw String producer");
+            let scripted = Arc::new(ScriptedNetwork::new(
+                SocketAddr::from((Ipv4Addr::LOCALHOST, 4321)),
+                vec![],
+            ));
+            let source = format!(
+                r#"
+import glisten/socket
+import glisten/socket/options
+import glisten/ssl
+import glisten/tcp
+@external(erlang, "fixture", "raw") fn raw() -> String
+pub fn main() {{
+  {assertion}
+  Nil
+}}
+"#,
+                assertion = if accepted {
+                    format!(
+                        "let assert Ok(listener) = ssl.listen(0, [{options}]) assert tcp.close(listener) == Ok(Nil)"
+                    )
+                } else {
+                    format!("assert ssl.listen(0, [{options}]) == Error(socket.Badarg)")
+                }
+            );
+            let (mut execution, mut state) = source_project_with(&source, scripted.clone(), [raw]);
+            let host = TestHost::default();
+            assert_eq!(
+                host.block_on(execution.run_main(&host, &mut state, &mut Vec::new()))
+                    .expect("source options execute")
+                    .try_into_value()
+                    .expect("normal return"),
+                geam::Value::Nil
+            );
+            let captured = scripted.listen_options.lock();
+            if accepted {
+                assert_eq!(captured.len(), 1);
+                assert_eq!(
+                    captured[0].tls.as_ref().expect("TLS settings").alpn,
+                    [vec![255, 0]]
+                );
+            } else {
+                assert!(captured.is_empty());
+                assert!(scripted.events.lock().is_empty());
+            }
+        }
+    }
+
+    #[test]
+    fn non_utf8_tls_paths_preserve_the_previous_credentials() {
+        let mut builder = ListenBuilder::new(0);
+        builder
+            .push(&TcpOptionInput::CertKeyConfig(
+                TlsCertsInput::CertKeyFiles {
+                    certfile: "cert.pem".into(),
+                    keyfile: "key.pem".into(),
+                },
+            ))
+            .expect("valid credential paths");
+        for (certfile, keyfile) in [
+            (geam::StringValue::from_bytes(vec![255]), "key.pem".into()),
+            ("cert.pem".into(), geam::StringValue::from_bytes(vec![255])),
+        ] {
+            assert_eq!(
+                builder.push(&TcpOptionInput::CertKeyConfig(
+                    TlsCertsInput::CertKeyFiles { certfile, keyfile }
+                )),
+                Err("badarg")
+            );
+        }
+        let (options, _) = builder
+            .finish(true)
+            .expect("previous credentials remain valid");
+        let tls = options.tls.expect("TLS settings");
+        assert_eq!(tls.certificate_file, "cert.pem");
+        assert_eq!(tls.private_key_file, "key.pem");
+    }
 
     #[test]
     fn original_tcp_and_tls_options_select_explicit_listener_capabilities() {

@@ -6,6 +6,6 @@ The provider implements zlib-wrapped compression and decompression with `miniz_o
 
 The compressed byte sequence and compression ratio can differ from the Erlang or JavaScript backend. The compatibility boundary is a valid zlib stream, recovery of the original bytes, interoperability with the original backend, and exact CRC values. A complete zlib stream followed by trailing bytes is accepted, as by the Erlang FFI. Decompression returns the entire result as a `BitArray` and can allocate as much memory as that result requires. This crate does not implement gzip or raw DEFLATE APIs that the Gleam package does not expose.
 
-Geam is pinned to `main` commit `e5e1f5f772c6f48369050bdf3ee35c7a324277e2`. The [standalone fixture](fixtures/gleam/) explicitly selects this provider, and the [embedding fixture](fixtures/embedding/) directly depends on this crate. Both use the original package from Hex. The [contract inventory](fixtures/CONTRACTS.md) records the release's five externals and their observable boundaries.
+Geam is pinned to `main` commit `6a6cf4624447b53362bf394513578d708682f0e5`. The [standalone fixture](fixtures/gleam/) explicitly selects this provider, and the [embedding fixture](fixtures/embedding/) directly depends on this crate. Both use the original package from Hex. The [contract inventory](fixtures/CONTRACTS.md) records the release's five externals and their observable boundaries.
 
 The crate is ready for source-based use with that Geam commit. Publishing to crates.io and testing a consumer of the published package are separate steps.

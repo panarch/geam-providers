@@ -551,9 +551,7 @@ fn protocol<'call, Profile: GlistenProfile>(
     };
     match protocol {
         Some(protocol) => {
-            let protocol: StringValue = String::from_utf8(protocol)
-                .map_err(|_| HostFailure::new("negotiated ALPN is not a source String"))?
-                .into();
+            let protocol = StringValue::from_bytes(protocol);
             Ok(call.return_custom::<GleamOk<StringValue, StringValue>>((protocol, ())))
         }
         None => Ok(call.return_custom::<GleamError<StringValue, StringValue>>((
@@ -1559,6 +1557,41 @@ pub fn main() {{
     }
 
     #[test]
+    fn negotiated_alpn_preserves_non_utf8_protocol_bytes() {
+        let local = "127.0.0.1:4321".parse().unwrap();
+        let mut io = ScriptedConnection::new(local, "127.0.0.2:5678".parse().unwrap(), vec![]);
+        io.protocol = Some(vec![0, 255, 128]);
+        let network = Arc::new(ScriptedNetwork::new(local, vec![Arc::new(io)]));
+        let (mut execution, mut state) = source_project(
+            r#"
+import gleam/bit_array
+import glisten/socket/options
+import glisten/ssl
+import glisten/tcp
+pub fn main() {
+  let assert Ok(listener) = ssl.listen(0, [options.CertKeyConfig(options.CertKeyFiles("cert.pem", "key.pem"))])
+  let assert Ok(connection) = ssl.accept(listener)
+  let assert Ok(connection) = ssl.handshake(connection)
+  let assert Ok(protocol) = ssl.negotiated_protocol(connection)
+  assert bit_array.from_string(protocol) == <<0, 255, 128>>
+  assert ssl.close(connection) == Ok(Nil)
+  assert tcp.close(listener) == Ok(Nil)
+  Nil
+}
+"#,
+            network,
+        );
+        let host = TestHost::default();
+        assert_eq!(
+            host.block_on(execution.run_main(&host, &mut state, &mut Vec::new()))
+                .unwrap()
+                .try_into_value()
+                .unwrap(),
+            Value::Nil
+        );
+    }
+
+    #[test]
     fn tls_native_calls_preserve_handshake_alias_protocol_and_mapped_addresses() {
         let local = "[::ffff:127.0.0.1]:4321".parse().unwrap();
         let mut io = ScriptedConnection::new(
@@ -1980,11 +2013,10 @@ pub fn main() {
 
     #[test]
     fn native_fatal_boundaries_preserve_the_operation_and_actual_specialization() {
-        for (operation, expected, local_error, peer_error, protocol) in [
+        for (operation, expected, local_error, peer_error) in [
             (
                 "let _: Int = tcp.negotiated_protocol(connection) Nil",
                 "undefined Erlang target tcp:negotiated_protocol/1",
-                None,
                 None,
                 None,
             ),
@@ -1993,12 +2025,10 @@ pub fn main() {
                 "socket info key specialization does not accept native symbols",
                 None,
                 None,
-                None,
             ),
             (
                 "let _: dict.Dict(Atom, Int) = tcp.socket_info(connection) Nil",
                 "socket info item specialization does not accept native data",
-                None,
                 None,
                 None,
             ),
@@ -2007,12 +2037,10 @@ pub fn main() {
                 "socket info requires an open connection",
                 None,
                 None,
-                None,
             ),
             (
                 "let _ = tcp.close(connection) let _: dict.Dict(Atom, Dynamic) = tcp.socket_info(connection) Nil",
                 "socket info requires an open connection",
-                None,
                 None,
                 None,
             ),
@@ -2021,21 +2049,12 @@ pub fn main() {
                 "permission denied",
                 Some(std::io::ErrorKind::PermissionDenied),
                 None,
-                None,
             ),
             (
                 "let _ = transport.socket_info(connection) Nil",
                 "address not available",
                 None,
                 Some(std::io::ErrorKind::AddrNotAvailable),
-                None,
-            ),
-            (
-                "let _ = ssl.handshake(connection) let _ = ssl.negotiated_protocol(connection) Nil",
-                "negotiated ALPN is not a source String",
-                None,
-                None,
-                Some(vec![255]),
             ),
         ] {
             let local = "[2001:db8::1]:4321".parse().unwrap();
@@ -2043,8 +2062,6 @@ pub fn main() {
                 ScriptedConnection::new(local, "[2001:db8::2]:5678".parse().unwrap(), vec![]);
             io.local_error = local_error;
             io.peer_error = peer_error;
-            let tls = protocol.is_some();
-            io.protocol = protocol;
             let network = Arc::new(ScriptedNetwork::new(local, vec![Arc::new(io)]));
             let source = format!(
                 r#"
@@ -2052,16 +2069,13 @@ import gleam/dict
 import gleam/dynamic.{{type Dynamic}}
 import gleam/erlang/atom.{{type Atom}}
 import glisten/tcp
-import glisten/ssl
 import glisten/transport
-import glisten/socket/options
 pub fn main() {{
-  let assert Ok(listener) = {owner}.listen(0, [options.CertKeyConfig(options.CertKeyFiles("cert", "key"))])
-  let assert Ok(connection) = {owner}.accept(listener)
+  let assert Ok(listener) = tcp.listen(0, [])
+  let assert Ok(connection) = tcp.accept(listener)
   {operation}
 }}
-"#,
-                owner = if tls { "ssl" } else { "tcp" }
+"#
             );
             let (mut execution, mut state) = source_project(&source, network.clone());
             let host = TestHost::default();

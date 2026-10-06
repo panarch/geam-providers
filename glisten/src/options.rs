@@ -157,7 +157,8 @@ fn parse<'call, Profile: GlistenProfile>(
     text: HostExternal<'call, Charlist>,
 ) -> Result<HostCallCompletion<'call, ParseResult>, HostCallError> {
     let text = service::charlist_string(native.call(), text);
-    let value = match text.parse::<IpAddr>() {
+    // The Charlist producer constructs Unicode text; Display preserves that text.
+    let value = match text.to_string().parse::<IpAddr>() {
         Ok(address) => {
             let tag = if address.is_ipv4() { "ip_v4" } else { "ip_v6" };
             let values = native.call().native_values();
@@ -436,7 +437,10 @@ mod tests {
             call.source_hash::<ProbeValue>(a),
             call.source_hash::<ProbeValue>(b)
         );
-        assert_eq!(call.inspect::<ProbeValue>(a).as_str(), expected.as_str());
+        assert_eq!(
+            call.inspect::<ProbeValue>(a).as_str(),
+            expected.as_str().expect("Unicode inspection")
+        );
         let native = |value| {
             <OptionStorage as HostExternalStorage<Profile, ErlangTcpOptionSchema>>::native_view(
                 &call.external_payload::<Probe, HostTypeListEnd>(value),

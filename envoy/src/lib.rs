@@ -9,7 +9,7 @@ use geam::host::{
     HostProviderComponentRegistration, HostProviderConfiguration, HostProviderInitializationError,
     HostProviderModule, HostRegistrationError, HostTypeIndex0, HostTypeList, HostTypeListEnd,
 };
-use geam::provider::{GleamError, GleamOk, GleamResult, StringValue};
+use geam::provider::{GleamError, GleamOk, GleamResult, HostFailure, StringValue};
 
 pub use state::RunState;
 
@@ -66,7 +66,10 @@ fn get<'call, Profile>(
 where
     Profile: HostComponentProfile<Component>,
 {
-    let value = call.state().get(name.as_str())?.map(StringValue::from);
+    let value = call
+        .state()
+        .get(environment_text(&name, "name")?)?
+        .map(StringValue::from);
     match value {
         Some(value) => Ok(call.return_custom::<GleamOk<StringValue, ()>>((value, ()))),
         None => Ok(call.return_custom::<GleamError<StringValue, ()>>(((), ()))),
@@ -81,7 +84,9 @@ fn set<'call, Profile>(
 where
     Profile: HostComponentProfile<Component>,
 {
-    call.state().set(name.as_str(), value.as_str())?;
+    let name = environment_text(&name, "name")?;
+    let value = environment_text(&value, "value")?;
+    call.state().set(name, value)?;
     Ok(call.return_value(()))
 }
 
@@ -92,7 +97,7 @@ fn unset<'call, Profile>(
 where
     Profile: HostComponentProfile<Component>,
 {
-    call.state().unset(name.as_str())?;
+    call.state().unset(environment_text(&name, "name")?)?;
     Ok(call.return_value(()))
 }
 
@@ -114,4 +119,12 @@ where
     });
     let dict = service::dict_from_entries(&mut call, constructions.at::<HostTypeIndex0>(), entries);
     Ok(call.return_value(dict))
+}
+
+fn environment_text<'a>(value: &'a StringValue, field: &str) -> Result<&'a str, HostFailure> {
+    value.as_str().map_err(|error| {
+        HostFailure::new(format!(
+            "environment variable {field} is not UTF-8: {error}"
+        ))
+    })
 }

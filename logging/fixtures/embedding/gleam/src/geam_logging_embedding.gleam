@@ -26,3 +26,7 @@ pub fn filter_and_reset() {
 pub fn log_one() {
   logging.log(Info, "one")
 }
+
+pub fn log_message(message: String) {
+  logging.log(Info, message)
+}

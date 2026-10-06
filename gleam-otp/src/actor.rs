@@ -68,7 +68,8 @@ fn log_warning<'call, Profile: OtpProfile>(
     let mut index = 0;
     while let Some(argument) = call.list_item::<Charlist>(arguments, index) {
         let argument = charlist_string(&mut call, argument);
-        message = message.replacen("~s", &argument, 1);
+        // Charlist's public producer constructs this String from Unicode chars.
+        message = message.replacen("~s", &argument.to_string(), 1);
         index += 1;
     }
     call.state().warnings.push(message);

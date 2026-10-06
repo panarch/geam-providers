@@ -50,7 +50,7 @@ fn original_gleam_name_matches_geam_hosted_name() {
                     .call(&functions.name, ())
                     .await
                     .expect("original operating_system.name contract");
-                assert_eq!(actual.as_str(), original_name);
+                assert_eq!(actual.as_str(), Ok(original_name));
             }),
         )
         .expect("host execution completes")

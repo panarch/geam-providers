@@ -67,11 +67,20 @@ fn original_package() -> PackageSource {
 }
 
 fn plain_execution(source: &str, global_value: PackageSource) -> HostedExecution<PlainProfile> {
+    let typed = plain_program(source, global_value);
+    HostedExecution::try_from_module_plan(plan_host_program(typed).expect("program plans"))
+        .expect("execution prepares")
+}
+
+fn plain_program(
+    source: &str,
+    global_value: PackageSource,
+) -> geam::HostedTypedProgram<PlainProfile> {
     let providers = <Component as HostProviderComponentRegistration<PlainProfile>>::providers()
         .expect("provider registration");
     let hosts = HostProviderSet::with_providers(Vec::<HostModule<PlainProfile>>::new(), providers)
         .expect("provider set");
-    let typed = compile_typed_host_program(
+    compile_typed_host_program(
         "application",
         "main",
         [
@@ -84,9 +93,61 @@ fn plain_execution(source: &str, global_value: PackageSource) -> HostedExecution
         ],
         hosts,
     )
-    .expect("original source links");
-    HostedExecution::try_from_module_plan(plan_host_program(typed).expect("program plans"))
-        .expect("execution prepares")
+    .expect("original source links")
+}
+
+#[test]
+fn raw_names_reuse_equal_bytes_and_remain_isolated_between_executions() {
+    let program = plain_program(
+        "import global_value\npub fn named(name: String, value: Int) { global_value.create_with_unique_name(name, fn() { value }) }",
+        original_package(),
+    );
+    let (bindings, named) = geam::embedding::HostedModuleBuilder::new(program)
+        .expect("library plans")
+        .function(geam::embedding::FunctionDeclaration::<
+            (geam::StringValue, geam::provider::BigInt),
+            geam::provider::BigInt,
+        >::new("named"))
+        .expect("typed String entry binds");
+    let mut module = bindings.seal().expect("library seals");
+    let host = support::execution_host::TestHost::default();
+    let mut echo = Vec::new();
+    for initial in [41, 99] {
+        host.block_on(
+            module.with_execution(&host, &mut (), &mut echo, async |scope| {
+                let root = geam::StringValue::from_bytes(vec![b':', 0, 255, b':']);
+                let view = root.slice(1..3);
+                assert_eq!(
+                    scope
+                        .call(&named, (view, initial.into()))
+                        .await
+                        .expect("raw name initializes"),
+                    initial.into()
+                );
+                drop(root);
+                let equal = geam::StringValue::from_bytes(vec![0, 255]);
+                assert_eq!(
+                    scope
+                        .call(&named, (equal, 0.into()))
+                        .await
+                        .expect("equal bytes reuse retained name"),
+                    initial.into()
+                );
+                let distinct = geam::StringValue::from_bytes(vec![0, 254]);
+                assert_eq!(
+                    scope
+                        .call(&named, (distinct, 7.into()))
+                        .await
+                        .expect("different bytes use another value"),
+                    7.into()
+                );
+            }),
+        )
+        .expect("execution completes")
+        .try_into_value()
+        .expect("normal return");
+    }
+    assert!(echo.is_empty());
 }
 
 #[test]

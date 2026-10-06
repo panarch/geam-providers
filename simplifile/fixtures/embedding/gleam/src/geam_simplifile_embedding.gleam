@@ -1,6 +1,11 @@
 import filepath
 import simplifile
 
+pub fn resolve_path(path: String) -> String {
+  let assert Ok(resolved) = simplifile.resolve(path)
+  resolved
+}
+
 pub fn verify(root: String) -> Bool {
   let assert Ok(Nil) = simplifile.create_directory(root)
   let file = filepath.join(root, "embedded.txt")

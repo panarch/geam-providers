@@ -18,6 +18,7 @@ use geam::embedding::HostedModuleBindings;
 use geam::embedding::HostedModuleBuilder;
 use geam::embedding::HostedProject;
 use geam::embedding::InputShape;
+use geam::embedding::StringValue;
 
 pub const ROOT_MODULE: &str = "geam_logging_embedding";
 
@@ -108,6 +109,7 @@ pub struct Functions {
     pub log_all_levels: Function<(), (), Function0Input>,
     pub filter_and_reset: Function<(), (), Function1Input>,
     pub log_one: Function<(), (), Function2Input>,
+    pub log_message: Function<(StringValue,), (), Function3Input>,
 }
 
 pub struct Function0Input;
@@ -122,6 +124,10 @@ pub struct Function2Input;
 
 impl InputShape<()> for Function2Input {}
 
+pub struct Function3Input;
+
+impl InputShape<(StringValue,)> for Function3Input {}
+
 pub fn bind(
     builder: HostedModuleBuilder<Profile>,
 ) -> Result<(HostedModuleBindings<Profile>, Functions), BindingError> {
@@ -129,12 +135,14 @@ pub fn bind(
         builder.function(FunctionDeclaration::new("log_all_levels"))?;
     let function_1 = bindings.function(FunctionDeclaration::new("filter_and_reset"))?;
     let function_2 = bindings.function(FunctionDeclaration::new("log_one"))?;
+    let function_3 = bindings.function(FunctionDeclaration::new("log_message"))?;
     Ok((
         bindings,
         Functions {
             log_all_levels: function_0.with_input_shape(),
             filter_and_reset: function_1.with_input_shape(),
             log_one: function_2.with_input_shape(),
+            log_message: function_3.with_input_shape(),
         },
     ))
 }

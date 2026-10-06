@@ -89,36 +89,37 @@ mod simplifile {
 
     #[geam::function]
     fn file_info(filepath: StringValue) -> Result<FileInfo, FileError> {
-        fs::metadata(filepath.as_str())
+        fs::metadata(path_text(&filepath)?)
             .map(metadata_to_info)
             .map_err(file_error)
     }
 
     #[geam::function]
     fn link_info(filepath: StringValue) -> Result<FileInfo, FileError> {
-        fs::symlink_metadata(filepath.as_str())
+        fs::symlink_metadata(path_text(&filepath)?)
             .map(metadata_to_info)
             .map_err(file_error)
     }
 
     #[geam::function]
     fn delete(path: StringValue) -> Result<(), FileError> {
-        let metadata = fs::symlink_metadata(path.as_str()).map_err(file_error)?;
+        let path = path_text(&path)?;
+        let metadata = fs::symlink_metadata(path).map_err(file_error)?;
         if metadata.is_dir() {
-            fs::remove_dir_all(path.as_str()).map_err(file_error)
+            fs::remove_dir_all(path).map_err(file_error)
         } else {
-            remove_file_or_directory_link(path.as_str(), &metadata).map_err(file_error)
+            remove_file_or_directory_link(path, &metadata).map_err(file_error)
         }
     }
 
     #[geam::function]
     fn delete_file(path: StringValue) -> Result<(), FileError> {
-        fs::remove_file(path.as_str()).map_err(file_error)
+        fs::remove_file(path_text(&path)?).map_err(file_error)
     }
 
     #[geam::function]
     fn read_bits(filepath: StringValue) -> Result<BitArrayValue, FileError> {
-        fs::read(filepath.as_str())
+        fs::read(path_text(&filepath)?)
             .map(BitArrayValue::from_bytes)
             .map_err(file_error)
     }
@@ -128,7 +129,7 @@ mod simplifile {
         if !bits.bit_len().is_multiple_of(8) {
             return Err(FileError::Einval);
         }
-        fs::write(filepath.as_str(), bits.bytes()).map_err(file_error)
+        fs::write(path_text(&filepath)?, bits.bytes()).map_err(file_error)
     }
 
     #[geam::function]
@@ -139,29 +140,29 @@ mod simplifile {
         let mut file = OpenOptions::new()
             .append(true)
             .create(true)
-            .open(filepath.as_str())
+            .open(path_text(&filepath)?)
             .map_err(file_error)?;
         file.write_all(bits.bytes()).map_err(file_error)
     }
 
     #[geam::function]
     fn create_directory(filepath: StringValue) -> Result<(), FileError> {
-        fs::create_dir(filepath.as_str()).map_err(file_error)
+        fs::create_dir(path_text(&filepath)?).map_err(file_error)
     }
 
     #[geam::function]
     fn create_symlink(target: StringValue, symlink: StringValue) -> Result<(), FileError> {
-        create_host_symlink(target.as_str(), symlink.as_str()).map_err(file_error)
+        create_host_symlink(path_text(&target)?, path_text(&symlink)?).map_err(file_error)
     }
 
     #[geam::function]
     fn create_link(target: StringValue, link: StringValue) -> Result<(), FileError> {
-        fs::hard_link(target.as_str(), link.as_str()).map_err(file_error)
+        fs::hard_link(path_text(&target)?, path_text(&link)?).map_err(file_error)
     }
 
     #[geam::function]
     fn read_directory(path: StringValue) -> Result<Vec<StringValue>, FileError> {
-        fs::read_dir(path.as_str())
+        fs::read_dir(path_text(&path)?)
             .map_err(file_error)?
             .map(|entry| directory_entry_name(entry.map(|entry| entry.file_name())))
             .collect()
@@ -173,24 +174,24 @@ mod simplifile {
 
     #[geam::function]
     fn do_create_dir_all(dirpath: StringValue) -> Result<(), FileError> {
-        fs::create_dir_all(dirpath.as_str()).map_err(file_error)
+        fs::create_dir_all(path_text(&dirpath)?).map_err(file_error)
     }
 
     #[geam::function]
     fn do_copy_file(src: StringValue, dest: StringValue) -> Result<BigInt, FileError> {
-        fs::copy(src.as_str(), dest.as_str())
+        fs::copy(path_text(&src)?, path_text(&dest)?)
             .map(BigInt::from)
             .map_err(file_error)
     }
 
     #[geam::function]
     fn rename_file(src: StringValue, dest: StringValue) -> Result<(), FileError> {
-        fs::rename(src.as_str(), dest.as_str()).map_err(file_error)
+        fs::rename(path_text(&src)?, path_text(&dest)?).map_err(file_error)
     }
 
     #[geam::function]
     fn rename(src: StringValue, dest: StringValue) -> Result<(), FileError> {
-        fs::rename(src.as_str(), dest.as_str()).map_err(file_error)
+        fs::rename(path_text(&src)?, path_text(&dest)?).map_err(file_error)
     }
 
     #[geam::function]
@@ -199,7 +200,7 @@ mod simplifile {
         if mode > 0o7777 {
             return Err(FileError::Einval);
         }
-        set_host_permissions(filepath.as_str(), mode).map_err(file_error)
+        set_host_permissions(path_text(&filepath)?, mode).map_err(file_error)
     }
 
     #[geam::function]
@@ -216,9 +217,12 @@ mod simplifile {
     }
 
     #[geam::function]
-    fn do_resolve(path: StringValue) -> StringValue {
-        let absolute = std::path::absolute(path.as_str());
-        resolve_absolute(path, absolute)
+    fn do_resolve(path: StringValue) -> geam::provider::HostResult<StringValue> {
+        let text = path.as_str().map_err(|error| {
+            geam::provider::HostFailure::new(format!("path is not UTF-8: {error}"))
+        })?;
+        let absolute = std::path::absolute(text);
+        Ok(resolve_absolute(path, absolute))
     }
 
     fn resolve_absolute(
@@ -237,11 +241,15 @@ mod simplifile {
             .write(true)
             .create(true)
             .truncate(false)
-            .open(path.as_str())
+            .open(path_text(&path)?)
             .map_err(file_error)?;
         let now = SystemTime::now();
         file.set_times(FileTimes::new().set_accessed(now).set_modified(now))
             .map_err(file_error)
+    }
+
+    fn path_text(path: &StringValue) -> Result<&str, FileError> {
+        path.as_str().map_err(|_| FileError::Einval)
     }
 
     fn file_error(error: io::Error) -> FileError {
@@ -388,6 +396,76 @@ mod simplifile {
 
         fn source_path(path: &Path) -> StringValue {
             path.to_str().expect("fixture path is Unicode").into()
+        }
+
+        #[test]
+        fn non_utf8_paths_are_rejected_before_filesystem_changes() {
+            let temp = tempfile::tempdir().expect("isolated file tree");
+            let file = source_path(&temp.path().join("kept.bin"));
+            let contents = BitArrayValue::from_bytes(vec![0, 255]);
+            write_bits(file.clone(), contents.clone()).expect("initial contents");
+            let mut bytes = source_path(&temp.path().join("invalid"))
+                .as_bytes()
+                .to_vec();
+            bytes.push(255);
+            let invalid = StringValue::from_bytes(bytes);
+
+            assert_eq!(file_info(invalid.clone()), Err(FileError::Einval));
+            assert_eq!(link_info(invalid.clone()), Err(FileError::Einval));
+            assert_eq!(delete(invalid.clone()), Err(FileError::Einval));
+            assert_eq!(delete_file(invalid.clone()), Err(FileError::Einval));
+            assert_eq!(read_bits(invalid.clone()), Err(FileError::Einval));
+            assert_eq!(
+                write_bits(invalid.clone(), contents.clone()),
+                Err(FileError::Einval)
+            );
+            assert_eq!(
+                append_bits(invalid.clone(), contents.clone()),
+                Err(FileError::Einval)
+            );
+            assert_eq!(create_directory(invalid.clone()), Err(FileError::Einval));
+            assert_eq!(read_directory(invalid.clone()), Err(FileError::Einval));
+            assert_eq!(do_create_dir_all(invalid.clone()), Err(FileError::Einval));
+            assert_eq!(
+                set_permissions_octal(invalid.clone(), 0o600.into()),
+                Err(FileError::Einval)
+            );
+            assert_eq!(touch(invalid.clone()), Err(FileError::Einval));
+            for (source, destination) in [
+                (invalid.clone(), file.clone()),
+                (file.clone(), invalid.clone()),
+            ] {
+                assert_eq!(
+                    create_symlink(source.clone(), destination.clone()),
+                    Err(FileError::Einval)
+                );
+                assert_eq!(
+                    create_link(source.clone(), destination.clone()),
+                    Err(FileError::Einval)
+                );
+                assert_eq!(
+                    do_copy_file(source.clone(), destination.clone()),
+                    Err(FileError::Einval)
+                );
+                assert_eq!(
+                    rename_file(source.clone(), destination.clone()),
+                    Err(FileError::Einval)
+                );
+                assert_eq!(rename(source, destination), Err(FileError::Einval));
+            }
+            assert!(
+                do_resolve(invalid)
+                    .expect_err("non-UTF-8 resolve path")
+                    .to_string()
+                    .starts_with("path is not UTF-8:")
+            );
+            assert_eq!(read_bits(file), Ok(contents));
+            assert_eq!(
+                fs::read_dir(temp.path())
+                    .expect("isolated file tree")
+                    .count(),
+                1
+            );
         }
 
         #[test]
@@ -566,7 +644,7 @@ mod simplifile {
                     .collect())
             );
             assert_eq!(
-                do_resolve("src/../Cargo.toml".into()),
+                do_resolve("src/../Cargo.toml".into()).expect("Unicode path"),
                 StringValue::from(
                     std::path::absolute("src/../Cargo.toml")
                         .expect("lexical absolute path")
