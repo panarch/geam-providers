@@ -123,6 +123,28 @@ fn original_package_filters_and_formats_all_levels_through_geam() {
         .expect("source execution returns normally");
     assert_eq!(colored.text(), "\x1b[1;34mINFO\x1b[0m one\n");
 
+    let raw_output = RecordingWriter::default();
+    let mut raw_state = run_state(raw_output.clone(), Some("1"));
+    executor
+        .block_on(
+            module.with_execution(&host, &mut raw_state, &mut echo, async |scope| {
+                scope
+                    .call(
+                        &functions.log_message,
+                        (geam::StringValue::from_bytes(vec![0, 255, 195, 169]),),
+                    )
+                    .await
+                    .expect("original logger accepts raw String");
+            }),
+        )
+        .expect("raw logging execution")
+        .try_into_value()
+        .expect("normal return");
+    assert_eq!(
+        *raw_output.0.lock().expect("recorded raw output"),
+        b"INFO \x00\xff\xc3\xa9\n"
+    );
+
     let mut failing_state = run_state(FailingWriter, Some("1"));
     executor
         .block_on(

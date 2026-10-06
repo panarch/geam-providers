@@ -79,7 +79,7 @@ fn original_exception_source_preserves_results_and_cleanup_order() {
         .stdlib()
         .io_outputs()
         .iter()
-        .map(|event| event.text().as_str())
+        .map(|event| event.text().as_str().expect("Unicode fixture output"))
         .collect::<Vec<_>>();
     assert_eq!(output[..3].concat(), original_output);
     assert_eq!(
@@ -196,7 +196,7 @@ fn callback_cancellation_keeps_its_execution_domain_and_cleanup_boundary() {
             .stdlib()
             .io_outputs()
             .iter()
-            .map(|event| event.text().as_str())
+            .map(|event| event.text().as_str().expect("Unicode fixture output"))
             .collect::<Vec<_>>();
         assert_eq!(output, expected_output);
     }

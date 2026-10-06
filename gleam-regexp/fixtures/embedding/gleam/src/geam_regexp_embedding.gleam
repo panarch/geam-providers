@@ -98,3 +98,28 @@ pub fn callback_failure() -> String {
     }
   })
 }
+
+pub fn check_input(input: String) -> Bool {
+  let assert Ok(compiled) = regexp.from_string("a")
+  regexp.check(compiled, input)
+}
+
+pub fn split_input(input: String) -> List(String) {
+  let assert Ok(compiled) = regexp.from_string("a")
+  regexp.split(compiled, input)
+}
+
+pub fn scan_input(input: String) -> List(regexp.Match) {
+  let assert Ok(compiled) = regexp.from_string("a")
+  regexp.scan(compiled, input)
+}
+
+pub fn replace_input(input: String, substitute: String) -> String {
+  let assert Ok(compiled) = regexp.from_string("a")
+  regexp.replace(compiled, input, substitute)
+}
+
+pub fn map_input(input: String, substitute: String) -> String {
+  let assert Ok(compiled) = regexp.from_string("a")
+  regexp.match_map(compiled, input, fn(_) { substitute })
+}

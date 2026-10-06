@@ -18,9 +18,21 @@ use geam::embedding::HostedModuleBindings;
 use geam::embedding::HostedModuleBuilder;
 use geam::embedding::HostedProject;
 use geam::embedding::InputShape;
+use geam::embedding::List;
 use geam::embedding::StringValue;
 
 pub const ROOT_MODULE: &str = "geam_regexp_embedding";
+
+/// Opaque `gleam_regexp:gleam/regexp.Match` in this execution domain.
+pub type Type0 = geam::embedding::CustomType<Type0Schema>;
+
+pub struct Type0Schema;
+
+impl geam::embedding::NamedTypeSchema for Type0Schema {
+    const PACKAGE: &'static str = "gleam_regexp";
+    const MODULE: &'static str = "gleam/regexp";
+    const NAME: &'static str = "Match";
+}
 
 pub struct Profile;
 
@@ -110,6 +122,11 @@ pub struct Functions {
         Function<(StringValue, StringValue), Result<StringValue, StringValue>, Function0Input>,
     pub verify: Function<(), bool, Function1Input>,
     pub callback_failure: Function<(), StringValue, Function2Input>,
+    pub check_input: Function<(StringValue,), bool, Function3Input>,
+    pub split_input: Function<(StringValue,), List<StringValue>, Function4Input>,
+    pub scan_input: Function<(StringValue,), List<Type0>, Function5Input>,
+    pub replace_input: Function<(StringValue, StringValue), StringValue, Function6Input>,
+    pub map_input: Function<(StringValue, StringValue), StringValue, Function7Input>,
 }
 
 pub struct Function0Input;
@@ -124,18 +141,48 @@ pub struct Function2Input;
 
 impl InputShape<()> for Function2Input {}
 
+pub struct Function3Input;
+
+impl InputShape<(StringValue,)> for Function3Input {}
+
+pub struct Function4Input;
+
+impl InputShape<(StringValue,)> for Function4Input {}
+
+pub struct Function5Input;
+
+impl InputShape<(StringValue,)> for Function5Input {}
+
+pub struct Function6Input;
+
+impl InputShape<(StringValue, StringValue)> for Function6Input {}
+
+pub struct Function7Input;
+
+impl InputShape<(StringValue, StringValue)> for Function7Input {}
+
 pub fn bind(
     builder: HostedModuleBuilder<Profile>,
 ) -> Result<(HostedModuleBindings<Profile>, Functions), BindingError> {
     let (mut bindings, function_0) = builder.function(FunctionDeclaration::new("decorate"))?;
     let function_1 = bindings.function(FunctionDeclaration::new("verify"))?;
     let function_2 = bindings.function(FunctionDeclaration::new("callback_failure"))?;
+    let function_3 = bindings.function(FunctionDeclaration::new("check_input"))?;
+    let function_4 = bindings.function(FunctionDeclaration::new("split_input"))?;
+    let function_5 = bindings.function(FunctionDeclaration::new("scan_input"))?;
+    let function_6 = bindings.function(FunctionDeclaration::new("replace_input"))?;
+    let function_7 = bindings.function(FunctionDeclaration::new("map_input"))?;
     Ok((
         bindings,
         Functions {
             decorate: function_0.with_input_shape(),
             verify: function_1.with_input_shape(),
             callback_failure: function_2.with_input_shape(),
+            check_input: function_3.with_input_shape(),
+            split_input: function_4.with_input_shape(),
+            scan_input: function_5.with_input_shape(),
+            replace_input: function_6.with_input_shape(),
+            map_input: function_7.with_input_shape(),
         },
     ))
 }

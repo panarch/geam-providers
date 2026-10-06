@@ -29,7 +29,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     .call(&functions.escape, ("&한글<".into(),))
                     .await
                     .expect("public escape call");
-                assert_eq!(escaped.as_str(), "&amp;한글&lt;");
+                assert_eq!(escaped.as_str(), Ok("&amp;한글&lt;"));
+                let raw = scope
+                    .call(
+                        &functions.escape,
+                        (geam::StringValue::from_bytes(vec![255, b'<', 0, b'&', 128]),),
+                    )
+                    .await
+                    .expect("original escape preserves non-HTML bytes");
+                assert_eq!(raw.as_bytes(), b"\xff&lt;\x00&amp;\x80");
             }),
         )?
         .try_into_value()

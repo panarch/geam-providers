@@ -43,7 +43,7 @@ mod operating_system {
 
         #[test]
         fn reports_the_current_native_target() {
-            assert_eq!(name().as_str(), source_os_name(std::env::consts::OS));
+            assert_eq!(name().as_str(), Ok(source_os_name(std::env::consts::OS)));
         }
     }
 }

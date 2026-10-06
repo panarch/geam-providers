@@ -56,10 +56,10 @@ mod platform {
             let os: StringValue = os_();
             let arch: StringValue = arch_();
 
-            assert_eq!(runtime.as_str(), "erlang");
-            assert_eq!(os.as_str(), os_name(std::env::consts::OS));
+            assert_eq!(runtime.as_str(), Ok("erlang"));
+            assert_eq!(os.as_str(), Ok(os_name(std::env::consts::OS)));
             assert_eq!(
-                arch.as_str(),
+                arch.as_str().expect("architecture is Unicode"),
                 arch_name(
                     std::env::consts::OS,
                     std::env::consts::ARCH,

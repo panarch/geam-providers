@@ -7,7 +7,7 @@ Geam. The original Gleam code still owns `send`, `dispatch`, `send_bits`, and
 and native error conversion. It uses Geam's `gleam_erlang` service for the
 package's `Charlist` values. The supported Gleam range is exactly 5.0.0, and
 the Geam dependency is pinned to `main` commit
-`e5e1f5f772c6f48369050bdf3ee35c7a324277e2`.
+`6a6cf4624447b53362bf394513578d708682f0e5`.
 
 Add `gleam_httpc` to the Gleam project, then select this crate for that package
 with Geam's `provider add --path` command. Embedding applications depend on
@@ -39,6 +39,9 @@ error text. The TLS alert for an untrusted certificate may be `unknown_ca` or
 `bad_certificate`, depending on the platform verifier. A closed local port may
 also time out instead of reporting `econnrefused` on Windows. Invalid request
 syntax and body shapes fail at the host boundary.
+Custom method names must be UTF-8 text; invalid encoding produces a host failure
+before the transport receives a request. URLs and headers use the upstream
+package's Unicode Charlist conversion.
 
 The [source contract](fixtures/CONTRACTS.md) pins the original Hex contents.
 The [standalone fixture](fixtures/gleam) and [embedding fixture](fixtures/embedding)

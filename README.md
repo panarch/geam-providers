@@ -31,6 +31,6 @@ This repository implements native functions for existing Gleam packages through 
 | [`directories`](https://hex.pm/packages/directories) | [Standalone and embedding](integrations/directories/README.md) | 1.2.0 | `geam-envoy`, `geam-platform`, `geam-simplifile`, `geam-filepath` |
 | [`clip`](https://hex.pm/packages/clip) | [Contracts, file-search CLI and embedding](integrations/clip/README.md) | 1.2.2 | `geam-argv`, `geam-simplifile`, `geam-filepath`, `geam-regexp` |
 
-The Geam dependencies are pinned to `main` commit `e5e1f5f772c6f48369050bdf3ee35c7a324277e2` rather than a released version or local path. The Gleam packages come from Hex without changes to their upstream source. Publishing provider crates and testing consumption of published packages are separate steps after the required Geam features are released.
+The Geam dependencies are pinned to `main` commit `6a6cf4624447b53362bf394513578d708682f0e5` rather than a released version or local path. The Gleam packages come from Hex without changes to their upstream source. Publishing provider crates and testing consumption of published packages are separate steps after the required Geam features are released.
 
 See [provider compatibility](docs/design/provider-compatibility.md) for the design boundary, the [testing guide](docs/development/testing.md) for verification steps and coverage requirements, and the [review policy](docs/development/review-policy.md) for code review criteria.

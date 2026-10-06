@@ -182,8 +182,8 @@ fn construct_connect<'call, Profile: HttpcProfile>(
 fn method<'call, Profile: HttpcProfile>(
     call: &mut Call<'call, Profile, RequestResult>,
     value: HostCustom<'call, Method>,
-) -> String {
-    match call.custom_constructor(value) {
+) -> Result<String, HostCallError> {
+    Ok(match call.custom_constructor(value) {
         0 => "GET".to_owned(),
         1 => "POST".to_owned(),
         2 => "HEAD".to_owned(),
@@ -195,9 +195,11 @@ fn method<'call, Profile: HttpcProfile>(
         8 => "PATCH".to_owned(),
         _ => {
             let (name, ()) = call.provider_borrow_remaining_custom_fields::<OtherMethod>(value);
-            name.as_str().to_owned()
+            name.as_str()
+                .map_err(|error| HostFailure::new(format!("HTTP method is not UTF-8: {error}")))?
+                .to_owned()
         }
-    }
+    })
 }
 
 fn headers<'call, Profile: HttpcProfile>(
@@ -256,7 +258,7 @@ fn request_body<'call, Profile: HttpcProfile>(
     http_options: HostList<'call, HttpOption>,
     _options: HostList<'call, ErlOption>,
 ) -> Result<HostCallContinuation<'call, RequestResult>, HostCallError> {
-    let method = method(&mut call, method_value);
+    let method = method(&mut call, method_value)?;
     let (url, (request_headers, (content_type, (body, ())))) = call.tuple_values(request_value);
     let url = service::charlist_string(&mut call, url).to_string();
     let content_type = service::charlist_string(&mut call, content_type).to_string();
@@ -290,7 +292,7 @@ fn request_no_body<'call, Profile: HttpcProfile>(
     http_options: HostList<'call, HttpOption>,
     _options: HostList<'call, ErlOption>,
 ) -> Result<HostCallContinuation<'call, RequestResult>, HostCallError> {
-    let method = method(&mut call, method_value);
+    let method = method(&mut call, method_value)?;
     let (url, (request_headers, ())) = call.tuple_values(request_value);
     let url = service::charlist_string(&mut call, url).to_string();
     let headers = headers(&mut call, request_headers);
@@ -401,7 +403,13 @@ fn connect_native(value: transport::ConnectError) -> NativeValue {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use super::{
+        BigInt, Charlist, Component, DefaultConstructions, Dynamic, DynamicSchema, ErlOption,
+        ErrorConstructions, HostCall, HostCallCompletion, HostCallError, HostConstructions,
+        HostProviderModule, HttpError, I0, I1, Method, NativeHttpError, NativeValue, Request,
+        RequestConstructions, RequestNoBody, RequestResult, StringValue, connect_native,
+        normalise_error, parse_error, request_no_body, service, transport,
+    };
     use geam::host::{
         HostComponentProfile, HostProviderComponent, HostProviderComponentInitialization,
     };
@@ -559,6 +567,179 @@ mod tests {
             ]),
         ));
         Ok(call.return_value(value))
+    }
+
+    #[derive(Default)]
+    struct MethodTransport(std::sync::Mutex<Vec<Request>>);
+
+    impl transport::Transport for MethodTransport {
+        fn send(
+            &self,
+            request: Request,
+        ) -> std::pin::Pin<
+            Box<
+                dyn std::future::Future<Output = Result<transport::Response, transport::Failure>>
+                    + Send
+                    + '_,
+            >,
+        > {
+            self.0.lock().expect("captured request").push(request);
+            Box::pin(async { Err(transport::Failure::Timeout) })
+        }
+    }
+
+    fn fixture_url<'call>(
+        mut call: HostCall<'call, ErrorProfile, Httpc, Charlist>,
+        constructions: HostConstructions<'call, DefaultConstructions>,
+    ) -> Result<HostCallCompletion<'call, Charlist>, HostCallError> {
+        let value = service::charlist_from_string(
+            &mut call,
+            constructions.at::<I0>(),
+            constructions.at::<I1>(),
+            "http://fixture.invalid",
+        );
+        Ok(call.return_value(value))
+    }
+
+    #[test]
+    fn native_no_body_request_rejects_invalid_inputs_before_transport_and_recovers() {
+        // The public dispatch selects the body path for Other, but this original
+        // native declaration also accepts Other. Exercise that declared boundary
+        // without modifying the Hex package or manufacturing an opaque value.
+        let charlists = HostProviderModule::new("gleam_erlang", "gleam/erlang/charlist")
+            .unwrap()
+            .with_external_type::<Erlang, geam::gleam_erlang::CharlistSchema>()
+            .unwrap();
+        let dynamics = HostProviderModule::new("gleam_stdlib", "gleam/dynamic")
+            .unwrap()
+            .with_external_type::<Erlang, DynamicSchema>()
+            .unwrap();
+        let request = HostProviderModule::new("gleam_httpc", "gleam/httpc")
+            .unwrap()
+            .with_scoped_function_and_constructions::<Httpc, (), Charlist, DefaultConstructions, _>(
+                "fixture_url",
+                fixture_url,
+            )
+            .unwrap()
+            .with_resumable_function::<Httpc, (
+                Method,
+                RequestNoBody,
+                geam::HostListType<super::HttpOption>,
+                geam::HostListType<ErlOption>,
+            ), RequestResult, RequestConstructions, _>(
+                "erl_request_no_body",
+                request_no_body::<ErrorProfile>,
+            )
+            .unwrap();
+        let program = geam::compile_typed_host_program(
+            "gleam_httpc",
+            "gleam/httpc",
+            [
+                PackageSource::new("gleam_stdlib", Vec::<String>::new(), [ModuleSource::new(
+                    "gleam/dynamic", "dynamic.gleam", "pub type Dynamic",
+                )]),
+                PackageSource::new("gleam_erlang", ["gleam_stdlib"], [ModuleSource::new(
+                    "gleam/erlang/charlist", "charlist.gleam",
+                    "pub type Charlist",
+                )]),
+                PackageSource::new("gleam_http", Vec::<String>::new(), [ModuleSource::new(
+                    "gleam/http", "http.gleam",
+                    "pub type Method { Get Post Head Put Delete Trace Connect Options Patch Other(String) }",
+                )]),
+                PackageSource::new("gleam_httpc", ["gleam_stdlib", "gleam_erlang", "gleam_http"], [ModuleSource::new(
+                    "gleam/httpc", "httpc.gleam", r#"
+import gleam/dynamic.{type Dynamic}
+import gleam/erlang/charlist.{type Charlist}
+import gleam/http.{type Method}
+type ErlHttpOption { Ssl(List(ErlSslOption)) Autoredirect(Bool) Timeout(Int) }
+type ErlSslOption { Verify(ErlVerifyOption) }
+type ErlVerifyOption { VerifyNone }
+type ErlOption { BodyFormat(BodyFormat) SocketOpts(List(SocketOpt)) }
+type BodyFormat { Binary }
+type SocketOpt { Ipfamily(Inet6fb4) }
+type Inet6fb4 { Inet6fb4 }
+@external(erlang, "httpc", "request")
+fn erl_request_no_body(
+  a: Method,
+  b: #(Charlist, List(#(Charlist, Charlist))),
+  c: List(ErlHttpOption),
+  d: List(ErlOption),
+) -> Result(
+  #(#(Charlist, Int, Charlist), List(#(Charlist, Charlist)), BitArray),
+  Dynamic,
+)
+pub fn probe(method: String, timeout: Int) -> Bool {
+  case erl_request_no_body(http.Other(method), #(fixture_url(), []), [Timeout(timeout)], []) {
+    Ok(_) -> True
+    Error(_) -> False
+  }
+}
+@external(erlang, "fixture", "url") fn fixture_url() -> Charlist
+"#,
+                )]),
+            ],
+            HostProviderSet::from_providers([charlists, dynamics, request]).unwrap(),
+        )
+        .expect("original native signature links");
+        let (bindings, probe) = geam::embedding::HostedModuleBuilder::new(program)
+            .unwrap()
+            .function::<(StringValue, BigInt), bool>(geam::embedding::FunctionDeclaration::new(
+                "probe",
+            ))
+            .unwrap();
+        let mut module = bindings.seal().unwrap();
+        let transport = std::sync::Arc::new(MethodTransport::default());
+        let mut state = ErrorState {
+            stdlib: geam::gleam_stdlib::GleamStdlibRunState::from_seed([0; 32]),
+            erlang: geam::gleam_erlang::Configuration::default(),
+            httpc: crate::State {
+                transport: transport.clone(),
+            },
+        };
+        let executor = tokio::runtime::Builder::new_current_thread()
+            .build()
+            .unwrap();
+        let host = geam::execution::TokioHost::new(executor.handle().clone());
+        executor
+            .block_on(
+                module.with_execution(&host, &mut state, &mut Vec::new(), async |scope| {
+                    let failure = scope
+                        .call(&probe, (StringValue::from_bytes(vec![255]), 30_000.into()))
+                        .await
+                        .expect_err("invalid method is a host failure");
+                    assert!(failure.to_string().contains("HTTP method is not UTF-8"));
+                    assert!(transport.0.lock().unwrap().is_empty());
+                    let failure = scope
+                        .call(&probe, ("REPORT".into(), (-1).into()))
+                        .await
+                        .expect_err("negative timeout is a host failure");
+                    assert!(
+                        failure
+                            .to_string()
+                            .contains("timeout must be a non-negative millisecond value")
+                    );
+                    assert!(transport.0.lock().unwrap().is_empty());
+                    assert!(
+                        !scope
+                            .call(&probe, ("REPORT".into(), 30_000.into()))
+                            .await
+                            .expect("next request reaches transport")
+                    );
+                }),
+            )
+            .unwrap()
+            .try_into_value()
+            .unwrap();
+        let requests = transport.0.lock().unwrap();
+        assert_eq!(requests.len(), 1);
+        assert_eq!(requests[0].method, "REPORT");
+        assert_eq!(requests[0].url, "http://fixture.invalid");
+        assert!(requests[0].headers.is_empty());
+        assert_eq!(requests[0].body, None);
+        assert_eq!(requests[0].content_type, None);
+        assert!(requests[0].verify_tls);
+        assert!(!requests[0].follow_redirects);
+        assert_eq!(requests[0].timeout, std::time::Duration::from_secs(30));
     }
 
     #[test]

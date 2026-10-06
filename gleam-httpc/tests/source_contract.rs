@@ -152,6 +152,24 @@ fn original_httpc_methods_options_binary_and_errors_use_typed_host_boundary() {
             "http://fixture.invalid/invalid-method",
             "invalid HTTP method"
         );
+        let failure = module
+            .with_execution(&host, &mut state, &mut echo, async |scope| {
+                scope
+                    .call(
+                        &functions.custom_method,
+                        (
+                            "http://fixture.invalid/raw-method".into(),
+                            geam::StringValue::from_bytes(vec![255]),
+                        ),
+                    )
+                    .await
+            })
+            .await
+            .unwrap()
+            .try_into_value()
+            .unwrap()
+            .expect_err("non-UTF-8 method fails before transport");
+        assert!(failure.to_string().contains("HTTP method is not UTF-8"));
     });
     let requests = transport.requests.lock().unwrap();
     assert_eq!(requests.len(), 17);

@@ -23,6 +23,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     .call(&functions.filter_and_reset, ())
                     .await
                     .expect("original logging contract");
+                scope
+                    .call(
+                        &functions.log_message,
+                        (geam::StringValue::from_bytes(vec![0, 255, 195, 169]),),
+                    )
+                    .await
+                    .expect("raw String reaches the host writer");
             }),
         )?
         .try_into_value()

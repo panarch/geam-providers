@@ -22,18 +22,18 @@ mod splitter {
         fn new(patterns: impl IntoIterator<Item = StringValue>) -> Self {
             let finders: Vec<_> = patterns
                 .into_iter()
-                .filter(|pattern| !pattern.as_str().is_empty())
-                .map(|pattern| Finder::new(pattern.as_str().as_bytes()).into_owned())
+                .filter(|pattern| !pattern.as_bytes().is_empty())
+                .map(|pattern| Finder::new(pattern.as_bytes()).into_owned())
                 .collect();
             let id =
                 (!finders.is_empty()).then(|| NEXT_SPLITTER_ID.fetch_add(1, Ordering::Relaxed));
             Self { id, finders }
         }
 
-        fn first_match(&self, input: &str, from: usize) -> Option<Range<usize>> {
+        fn first_match(&self, input: &[u8], from: usize) -> Option<Range<usize>> {
             let mut first: Option<Range<usize>> = None;
             for finder in &self.finders {
-                if let Some(relative) = finder.find(&input.as_bytes()[from..]) {
+                if let Some(relative) = finder.find(&input[from..]) {
                     let start = from + relative;
                     let end = start + finder.needle().len();
                     if first.as_ref().is_none_or(|previous| {
@@ -50,7 +50,7 @@ mod splitter {
             if self.finders.is_empty() {
                 return ("".into(), "".into(), input);
             }
-            match self.first_match(input.as_str(), 0) {
+            match self.first_match(input.as_bytes(), 0) {
                 Some(found) => (
                     input.slice(0..found.start),
                     input.slice(found.clone()),
@@ -64,7 +64,7 @@ mod splitter {
             if self.finders.is_empty() {
                 return ("".into(), input);
             }
-            match self.first_match(input.as_str(), 0) {
+            match self.first_match(input.as_bytes(), 0) {
                 Some(found) => (
                     input.slice(0..found.start),
                     input.slice(found.start..input.len()),
@@ -77,7 +77,7 @@ mod splitter {
             if self.finders.is_empty() {
                 return ("".into(), input);
             }
-            match self.first_match(input.as_str(), 0) {
+            match self.first_match(input.as_bytes(), 0) {
                 Some(found) => (
                     input.slice(0..found.end),
                     input.slice(found.end..input.len()),
@@ -87,7 +87,7 @@ mod splitter {
         }
 
         fn would_split(&self, input: StringValue) -> bool {
-            self.first_match(input.as_str(), 0).is_some()
+            self.first_match(input.as_bytes(), 0).is_some()
         }
 
         fn split_all(&self, input: StringValue) -> Vec<StringValue> {
@@ -96,7 +96,7 @@ mod splitter {
             }
             let mut parts = Vec::new();
             let mut from = 0;
-            while let Some(found) = self.first_match(input.as_str(), from) {
+            while let Some(found) = self.first_match(input.as_bytes(), from) {
                 parts.push(input.slice(from..found.start));
                 from = found.end;
             }
@@ -157,6 +157,41 @@ mod splitter {
     #[cfg(test)]
     mod tests {
         use super::{ExternalPayload, Splitter, StringValue};
+
+        #[test]
+        fn raw_patterns_split_byte_views_without_unicode_boundaries() {
+            let input = StringValue::from_bytes(vec![255, 195, 169, 0, 169, 128]);
+            let splitter = Splitter::new([StringValue::from_bytes(vec![169]), "".into()]);
+            let before = StringValue::from_bytes(vec![255, 195]);
+            let matched = StringValue::from_bytes(vec![169]);
+            let after = StringValue::from_bytes(vec![0, 169, 128]);
+            assert_eq!(
+                splitter.split(input.clone()),
+                (before.clone(), matched, after.clone())
+            );
+            assert_eq!(
+                splitter.split_before(input.clone()),
+                (before.clone(), input.slice(2..6))
+            );
+            assert_eq!(
+                splitter.split_after(input.clone()),
+                (input.slice(0..3), after)
+            );
+            assert!(splitter.would_split(input.clone()));
+            assert_eq!(
+                splitter.split_all(input.clone()),
+                [
+                    before,
+                    StringValue::from_bytes(vec![0]),
+                    StringValue::from_bytes(vec![128])
+                ]
+            );
+            assert_eq!(input.as_bytes(), &[255, 195, 169, 0, 169, 128]);
+            assert_eq!(
+                splitter.split(input.slice(3..4)),
+                (StringValue::from_bytes(vec![0]), "".into(), "".into())
+            );
+        }
 
         #[test]
         fn earliest_match_wins_and_longest_match_breaks_ties() {

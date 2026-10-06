@@ -38,6 +38,19 @@ fn original_simplifile_and_filepath_run_through_public_host_boundary() {
     executor
         .block_on(
             module.with_execution(&host, &mut state, &mut echo, async |scope| {
+                let failure = scope
+                    .call(
+                        &functions.resolve_path,
+                        (geam::StringValue::from_bytes(vec![255]),),
+                    )
+                    .await
+                    .expect_err("resolve rejects a non-UTF-8 path at the host boundary");
+                assert!(failure.to_string().contains("path is not UTF-8"));
+                let resolved = scope
+                    .call(&functions.resolve_path, (root.into(),))
+                    .await
+                    .expect("fresh resolve after a path failure");
+                assert_eq!(resolved.as_bytes(), root.as_bytes());
                 assert!(
                     scope
                         .call(&functions.verify, (root.into(),))

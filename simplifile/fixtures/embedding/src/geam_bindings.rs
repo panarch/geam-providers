@@ -222,12 +222,17 @@ where
 
 #[allow(clippy::type_complexity)]
 pub struct Functions {
-    pub verify: Function<(StringValue,), bool, Function0Input>,
+    pub resolve_path: Function<(StringValue,), StringValue, Function0Input>,
+    pub verify: Function<(StringValue,), bool, Function1Input>,
 }
 
 pub struct Function0Input;
 
 impl InputShape<(StringValue,)> for Function0Input {}
+
+pub struct Function1Input;
+
+impl InputShape<(StringValue,)> for Function1Input {}
 
 pub fn bind<Io>(
     builder: HostedModuleBuilder<Profile<Io>>,
@@ -235,11 +240,13 @@ pub fn bind<Io>(
 where
     Io: geam::gleam_stdlib::IoSink + 'static,
 {
-    let (bindings, function_0) = builder.function(FunctionDeclaration::new("verify"))?;
+    let (mut bindings, function_0) = builder.function(FunctionDeclaration::new("resolve_path"))?;
+    let function_1 = bindings.function(FunctionDeclaration::new("verify"))?;
     Ok((
         bindings,
         Functions {
-            verify: function_0.with_input_shape(),
+            resolve_path: function_0.with_input_shape(),
+            verify: function_1.with_input_shape(),
         },
     ))
 }

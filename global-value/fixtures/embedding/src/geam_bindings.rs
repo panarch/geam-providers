@@ -19,6 +19,7 @@ use geam::embedding::HostedModuleBindings;
 use geam::embedding::HostedModuleBuilder;
 use geam::embedding::HostedProject;
 use geam::embedding::InputShape;
+use geam::embedding::StringValue;
 
 pub const ROOT_MODULE: &str = "geam_global_value_embedding";
 
@@ -123,6 +124,7 @@ pub struct Functions {
     pub first: Function<(BigInt,), BigInt, Function0Input>,
     pub second: Function<(), BigInt, Function1Input>,
     pub other: Function<(), BigInt, Function2Input>,
+    pub named: Function<(StringValue, BigInt), BigInt, Function3Input>,
 }
 
 pub struct Function0Input;
@@ -137,18 +139,24 @@ pub struct Function2Input;
 
 impl InputShape<()> for Function2Input {}
 
+pub struct Function3Input;
+
+impl InputShape<(StringValue, BigInt)> for Function3Input {}
+
 pub fn bind(
     builder: HostedModuleBuilder<Profile>,
 ) -> Result<(HostedModuleBindings<Profile>, Functions), BindingError> {
     let (mut bindings, function_0) = builder.function(FunctionDeclaration::new("first"))?;
     let function_1 = bindings.function(FunctionDeclaration::new("second"))?;
     let function_2 = bindings.function(FunctionDeclaration::new("other"))?;
+    let function_3 = bindings.function(FunctionDeclaration::new("named"))?;
     Ok((
         bindings,
         Functions {
             first: function_0.with_input_shape(),
             second: function_1.with_input_shape(),
             other: function_2.with_input_shape(),
+            named: function_3.with_input_shape(),
         },
     ))
 }

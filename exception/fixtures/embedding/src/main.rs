@@ -53,7 +53,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             .stdlib()
             .io_outputs()
             .iter()
-            .map(|output| output.text().as_str())
+            .map(|output| output.text().as_str().expect("Unicode fixture output"))
             .collect::<Vec<_>>(),
         [
             "cleanup success\n",

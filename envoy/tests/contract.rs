@@ -157,9 +157,69 @@ fn unchanged_gleam_source_observes_result_and_dict_after_mutations() {
                         .to_string()
                         .contains("environment variable name contains `=`")
                 );
+                let raw_name = geam::StringValue::from_bytes(vec![b'A', 255]);
+                let invalid_get = scope
+                    .call(&functions.contains, (raw_name.clone(), "x".into()))
+                    .await
+                    .expect_err("non-UTF-8 get name");
+                assert!(
+                    invalid_get
+                        .to_string()
+                        .contains("environment variable name is not UTF-8")
+                );
+                let invalid_set = scope
+                    .call(&functions.write, (raw_name.clone(), "x".into()))
+                    .await
+                    .expect_err("non-UTF-8 set name");
+                assert!(
+                    invalid_set
+                        .to_string()
+                        .contains("environment variable name is not UTF-8")
+                );
+                let invalid_unset = scope
+                    .call(&functions.clear, (raw_name,))
+                    .await
+                    .expect_err("non-UTF-8 unset name");
+                assert!(
+                    invalid_unset
+                        .to_string()
+                        .contains("environment variable name is not UTF-8")
+                );
+                let invalid_value = scope
+                    .call(
+                        &functions.write,
+                        ("INITIAL".into(), geam::StringValue::from_bytes(vec![255])),
+                    )
+                    .await
+                    .expect_err("non-UTF-8 set value");
+                assert!(
+                    invalid_value
+                        .to_string()
+                        .contains("environment variable value is not UTF-8")
+                );
             }),
         )
         .expect("invalid inputs are reported at the host boundary")
+        .try_into_value()
+        .expect("source execution returns normally");
+    executor
+        .block_on(
+            module.with_execution(&host, &mut state, &mut echo, async |scope| {
+                assert!(
+                    scope
+                        .call(&functions.contains, ("INITIAL".into(), "ready".into()))
+                        .await
+                        .expect("failed writes preserve environment")
+                );
+                assert!(
+                    scope
+                        .call(&functions.verify, ())
+                        .await
+                        .expect("fresh execution after invalid inputs")
+                );
+            }),
+        )
+        .expect("fresh execution completes")
         .try_into_value()
         .expect("source execution returns normally");
     assert!(echo.is_empty());

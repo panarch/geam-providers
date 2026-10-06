@@ -54,6 +54,17 @@ fn original_gleam_package_runs_through_public_host_boundary() {
                         "".into(),
                     ]
                 );
+                let raw = geam::StringValue::from_bytes(vec![255, b',', 0, b',', 128]);
+                let parts = scope
+                    .call(&functions.split_commas, (raw.clone(),))
+                    .await
+                    .expect("raw String crosses the original declaration");
+                assert_eq!(
+                    (0..parts.len())
+                        .map(|index| parts.read_item(index, Clone::clone).expect("raw list item"))
+                        .collect::<Vec<_>>(),
+                    [raw.slice(0..1), raw.slice(2..3), raw.slice(4..5)]
+                );
             }),
         )
         .expect("host execution completes")

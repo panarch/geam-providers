@@ -7,7 +7,7 @@ connection handlers, selectors, and supervision run as upstream source. The
 supported package range is limited to 9.0.1 until other versions are tested.
 
 Geam is pinned to `main` commit
-`e5e1f5f772c6f48369050bdf3ee35c7a324277e2`. The
+`6a6cf4624447b53362bf394513578d708682f0e5`. The
 [standalone fixture](fixtures/gleam/) selects `geam-glisten`, `geam-otp`,
 `geam-logging`, and `geam-argv` explicitly. The
 [embedding fixture](fixtures/embedding/) composes the same providers with
@@ -39,6 +39,10 @@ with explicit certificate/key files, TLS 1.2/1.3, and server ALPN preference.
 The explicitly selected rustls crypto backend is AWS-LC, matching the existing
 workspace TLS dependency. The package exposes no client certificate
 authentication option.
+
+ALPN protocol names are opaque bytes and are preserved in both listener options
+and negotiated results. Certificate and private-key paths must be UTF-8 text;
+invalid encoding returns `Badarg` before listener creation.
 
 ## Backend Behavior
 

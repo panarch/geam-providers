@@ -4,6 +4,9 @@ Rust provider for the unmodified Gleam [`global_value` 1.0.0](https://hex.pm/pac
 
 Within one Geam execution domain, processes share a value by name and concurrent initialisation is serialized for that name. An initializer that fails or is cancelled before storing a value leaves the name available for retry. Once stored, the value remains available until that domain closes. Distinct Geam execution domains have separate caches. The provider does not share Erlang `persistent_term` storage or coordinate distributed BEAM nodes.
 
+Cache names use their full String byte contents. Equal names share one value,
+including non-UTF-8 names; distinct byte sequences remain separate.
+
 The [standalone fixture](fixtures/gleam/) and [embedding fixture](fixtures/embedding/) use the original Hex package without editing its Gleam source. The source-backed tests also check `Result`, function and custom values, cancellation and failure, and concurrent Gleam processes. The fixtures pin `gleam_stdlib` 1.0.3 for compatibility with the Geam commit below. See the [testing guide](../docs/development/testing.md) for the verification commands.
 
-This crate depends on Geam's public typed provider API at commit `e5e1f5f772c6f48369050bdf3ee35c7a324277e2`. The pinned Git dependency currently means `cargo package --list` checks the package contents but does not establish crates.io publication readiness.
+This crate depends on Geam's public typed provider API at commit `6a6cf4624447b53362bf394513578d708682f0e5`. The pinned Git dependency currently means `cargo package --list` checks the package contents but does not establish crates.io publication readiness.

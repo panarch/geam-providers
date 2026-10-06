@@ -11,7 +11,7 @@ gleam-package = "geam_clip_search"
 gleam-version = ">= 0.1.0 and < 0.2.0"
 
 [dependencies]
-geam = { git = "https://github.com/panarch/geam.git", rev = "e5e1f5f772c6f48369050bdf3ee35c7a324277e2", default-features = false, features = ["provider"] }
+geam = { git = "https://github.com/panarch/geam.git", rev = "6a6cf4624447b53362bf394513578d708682f0e5", default-features = false, features = ["provider"] }
 
 [workspace]
 resolver = "3"

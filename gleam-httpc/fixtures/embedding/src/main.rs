@@ -50,6 +50,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let url = format!("http://{address}/hello");
         let matched = module
             .with_execution(&host, &mut state, &mut echo, async |scope| {
+                let failure = scope
+                    .call(
+                        &functions.custom_method,
+                        (url.clone().into(), geam::StringValue::from_bytes(vec![255])),
+                    )
+                    .await
+                    .expect_err("non-UTF-8 method fails before transport");
+                assert!(failure.to_string().contains("HTTP method is not UTF-8"));
                 scope.call(&functions.verify, (url.into(),)).await
             })
             .await?

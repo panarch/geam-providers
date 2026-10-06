@@ -10,12 +10,14 @@ supported upstream range is limited to 2.7.0 until other versions are tested.
 The [standalone fixture](fixtures/gleam/) and
 [embedding fixture](fixtures/embedding/) both compile the original Hex packages
 without upstream changes. Geam is pinned to `main` commit
-`e5e1f5f772c6f48369050bdf3ee35c7a324277e2`. The provider implements the
+`6a6cf4624447b53362bf394513578d708682f0e5`. The provider implements the
 host file system effects; the upstream Gleam package retains its public API and
 the Gleam implementations of operations such as `read`, `write`, and recursive
 copy.
 
-File names and the current directory must be Unicode. Non-Unicode directory
+Input paths, file names, and the current directory must be Unicode. Non-UTF-8
+input paths fail before filesystem effects: `resolve` reports a host failure,
+and other operations return `Einval`. Non-Unicode directory
 entry names produce `Einval`. Non-byte-aligned bit arrays produce `Einval` for
 write and append. Common host errors map to the corresponding `FileError`
 constructors; unclassified host errors use `Unknown` with the host message.

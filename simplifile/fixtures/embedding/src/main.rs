@@ -25,6 +25,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     executor
         .block_on(
             module.with_execution(&host, &mut state, &mut echo, async |scope| {
+                let failure = scope
+                    .call(
+                        &functions.resolve_path,
+                        (geam::StringValue::from_bytes(vec![255]),),
+                    )
+                    .await
+                    .expect_err("resolve requires a UTF-8 path");
+                assert!(failure.to_string().contains("path is not UTF-8"));
+                let resolved = scope
+                    .call(&functions.resolve_path, (root.into(),))
+                    .await
+                    .expect("valid resolve after a host failure");
+                assert_eq!(resolved.as_bytes(), root.as_bytes());
                 assert!(
                     scope
                         .call(&functions.verify, (root.into(),))

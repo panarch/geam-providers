@@ -76,8 +76,16 @@ fn original_houdini_runs_through_the_public_host_boundary() {
                         .call(&functions.escape, (input.into(),))
                         .await
                         .expect("public escape call");
-                    assert_eq!(actual.as_str(), expected);
+                    assert_eq!(actual.as_str(), Ok(expected));
                 }
+                let escaped = scope
+                    .call(
+                        &functions.escape,
+                        (StringValue::from_bytes(vec![255, b'<', 0, b'&', 128]),),
+                    )
+                    .await
+                    .expect("original escape preserves non-HTML bytes");
+                assert_eq!(escaped.as_bytes(), b"\xff&lt;\x00&amp;\x80");
             }),
         )
         .expect("host execution completes")
@@ -86,7 +94,7 @@ fn original_houdini_runs_through_the_public_host_boundary() {
 }
 
 #[test]
-fn malformed_native_inputs_return_host_errors() {
+fn native_coercion_preserves_bytes_and_rejects_invalid_inputs() {
     // This minimal source exposes Houdini's private declarations to exercise
     // caller-owned invalid input. The original Hex package remains unchanged.
     let program = compile_typed_host_program(
@@ -105,7 +113,8 @@ pub fn coerce(value: a) -> b
 @external(erlang, "binary", "part")
 pub fn slice(value: BitArray, from: Int, size: Int) -> BitArray
 
-pub fn bad_coerce() -> String { coerce(<<255>>) }
+pub fn raw_coerce() -> String { coerce(<<0, 255, 128>>) }
+pub fn bad_coerce() -> String { coerce(1) }
 pub fn bad_slice() -> BitArray { slice(<<1, 2>>, -1, 1) }
 "#,
             )],
@@ -117,6 +126,9 @@ pub fn bad_slice() -> BitArray { slice(<<1, 2>>, -1, 1) }
         .expect("host program plans")
         .function::<(), StringValue>(FunctionDeclaration::new("bad_coerce"))
         .expect("coerce source signature binds");
+    let raw_coerce = bindings
+        .function::<(), StringValue>(FunctionDeclaration::new("raw_coerce"))
+        .expect("byte-preserving coerce source signature binds");
     let bad_slice = bindings
         .function::<(), geam::provider::BitArrayValue>(FunctionDeclaration::new("bad_slice"))
         .expect("slice source signature binds");
@@ -134,10 +146,15 @@ pub fn bad_slice() -> BitArray { slice(<<1, 2>>, -1, 1) }
     let (coerce_error, slice_error) = executor
         .block_on(
             module.with_execution(&host, &mut state, &mut echo, async |scope| {
+                let raw = scope
+                    .call(&raw_coerce, ())
+                    .await
+                    .expect("byte-aligned BitArray becomes a String");
+                assert_eq!(raw.as_bytes(), &[0, 255, 128]);
                 let coerce_error = scope
                     .call(&bad_coerce, ())
                     .await
-                    .expect_err("invalid UTF-8 cannot become a String")
+                    .expect_err("Int cannot become a String")
                     .to_string();
                 let slice_error = scope
                     .call(&bad_slice, ())

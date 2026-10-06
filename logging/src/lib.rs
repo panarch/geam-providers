@@ -30,7 +30,7 @@ impl RunState {
         self.level = Level::Info;
     }
 
-    fn log(&mut self, level: Level, message: &str) -> Result<(), HostFailure> {
+    fn log(&mut self, level: Level, message: &[u8]) -> Result<(), HostFailure> {
         if level > self.level {
             return Ok(());
         }
@@ -40,8 +40,12 @@ impl RunState {
         } else {
             label.to_owned()
         };
-        let line = format!("{prefix} {message}\n");
-        self.writer.write_all(line.as_bytes()).map_err(io_failure)?;
+        let mut line = Vec::with_capacity(prefix.len() + message.len() + 2);
+        line.extend_from_slice(prefix.as_bytes());
+        line.push(b' ');
+        line.extend_from_slice(message);
+        line.push(b'\n');
+        self.writer.write_all(&line).map_err(io_failure)?;
         self.writer.flush().map_err(io_failure)
     }
 }
@@ -159,7 +163,7 @@ mod logging {
         level: LogLevelInput,
         message: StringValue,
     ) -> HostResult<DoNotLeak> {
-        call.state_mut().log(level.into(), message.as_str())?;
+        call.state_mut().log(level.into(), message.as_bytes())?;
         Ok(DoNotLeak)
     }
 
@@ -240,6 +244,27 @@ mod tests {
     }
 
     #[test]
+    fn messages_preserve_raw_bytes_with_and_without_color() {
+        for (no_color, prefix) in [
+            (Some("1"), b"INFO ".as_slice()),
+            (None, b"\x1b[1;34mINFO\x1b[0m ".as_slice()),
+        ] {
+            let writer = RecordingWriter::default();
+            let mut state = RunState::with_writer(writer.clone(), no_color, None);
+            state
+                .log(Level::Info, &[0, 255, 195, 169])
+                .expect("raw message is writable");
+            let mut expected = prefix.to_vec();
+            expected.extend_from_slice(&[0, 255, 195, 169, b'\n']);
+            assert_eq!(*writer.0.lock().expect("recorded bytes"), expected);
+            state
+                .log(Level::Debug, &[255])
+                .expect("filtered raw message");
+            assert_eq!(*writer.0.lock().expect("recorded bytes"), expected);
+        }
+    }
+
+    #[test]
     fn level_order_formatting_and_reconfiguration_are_exact() {
         let writer = RecordingWriter::default();
         let mut state = RunState::with_writer(writer.clone(), Some("1"), None);
@@ -254,7 +279,7 @@ mod tests {
             Level::Info,
             Level::Debug,
         ] {
-            state.log(level, "message").expect("record output");
+            state.log(level, b"message").expect("record output");
         }
         assert_eq!(
             writer.text(),
@@ -262,13 +287,13 @@ mod tests {
         );
 
         state.level = Level::Error;
-        state.log(Level::Warning, "hidden").expect("filtered");
-        state.log(Level::Error, "visible").expect("record output");
+        state.log(Level::Warning, b"hidden").expect("filtered");
+        state.log(Level::Error, b"visible").expect("record output");
         state.configure();
         assert_eq!(state.level, Level::Info);
         assert!(!state.colored);
-        state.log(Level::Debug, "hidden").expect("filtered");
-        state.log(Level::Info, "reset").expect("record output");
+        state.log(Level::Debug, b"hidden").expect("filtered");
+        state.log(Level::Info, b"reset").expect("record output");
         assert!(writer.text().ends_with("EROR visible\nINFO reset\n"));
     }
 
@@ -288,7 +313,7 @@ mod tests {
             Level::Info,
             Level::Debug,
         ] {
-            state.log(level, "m").expect("record output");
+            state.log(level, b"m").expect("record output");
         }
         assert_eq!(
             writer.text(),
@@ -339,7 +364,7 @@ mod tests {
             RunState::with_writer(FailingWriter { fail_write: true }, None, None);
         assert!(
             write_failure
-                .log(Level::Info, "message")
+                .log(Level::Info, b"message")
                 .expect_err("write failure")
                 .to_string()
                 .contains("logging output failed: write unavailable")
@@ -348,7 +373,7 @@ mod tests {
             RunState::with_writer(FailingWriter { fail_write: false }, None, None);
         assert!(
             flush_failure
-                .log(Level::Info, "message")
+                .log(Level::Info, b"message")
                 .expect_err("flush failure")
                 .to_string()
                 .contains("logging output failed: flush unavailable")

@@ -1,4 +1,6 @@
-use geam::provider::{BigInt, Call, Callback, ExternalPayload, HostResult, StringValue};
+use geam::provider::{
+    BigInt, Call, Callback, ExternalPayload, HostFailure, HostResult, StringValue,
+};
 use regex::{Regex, RegexBuilder};
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
@@ -9,8 +11,8 @@ pub struct Component;
 #[geam::module(path = "gleam/regexp")]
 mod regexp {
     use super::{
-        BigInt, Call, Callback, DefaultHasher, ExternalPayload, Hash, Hasher, HostResult, Regex,
-        RegexBuilder, StringValue,
+        BigInt, Call, Callback, DefaultHasher, ExternalPayload, Hash, Hasher, HostFailure,
+        HostResult, Regex, RegexBuilder, StringValue,
     };
 
     #[geam::external(name = "Regexp", manual)]
@@ -77,7 +79,13 @@ mod regexp {
             case_insensitive,
             multi_line,
         } = options;
-        if let Err(error) = regex_syntax::ast::parse::Parser::new().parse(pattern.as_str()) {
+        let text = pattern
+            .as_str()
+            .map_err(|error| CompileError::CompileError {
+                error: error.to_string().into(),
+                byte_index: BigInt::from(error.valid_up_to()),
+            })?;
+        if let Err(error) = regex_syntax::ast::parse::Parser::new().parse(text) {
             let byte_index = if matches!(error.kind(), regex_syntax::ast::ErrorKind::ClassUnclosed)
             {
                 pattern.len()
@@ -89,7 +97,7 @@ mod regexp {
                 byte_index: BigInt::from(byte_index),
             });
         }
-        match RegexBuilder::new(pattern.as_str())
+        match RegexBuilder::new(text)
             .case_insensitive(case_insensitive)
             .multi_line(multi_line)
             .build()
@@ -108,19 +116,19 @@ mod regexp {
     }
 
     #[geam::function]
-    fn do_check(regexp: &Regexp, string: StringValue) -> bool {
-        regexp.regex.is_match(string.as_str())
+    fn do_check(regexp: &Regexp, string: StringValue) -> HostResult<bool> {
+        Ok(regexp.regex.is_match(input_text(&string)?))
     }
 
     #[geam::function]
-    fn do_split(regexp: &Regexp, string: StringValue) -> Vec<StringValue> {
+    fn do_split(regexp: &Regexp, string: StringValue) -> HostResult<Vec<StringValue>> {
         split_value(&regexp.regex, string)
     }
 
-    fn split_value(regex: &Regex, string: StringValue) -> Vec<StringValue> {
+    fn split_value(regex: &Regex, string: StringValue) -> HostResult<Vec<StringValue>> {
         let mut pieces = Vec::new();
         let mut previous_end = 0;
-        for captures in regex.captures_iter(string.as_str()) {
+        for captures in regex.captures_iter(input_text(&string)?) {
             let matched = captures.get_match();
             pieces.push(string.slice(previous_end..matched.start()));
             for group in captures.iter().skip(1) {
@@ -132,27 +140,33 @@ mod regexp {
             previous_end = matched.end();
         }
         pieces.push(string.slice(previous_end..string.len()));
-        pieces
+        Ok(pieces)
     }
 
     #[geam::function]
-    fn do_scan(regexp: &Regexp, string: StringValue) -> Vec<Match> {
-        regexp
+    fn do_scan(regexp: &Regexp, string: StringValue) -> HostResult<Vec<Match>> {
+        Ok(regexp
             .regex
-            .captures_iter(string.as_str())
+            .captures_iter(input_text(&string)?)
             .map(|captures| match_value(&string, &captures))
-            .collect()
+            .collect())
     }
 
     #[geam::function]
-    fn replace(regexp: &Regexp, string: StringValue, substitute: StringValue) -> StringValue {
-        match regexp
-            .regex
-            .replace_all(string.as_str(), substitute.as_str())
-        {
-            std::borrow::Cow::Borrowed(_) => string,
-            std::borrow::Cow::Owned(replaced) => replaced.into(),
-        }
+    fn replace(
+        regexp: &Regexp,
+        string: StringValue,
+        substitute: StringValue,
+    ) -> HostResult<StringValue> {
+        Ok(
+            match regexp
+                .regex
+                .replace_all(input_text(&string)?, input_text(&substitute)?)
+            {
+                std::borrow::Cow::Borrowed(_) => string,
+                std::borrow::Cow::Owned(replaced) => replaced.into(),
+            },
+        )
     }
 
     #[geam::function(await)]
@@ -163,28 +177,34 @@ mod regexp {
         substitute: Callback<fn(Match) -> StringValue>,
     ) -> HostResult<StringValue> {
         let regex = regexp.with(|value| value.regex.clone());
-        let mut output = String::new();
+        let mut output = Vec::new();
         let mut matched = false;
         let mut previous_end = 0;
-        for captures in regex.captures_iter(string.as_str()) {
+        for captures in regex.captures_iter(input_text(&string)?) {
             let full = captures.get_match();
             if !matched {
                 output.reserve(string.len());
                 matched = true;
             }
-            output.push_str(&string.as_str()[previous_end..full.start()]);
+            output.extend_from_slice(&string.as_bytes()[previous_end..full.start()]);
             let replacement = call
                 .invoke(&substitute, (match_value(&string, &captures),))
                 .await?;
-            output.push_str(replacement.as_str());
+            output.extend_from_slice(replacement.as_bytes());
             previous_end = full.end();
         }
         if matched {
-            output.push_str(&string.as_str()[previous_end..]);
-            Ok(output.into())
+            output.extend_from_slice(&string.as_bytes()[previous_end..]);
+            Ok(StringValue::from_bytes(output))
         } else {
             Ok(string)
         }
+    }
+
+    fn input_text(value: &StringValue) -> Result<&str, HostFailure> {
+        value.as_str().map_err(|error| {
+            HostFailure::new(format!("regular expression text is not UTF-8: {error}"))
+        })
     }
 
     fn match_value(string: &StringValue, captures: &regex::Captures<'_>) -> Match {
@@ -209,7 +229,10 @@ mod regexp {
 
     #[cfg(test)]
     mod tests {
-        use super::*;
+        use super::{
+            BigInt, CompileError, ExternalPayload, Match, OptionsInput, Regexp, StringValue,
+            do_compile, match_value, split_value,
+        };
 
         fn compile(pattern: &str) -> Regexp {
             do_compile(
@@ -220,6 +243,25 @@ mod regexp {
                 },
             )
             .expect("fixture pattern compiles")
+        }
+
+        #[test]
+        fn non_utf8_pattern_reports_the_first_invalid_byte() {
+            let pattern = StringValue::from_bytes(vec![195, 169, 255]);
+            let CompileError::CompileError { error, byte_index } = do_compile(
+                pattern,
+                OptionsInput::Options {
+                    case_insensitive: false,
+                    multi_line: false,
+                },
+            )
+            .err()
+            .expect("non-UTF-8 pattern");
+            assert_eq!(byte_index, BigInt::from(2));
+            assert_eq!(
+                error.as_str(),
+                Ok("invalid utf-8 sequence of 1 bytes from index 2")
+            );
         }
 
         #[test]
@@ -311,7 +353,7 @@ mod regexp {
             let regex = compile(r"(\w+)-(\d+)");
             let matches = regex
                 .regex
-                .captures_iter(text.as_str())
+                .captures_iter(text.as_str().expect("Unicode test input"))
                 .map(|captures| match_value(&text, &captures))
                 .collect::<Vec<_>>();
             assert_eq!(matches.len(), 2);
@@ -323,36 +365,46 @@ mod regexp {
                 content: second,
                 submatches: second_parts,
             } = &matches[1];
-            assert_eq!(first.as_str(), "é-12");
+            assert_eq!(first.as_str(), Ok("é-12"));
             assert_eq!(first_parts, &[Some("é".into()), Some("12".into())]);
-            assert_eq!(second.as_str(), "b-3");
+            assert_eq!(second.as_str(), Ok("b-3"));
             assert_eq!(second_parts, &[Some("b".into()), Some("3".into())]);
 
             let text: StringValue = "b".into();
             let regex = compile(r"(a*)(b)");
-            let captures = regex.regex.captures(text.as_str()).expect("one match");
+            let captures = regex
+                .regex
+                .captures(text.as_str().expect("Unicode test input"))
+                .expect("one match");
             let Match::Match {
                 content,
                 submatches,
             } = match_value(&text, &captures);
-            assert_eq!(content.as_str(), "b");
+            assert_eq!(content.as_str(), Ok("b"));
             assert_eq!(submatches, &[None, Some("b".into())]);
 
             let regex = compile(r"(a)?b");
-            let captures = regex.regex.captures(text.as_str()).expect("one match");
+            let captures = regex
+                .regex
+                .captures(text.as_str().expect("Unicode test input"))
+                .expect("one match");
             let Match::Match { submatches, .. } = match_value(&text, &captures);
             assert!(submatches.is_empty());
-            assert!(!compile("z+").regex.is_match(text.as_str()));
+            assert!(
+                !compile("z+")
+                    .regex
+                    .is_match(text.as_str().expect("Unicode test input"))
+            );
         }
 
         #[test]
         fn split_keeps_captured_delimiters_and_empty_optional_groups() {
             assert_eq!(
-                split_value(&compile("([+-])").regex, "-01:00".into()),
+                split_value(&compile("([+-])").regex, "-01:00".into()).expect("Unicode input"),
                 vec!["", "-", "01:00"]
             );
             assert_eq!(
-                split_value(&compile("(a)?b").regex, "1b2ab3".into()),
+                split_value(&compile("(a)?b").regex, "1b2ab3".into()).expect("Unicode input"),
                 vec!["1", "", "2", "a", "3"]
             );
         }
