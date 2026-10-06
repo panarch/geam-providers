@@ -33,11 +33,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
                     .await
                     .expect_err("resolve requires a UTF-8 path");
                 assert!(failure.to_string().contains("path is not UTF-8"));
+                let (path, expected) = if cfg!(windows) {
+                    // filepath 1.1.2 joins the drive's trailing "/" with "/".
+                    (r"C:\geam\fixtures\..\résumé.txt", "c://geam/résumé.txt")
+                } else {
+                    ("/geam/fixtures/../résumé.txt", "/geam/résumé.txt")
+                };
                 let resolved = scope
-                    .call(&functions.resolve_path, (root.into(),))
+                    .call(&functions.resolve_path, (path.into(),))
                     .await
                     .expect("valid resolve after a host failure");
-                assert_eq!(resolved.as_bytes(), root.as_bytes());
+                assert_eq!(resolved.as_bytes(), expected.as_bytes());
                 assert!(
                     scope
                         .call(&functions.verify, (root.into(),))
