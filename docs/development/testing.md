@@ -587,6 +587,12 @@ embedding Cargo test runs both live and prepared scopes and launches an Erlang
 zlib peer for both compression directions, takeover/reset and four message
 families. It compares recovered bytes rather than the compressors' wire bytes.
 
+The embedding entry point skips rustfmt's recursive walk into the generated
+bindings, whose prepared tables overflow rustfmt's main thread stack on
+Windows. `geam embedding check` verifies both generated files against the
+pinned generator. Hand-written Rust remains subject to the formatting check;
+generated bindings still compile and run through the mandatory consumer gates.
+
 ```sh
 cargo test --package geam-gramps --locked
 bash .github/scripts/run_ci.sh provider gramps erlang
