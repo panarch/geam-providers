@@ -26,7 +26,7 @@ unspecified. Runtime names and values must be UTF-8; invalid encoding produces
 a host failure before the environment state changes.
 
 Geam is pinned to `main` commit
-`6a6cf4624447b53362bf394513578d708682f0e5`. The
+`08b5651661f83d59423ff20e271c62fb42a2f2ae`. The
 [standalone fixture](fixtures/gleam/) and
 [embedding fixture](fixtures/embedding/) resolve the original Hex package
 without editing it. [Source checksums](fixtures/upstream.sha256) cover its

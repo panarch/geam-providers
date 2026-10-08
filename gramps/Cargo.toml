@@ -1,0 +1,42 @@
+[package]
+name = "geam-gramps"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+description = "Geam Rust provider for the original gramps package"
+repository = "https://github.com/panarch/geam-providers"
+readme = "README.md"
+exclude = ["fixtures/", "tests/", "examples/", "src/test_support.rs", "src/test_support/"]
+autotests = false
+keywords = ["geam", "gleam", "websocket", "http", "provider"]
+categories = ["network-programming", "development-tools"]
+
+[package.metadata.geam.provider]
+schema = 2
+gleam-package = "gramps"
+gleam-version = ">= 6.0.1 and < 6.0.2"
+component = "plain"
+execution-service = true
+requires-services = ["gleam_erlang"]
+
+[package.metadata.geam.ci]
+fixture-bin = "geam_gramps_fixture"
+example-dir = "examples/upgrade_echo"
+erlang-oracle = true
+runners = ["ubuntu-24.04", "macos-15", "windows-2025"]
+script = "fixtures/ci.sh"
+script-phases = ["erlang"]
+
+[dependencies]
+geam = { workspace = true, features = ["gleam-stdlib", "gleam-erlang"] }
+sha1.workspace = true
+miniz_oxide.workspace = true
+base64 = "0.22"
+
+[dev-dependencies]
+geam = { workspace = true, features = ["embedding", "tokio", "geam-builtin"] }
+geam-crypto = { path = "../gleam-crypto" }
+tokio = { version = "1.53.1", default-features = false, features = ["rt", "sync", "macros", "time"] }
+sha2.workspace = true
+camino = "1"

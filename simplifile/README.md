@@ -10,7 +10,7 @@ supported upstream range is limited to 2.7.0 until other versions are tested.
 The [standalone fixture](fixtures/gleam/) and
 [embedding fixture](fixtures/embedding/) both compile the original Hex packages
 without upstream changes. Geam is pinned to `main` commit
-`6a6cf4624447b53362bf394513578d708682f0e5`. The provider implements the
+`08b5651661f83d59423ff20e271c62fb42a2f2ae`. The provider implements the
 host file system effects; the upstream Gleam package retains its public API and
 the Gleam implementations of operations such as `read`, `write`, and recursive
 copy.

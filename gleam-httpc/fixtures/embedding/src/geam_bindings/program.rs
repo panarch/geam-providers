@@ -5,7 +5,7 @@ use geam::__prepared_support as data;
 #[rustfmt::skip]
 pub(super) static PROGRAM: data::HostedModuleArtifact = data::HostedModuleArtifact {
     module: data::ModuleArtifact {
-        format: 23,
+        format: 24,
         program: data::ProgramTables {
             root: data::source::module_id(19),
             modules: data::Storage::Static(&[
@@ -64399,7 +64399,9 @@ pub fn invalid_method(url: String) -> Bool {
                 construction_customs: data::Storage::Static(&[]),
                 construction_externals: data::Storage::Static(&[]),
                 native_rules: None,
+                native_sources: data::Storage::Static(&[]),
             }),
+            native_view: None,
         },
         data::host::HostedFunctionMetadata {
             completion: data::host::HostFunctionCompletion::Value,
@@ -64459,7 +64461,9 @@ pub fn invalid_method(url: String) -> Bool {
                 construction_customs: data::Storage::Static(&[]),
                 construction_externals: data::Storage::Static(&[]),
                 native_rules: None,
+                native_sources: data::Storage::Static(&[]),
             }),
+            native_view: None,
         },
         data::host::HostedFunctionMetadata {
             completion: data::host::HostFunctionCompletion::Value,
@@ -64566,7 +64570,9 @@ pub fn invalid_method(url: String) -> Bool {
                     },
                 ]),
                 native_rules: None,
+                native_sources: data::Storage::Static(&[]),
             }),
+            native_view: None,
         },
         data::host::HostedFunctionMetadata {
             completion: data::host::HostFunctionCompletion::Value,
@@ -65542,7 +65548,9 @@ pub fn invalid_method(url: String) -> Bool {
                     },
                 ]),
                 native_rules: None,
+                native_sources: data::Storage::Static(&[]),
             }),
+            native_view: None,
         },
         data::host::HostedFunctionMetadata {
             completion: data::host::HostFunctionCompletion::Value,
@@ -66539,7 +66547,9 @@ pub fn invalid_method(url: String) -> Bool {
                     },
                 ]),
                 native_rules: None,
+                native_sources: data::Storage::Static(&[]),
             }),
+            native_view: None,
         },
         data::host::HostedFunctionMetadata {
             completion: data::host::HostFunctionCompletion::Value,
@@ -66828,7 +66838,9 @@ pub fn invalid_method(url: String) -> Bool {
                 ]),
                 construction_externals: data::Storage::Static(&[]),
                 native_rules: None,
+                native_sources: data::Storage::Static(&[]),
             }),
+            native_view: None,
         },
         data::host::HostedFunctionMetadata {
             completion: data::host::HostFunctionCompletion::Value,
@@ -66898,7 +66910,9 @@ pub fn invalid_method(url: String) -> Bool {
                 construction_customs: data::Storage::Static(&[]),
                 construction_externals: data::Storage::Static(&[]),
                 native_rules: None,
+                native_sources: data::Storage::Static(&[]),
             }),
+            native_view: None,
         },
         data::host::HostedFunctionMetadata {
             completion: data::host::HostFunctionCompletion::Value,
@@ -66967,7 +66981,9 @@ pub fn invalid_method(url: String) -> Bool {
                 construction_customs: data::Storage::Static(&[]),
                 construction_externals: data::Storage::Static(&[]),
                 native_rules: None,
+                native_sources: data::Storage::Static(&[]),
             }),
+            native_view: None,
         },
         data::host::HostedFunctionMetadata {
             completion: data::host::HostFunctionCompletion::Value,
@@ -67032,7 +67048,9 @@ pub fn invalid_method(url: String) -> Bool {
                 construction_customs: data::Storage::Static(&[]),
                 construction_externals: data::Storage::Static(&[]),
                 native_rules: None,
+                native_sources: data::Storage::Static(&[]),
             }),
+            native_view: None,
         },
         data::host::HostedFunctionMetadata {
             completion: data::host::HostFunctionCompletion::Value,
@@ -67092,7 +67110,9 @@ pub fn invalid_method(url: String) -> Bool {
                 construction_customs: data::Storage::Static(&[]),
                 construction_externals: data::Storage::Static(&[]),
                 native_rules: None,
+                native_sources: data::Storage::Static(&[]),
             }),
+            native_view: None,
         },
         data::host::HostedFunctionMetadata {
             completion: data::host::HostFunctionCompletion::Value,
@@ -67152,7 +67172,9 @@ pub fn invalid_method(url: String) -> Bool {
                 construction_customs: data::Storage::Static(&[]),
                 construction_externals: data::Storage::Static(&[]),
                 native_rules: None,
+                native_sources: data::Storage::Static(&[]),
             }),
+            native_view: None,
         },
         data::host::HostedFunctionMetadata {
             completion: data::host::HostFunctionCompletion::Value,
@@ -67271,7 +67293,9 @@ pub fn invalid_method(url: String) -> Bool {
                     },
                 ]),
                 native_rules: None,
+                native_sources: data::Storage::Static(&[]),
             }),
+            native_view: None,
         },
         data::host::HostedFunctionMetadata {
             completion: data::host::HostFunctionCompletion::Value,
@@ -67361,11 +67385,13 @@ pub fn invalid_method(url: String) -> Bool {
                 construction_customs: data::Storage::Static(&[]),
                 construction_externals: data::Storage::Static(&[]),
                 native_rules: None,
+                native_sources: data::Storage::Static(&[]),
             }),
+            native_view: None,
         },
     ]),
     never_functions: data::Storage::Static(&[]),
     callables: data::Storage::Static(&[]),
 };
 
-// Preparation inputs: sha256:15dd9740c3ec8b2b9817d8ed754ab07da1bcdadb9f7fe88e7b417caa294f6ae4
+// Preparation inputs: sha256:1e7178b995662c5b1bd12f7c410d4387425583f31db07599d6696f500a84059f

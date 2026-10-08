@@ -9,4 +9,4 @@ including non-UTF-8 names; distinct byte sequences remain separate.
 
 The [standalone fixture](fixtures/gleam/) and [embedding fixture](fixtures/embedding/) use the original Hex package without editing its Gleam source. The source-backed tests also check `Result`, function and custom values, cancellation and failure, and concurrent Gleam processes. The fixtures pin `gleam_stdlib` 1.0.3 for compatibility with the Geam commit below. See the [testing guide](../docs/development/testing.md) for the verification commands.
 
-This crate depends on Geam's public typed provider API at commit `6a6cf4624447b53362bf394513578d708682f0e5`. The pinned Git dependency currently means `cargo package --list` checks the package contents but does not establish crates.io publication readiness.
+This crate depends on Geam's public typed provider API at commit `08b5651661f83d59423ff20e271c62fb42a2f2ae`. The pinned Git dependency currently means `cargo package --list` checks the package contents but does not establish crates.io publication readiness.

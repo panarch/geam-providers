@@ -1,0 +1,6 @@
+HTTP Upgrade: 101 Switching Protocols
+WebSocket accept: s3pPLMBiTxaQ9kYGzzhZRbK+xOo=
+Compressed masked client message: hello websocket
+Compressed unmasked echo: hello websocket
+Ping/pong and close: complete
+Compression contexts: closed

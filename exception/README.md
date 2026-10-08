@@ -2,7 +2,7 @@
 
 This crate implements the three Erlang externals in the unmodified [`exception` 2.1.1](https://hex.pm/packages/exception/2.1.1) package through Geam's public typed provider API. Add `exception` to a Gleam project and select `geam-exception` as its Geam provider. Other upstream versions have not been verified.
 
-The Geam dependency is pinned to `main` commit `6a6cf4624447b53362bf394513578d708682f0e5`. The [standalone fixture](fixtures/gleam/) and [embedding fixture](fixtures/embedding/) resolve the original Hex package.
+The Geam dependency is pinned to `main` commit `08b5651661f83d59423ff20e271c62fb42a2f2ae`. The [standalone fixture](fixtures/gleam/) and [embedding fixture](fixtures/embedding/) resolve the original Hex package.
 
 `rescue` returns `Ok` for a successful callback and `Error(Errored(reason))` for a catchable Geam callback failure. The `Dynamic` reason is an inspectable Geam diagnostic symbol (`dynamic.classify(reason) == "Atom"`); its text and Erlang's original error term are not stable cross-target formats. Geam has no Erlang `throw` or `exit` failure class, so this provider does not produce `Thrown` or `Exited`. The original constructors remain part of the Gleam type.
 

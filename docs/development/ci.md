@@ -119,7 +119,7 @@ Install Bash, jq, Rust, Gleam and Erlang, plus any tools required by the case
 absolute path and the repository's revision before starting child scripts:
 
 ```sh
-export GEAM_REV=6a6cf4624447b53362bf394513578d708682f0e5
+export GEAM_REV=08b5651661f83d59423ff20e271c62fb42a2f2ae
 export GEAM_BIN="$PWD/target/geam-cli-build/release/geam"
 bash .github/scripts/run_ci.sh integration clip
 bash .github/scripts/run_ci.sh integration directories

@@ -1,0 +1,3 @@
+# Preserve Geam's managed manifest marker and exact output comparisons.
+Cargo.toml text eol=lf
+expected-output.txt text eol=lf

@@ -984,7 +984,7 @@ dependencies = [
 [[package]]
 name = "geam"
 version = "0.2.3"
-source = "git+https://github.com/panarch/geam.git?rev=6a6cf4624447b53362bf394513578d708682f0e5#6a6cf4624447b53362bf394513578d708682f0e5"
+source = "git+https://github.com/panarch/geam.git?rev=08b5651661f83d59423ff20e271c62fb42a2f2ae#08b5651661f83d59423ff20e271c62fb42a2f2ae"
 dependencies = [
  "geam-builtin",
  "geam-core",
@@ -1002,7 +1002,7 @@ dependencies = [
 [[package]]
 name = "geam-builtin"
 version = "0.2.3"
-source = "git+https://github.com/panarch/geam.git?rev=6a6cf4624447b53362bf394513578d708682f0e5#6a6cf4624447b53362bf394513578d708682f0e5"
+source = "git+https://github.com/panarch/geam.git?rev=08b5651661f83d59423ff20e271c62fb42a2f2ae#08b5651661f83d59423ff20e271c62fb42a2f2ae"
 dependencies = [
  "ecow",
  "geam-core",
@@ -1032,7 +1032,7 @@ dependencies = [
 [[package]]
 name = "geam-core"
 version = "0.2.3"
-source = "git+https://github.com/panarch/geam.git?rev=6a6cf4624447b53362bf394513578d708682f0e5#6a6cf4624447b53362bf394513578d708682f0e5"
+source = "git+https://github.com/panarch/geam.git?rev=08b5651661f83d59423ff20e271c62fb42a2f2ae#08b5651661f83d59423ff20e271c62fb42a2f2ae"
 dependencies = [
  "bitvec",
  "camino",
@@ -1180,7 +1180,7 @@ dependencies = [
 [[package]]
 name = "geam-macros"
 version = "0.2.3"
-source = "git+https://github.com/panarch/geam.git?rev=6a6cf4624447b53362bf394513578d708682f0e5#6a6cf4624447b53362bf394513578d708682f0e5"
+source = "git+https://github.com/panarch/geam.git?rev=08b5651661f83d59423ff20e271c62fb42a2f2ae#08b5651661f83d59423ff20e271c62fb42a2f2ae"
 dependencies = [
  "proc-macro-crate",
  "proc-macro2",
@@ -1207,7 +1207,7 @@ dependencies = [
 [[package]]
 name = "geam-stdlib"
 version = "0.2.3"
-source = "git+https://github.com/panarch/geam.git?rev=6a6cf4624447b53362bf394513578d708682f0e5#6a6cf4624447b53362bf394513578d708682f0e5"
+source = "git+https://github.com/panarch/geam.git?rev=08b5651661f83d59423ff20e271c62fb42a2f2ae#08b5651661f83d59423ff20e271c62fb42a2f2ae"
 dependencies = [
  "base64 0.22.1",
  "bitvec",

@@ -5,7 +5,7 @@ use geam::__prepared_support as data;
 #[rustfmt::skip]
 pub(super) static PROGRAM: data::HostedModuleArtifact = data::HostedModuleArtifact {
     module: data::ModuleArtifact {
-        format: 23,
+        format: 24,
         program: data::ProgramTables {
             root: data::source::module_id(25),
             modules: data::Storage::Static(&[
@@ -59330,7 +59330,9 @@ pub fn main() {
                     },
                 ]),
                 native_rules: None,
+                native_sources: data::Storage::Static(&[]),
             }),
+            native_view: None,
         },
         data::host::HostedFunctionMetadata {
             completion: data::host::HostFunctionCompletion::Value,
@@ -59390,7 +59392,9 @@ pub fn main() {
                 construction_customs: data::Storage::Static(&[]),
                 construction_externals: data::Storage::Static(&[]),
                 native_rules: None,
+                native_sources: data::Storage::Static(&[]),
             }),
+            native_view: None,
         },
         data::host::HostedFunctionMetadata {
             completion: data::host::HostFunctionCompletion::Value,
@@ -59467,7 +59471,9 @@ pub fn main() {
                 construction_customs: data::Storage::Static(&[]),
                 construction_externals: data::Storage::Static(&[]),
                 native_rules: None,
+                native_sources: data::Storage::Static(&[]),
             }),
+            native_view: None,
         },
         data::host::HostedFunctionMetadata {
             completion: data::host::HostFunctionCompletion::Value,
@@ -59604,7 +59610,9 @@ pub fn main() {
                 construction_customs: data::Storage::Static(&[]),
                 construction_externals: data::Storage::Static(&[]),
                 native_rules: None,
+                native_sources: data::Storage::Static(&[]),
             }),
+            native_view: None,
         },
         data::host::HostedFunctionMetadata {
             completion: data::host::HostFunctionCompletion::Value,
@@ -59750,7 +59758,9 @@ pub fn main() {
                 construction_customs: data::Storage::Static(&[]),
                 construction_externals: data::Storage::Static(&[]),
                 native_rules: None,
+                native_sources: data::Storage::Static(&[]),
             }),
+            native_view: None,
         },
         data::host::HostedFunctionMetadata {
             completion: data::host::HostFunctionCompletion::Value,
@@ -60323,7 +60333,9 @@ pub fn main() {
                         arguments: data::Storage::Static(&[]),
                     },
                 ])),
+                native_sources: data::Storage::Static(&[]),
             }),
+            native_view: None,
         },
         data::host::HostedFunctionMetadata {
             completion: data::host::HostFunctionCompletion::Value,
@@ -60474,7 +60486,9 @@ pub fn main() {
                 construction_customs: data::Storage::Static(&[]),
                 construction_externals: data::Storage::Static(&[]),
                 native_rules: None,
+                native_sources: data::Storage::Static(&[]),
             }),
+            native_view: None,
         },
         data::host::HostedFunctionMetadata {
             completion: data::host::HostFunctionCompletion::Value,
@@ -60642,7 +60656,9 @@ pub fn main() {
                 construction_customs: data::Storage::Static(&[]),
                 construction_externals: data::Storage::Static(&[]),
                 native_rules: None,
+                native_sources: data::Storage::Static(&[]),
             }),
+            native_view: None,
         },
         data::host::HostedFunctionMetadata {
             completion: data::host::HostFunctionCompletion::Value,
@@ -60853,7 +60869,9 @@ pub fn main() {
                     },
                 ]),
                 native_rules: None,
+                native_sources: data::Storage::Static(&[]),
             }),
+            native_view: None,
         },
         data::host::HostedFunctionMetadata {
             completion: data::host::HostFunctionCompletion::Value,
@@ -61003,7 +61021,9 @@ pub fn main() {
                 construction_customs: data::Storage::Static(&[]),
                 construction_externals: data::Storage::Static(&[]),
                 native_rules: None,
+                native_sources: data::Storage::Static(&[]),
             }),
+            native_view: None,
         },
         data::host::HostedFunctionMetadata {
             completion: data::host::HostFunctionCompletion::Value,
@@ -61229,7 +61249,9 @@ pub fn main() {
                     },
                 ]),
                 native_rules: None,
+                native_sources: data::Storage::Static(&[]),
             }),
+            native_view: None,
         },
         data::host::HostedFunctionMetadata {
             completion: data::host::HostFunctionCompletion::Value,
@@ -61383,7 +61405,9 @@ pub fn main() {
                 construction_customs: data::Storage::Static(&[]),
                 construction_externals: data::Storage::Static(&[]),
                 native_rules: None,
+                native_sources: data::Storage::Static(&[]),
             }),
+            native_view: None,
         },
         data::host::HostedFunctionMetadata {
             completion: data::host::HostFunctionCompletion::Value,
@@ -61594,7 +61618,9 @@ pub fn main() {
                     },
                 ]),
                 native_rules: None,
+                native_sources: data::Storage::Static(&[]),
             }),
+            native_view: None,
         },
         data::host::HostedFunctionMetadata {
             completion: data::host::HostFunctionCompletion::Value,
@@ -61684,7 +61710,9 @@ pub fn main() {
                 construction_customs: data::Storage::Static(&[]),
                 construction_externals: data::Storage::Static(&[]),
                 native_rules: None,
+                native_sources: data::Storage::Static(&[]),
             }),
+            native_view: None,
         },
         data::host::HostedFunctionMetadata {
             completion: data::host::HostFunctionCompletion::Value,
@@ -61826,7 +61854,9 @@ pub fn main() {
                 construction_customs: data::Storage::Static(&[]),
                 construction_externals: data::Storage::Static(&[]),
                 native_rules: None,
+                native_sources: data::Storage::Static(&[]),
             }),
+            native_view: None,
         },
         data::host::HostedFunctionMetadata {
             completion: data::host::HostFunctionCompletion::Value,
@@ -62399,7 +62429,9 @@ pub fn main() {
                         arguments: data::Storage::Static(&[]),
                     },
                 ])),
+                native_sources: data::Storage::Static(&[]),
             }),
+            native_view: None,
         },
         data::host::HostedFunctionMetadata {
             completion: data::host::HostFunctionCompletion::Value,
@@ -62489,7 +62521,9 @@ pub fn main() {
                 construction_customs: data::Storage::Static(&[]),
                 construction_externals: data::Storage::Static(&[]),
                 native_rules: None,
+                native_sources: data::Storage::Static(&[]),
             }),
+            native_view: None,
         },
         data::host::HostedFunctionMetadata {
             completion: data::host::HostFunctionCompletion::Value,
@@ -62620,7 +62654,9 @@ pub fn main() {
                 construction_customs: data::Storage::Static(&[]),
                 construction_externals: data::Storage::Static(&[]),
                 native_rules: None,
+                native_sources: data::Storage::Static(&[]),
             }),
+            native_view: None,
         },
         data::host::HostedFunctionMetadata {
             completion: data::host::HostFunctionCompletion::Value,
@@ -62697,7 +62733,9 @@ pub fn main() {
                 construction_customs: data::Storage::Static(&[]),
                 construction_externals: data::Storage::Static(&[]),
                 native_rules: None,
+                native_sources: data::Storage::Static(&[]),
             }),
+            native_view: None,
         },
         data::host::HostedFunctionMetadata {
             completion: data::host::HostFunctionCompletion::Value,
@@ -62812,7 +62850,9 @@ pub fn main() {
                 construction_customs: data::Storage::Static(&[]),
                 construction_externals: data::Storage::Static(&[]),
                 native_rules: None,
+                native_sources: data::Storage::Static(&[]),
             }),
+            native_view: None,
         },
         data::host::HostedFunctionMetadata {
             completion: data::host::HostFunctionCompletion::Value,
@@ -63002,7 +63042,9 @@ pub fn main() {
                     },
                 ]),
                 native_rules: None,
+                native_sources: data::Storage::Static(&[]),
             }),
+            native_view: None,
         },
         data::host::HostedFunctionMetadata {
             completion: data::host::HostFunctionCompletion::Value,
@@ -63924,7 +63966,9 @@ pub fn main() {
                         arguments: data::Storage::Static(&[]),
                     },
                 ])),
+                native_sources: data::Storage::Static(&[]),
             }),
+            native_view: None,
         },
         data::host::HostedFunctionMetadata {
             completion: data::host::HostFunctionCompletion::Value,
@@ -64812,7 +64856,9 @@ pub fn main() {
                         arguments: data::Storage::Static(&[]),
                     },
                 ])),
+                native_sources: data::Storage::Static(&[]),
             }),
+            native_view: None,
         },
         data::host::HostedFunctionMetadata {
             completion: data::host::HostFunctionCompletion::Value,
@@ -65597,7 +65643,9 @@ pub fn main() {
                         arguments: data::Storage::Static(&[]),
                     },
                 ])),
+                native_sources: data::Storage::Static(&[]),
             }),
+            native_view: None,
         },
         data::host::HostedFunctionMetadata {
             completion: data::host::HostFunctionCompletion::Value,
@@ -65889,7 +65937,9 @@ pub fn main() {
                         arguments: data::Storage::Static(&[]),
                     },
                 ])),
+                native_sources: data::Storage::Static(&[]),
             }),
+            native_view: None,
         },
         data::host::HostedFunctionMetadata {
             completion: data::host::HostFunctionCompletion::Value,
@@ -65979,7 +66029,9 @@ pub fn main() {
                 construction_customs: data::Storage::Static(&[]),
                 construction_externals: data::Storage::Static(&[]),
                 native_rules: None,
+                native_sources: data::Storage::Static(&[]),
             }),
+            native_view: None,
         },
         data::host::HostedFunctionMetadata {
             completion: data::host::HostFunctionCompletion::Value,
@@ -66092,7 +66144,9 @@ pub fn main() {
                 construction_customs: data::Storage::Static(&[]),
                 construction_externals: data::Storage::Static(&[]),
                 native_rules: None,
+                native_sources: data::Storage::Static(&[]),
             }),
+            native_view: None,
         },
         data::host::HostedFunctionMetadata {
             completion: data::host::HostFunctionCompletion::Value,
@@ -66205,7 +66259,9 @@ pub fn main() {
                 construction_customs: data::Storage::Static(&[]),
                 construction_externals: data::Storage::Static(&[]),
                 native_rules: None,
+                native_sources: data::Storage::Static(&[]),
             }),
+            native_view: None,
         },
         data::host::HostedFunctionMetadata {
             completion: data::host::HostFunctionCompletion::Value,
@@ -66994,7 +67050,9 @@ pub fn main() {
                         arguments: data::Storage::Static(&[]),
                     },
                 ])),
+                native_sources: data::Storage::Static(&[]),
             }),
+            native_view: None,
         },
         data::host::HostedFunctionMetadata {
             completion: data::host::HostFunctionCompletion::Value,
@@ -67166,7 +67224,9 @@ pub fn main() {
                 construction_customs: data::Storage::Static(&[]),
                 construction_externals: data::Storage::Static(&[]),
                 native_rules: None,
+                native_sources: data::Storage::Static(&[]),
             }),
+            native_view: None,
         },
         data::host::HostedFunctionMetadata {
             completion: data::host::HostFunctionCompletion::Value,
@@ -67368,7 +67428,9 @@ pub fn main() {
                     },
                 ]),
                 native_rules: None,
+                native_sources: data::Storage::Static(&[]),
             }),
+            native_view: None,
         },
         data::host::HostedFunctionMetadata {
             completion: data::host::HostFunctionCompletion::Value,
@@ -67455,7 +67517,9 @@ pub fn main() {
                 construction_customs: data::Storage::Static(&[]),
                 construction_externals: data::Storage::Static(&[]),
                 native_rules: None,
+                native_sources: data::Storage::Static(&[]),
             }),
+            native_view: None,
         },
         data::host::HostedFunctionMetadata {
             completion: data::host::HostFunctionCompletion::Value,
@@ -68333,7 +68397,9 @@ pub fn main() {
                         arguments: data::Storage::Static(&[]),
                     },
                 ])),
+                native_sources: data::Storage::Static(&[]),
             }),
+            native_view: None,
         },
         data::host::HostedFunctionMetadata {
             completion: data::host::HostFunctionCompletion::Value,
@@ -68970,7 +69036,9 @@ pub fn main() {
                         arguments: data::Storage::Static(&[]),
                     },
                 ])),
+                native_sources: data::Storage::Static(&[]),
             }),
+            native_view: None,
         },
         data::host::HostedFunctionMetadata {
             completion: data::host::HostFunctionCompletion::Value,
@@ -69852,7 +69920,9 @@ pub fn main() {
                         arguments: data::Storage::Static(&[]),
                     },
                 ])),
+                native_sources: data::Storage::Static(&[]),
             }),
+            native_view: None,
         },
         data::host::HostedFunctionMetadata {
             completion: data::host::HostFunctionCompletion::Value,
@@ -69940,7 +70010,9 @@ pub fn main() {
                 construction_customs: data::Storage::Static(&[]),
                 construction_externals: data::Storage::Static(&[]),
                 native_rules: None,
+                native_sources: data::Storage::Static(&[]),
             }),
+            native_view: None,
         },
         data::host::HostedFunctionMetadata {
             completion: data::host::HostFunctionCompletion::Value,
@@ -70323,7 +70395,9 @@ pub fn main() {
                         arguments: data::Storage::Static(&[]),
                     },
                 ])),
+                native_sources: data::Storage::Static(&[]),
             }),
+            native_view: None,
         },
         data::host::HostedFunctionMetadata {
             completion: data::host::HostFunctionCompletion::Value,
@@ -70464,7 +70538,9 @@ pub fn main() {
                 construction_customs: data::Storage::Static(&[]),
                 construction_externals: data::Storage::Static(&[]),
                 native_rules: None,
+                native_sources: data::Storage::Static(&[]),
             }),
+            native_view: None,
         },
         data::host::HostedFunctionMetadata {
             completion: data::host::HostFunctionCompletion::Value,
@@ -70756,7 +70832,9 @@ pub fn main() {
                 construction_customs: data::Storage::Static(&[]),
                 construction_externals: data::Storage::Static(&[]),
                 native_rules: None,
+                native_sources: data::Storage::Static(&[]),
             }),
+            native_view: None,
         },
         data::host::HostedFunctionMetadata {
             completion: data::host::HostFunctionCompletion::Value,
@@ -71219,7 +71297,9 @@ pub fn main() {
                     },
                 ]),
                 native_rules: None,
+                native_sources: data::Storage::Static(&[]),
             }),
+            native_view: None,
         },
         data::host::HostedFunctionMetadata {
             completion: data::host::HostFunctionCompletion::Value,
@@ -71792,7 +71872,9 @@ pub fn main() {
                         arguments: data::Storage::Static(&[]),
                     },
                 ])),
+                native_sources: data::Storage::Static(&[]),
             }),
+            native_view: None,
         },
         data::host::HostedFunctionMetadata {
             completion: data::host::HostFunctionCompletion::Value,
@@ -71852,7 +71934,9 @@ pub fn main() {
                 construction_customs: data::Storage::Static(&[]),
                 construction_externals: data::Storage::Static(&[]),
                 native_rules: None,
+                native_sources: data::Storage::Static(&[]),
             }),
+            native_view: None,
         },
         data::host::HostedFunctionMetadata {
             completion: data::host::HostFunctionCompletion::Value,
@@ -72081,7 +72165,9 @@ pub fn main() {
                 construction_customs: data::Storage::Static(&[]),
                 construction_externals: data::Storage::Static(&[]),
                 native_rules: None,
+                native_sources: data::Storage::Static(&[]),
             }),
+            native_view: None,
         },
         data::host::HostedFunctionMetadata {
             completion: data::host::HostFunctionCompletion::Value,
@@ -72168,7 +72254,9 @@ pub fn main() {
                 construction_customs: data::Storage::Static(&[]),
                 construction_externals: data::Storage::Static(&[]),
                 native_rules: None,
+                native_sources: data::Storage::Static(&[]),
             }),
+            native_view: None,
         },
         data::host::HostedFunctionMetadata {
             completion: data::host::HostFunctionCompletion::Value,
@@ -72801,7 +72889,9 @@ pub fn main() {
                 construction_customs: data::Storage::Static(&[]),
                 construction_externals: data::Storage::Static(&[]),
                 native_rules: None,
+                native_sources: data::Storage::Static(&[]),
             }),
+            native_view: None,
         },
         data::host::HostedFunctionMetadata {
             completion: data::host::HostFunctionCompletion::Value,
@@ -73261,7 +73351,9 @@ pub fn main() {
                     },
                 ]),
                 native_rules: None,
+                native_sources: data::Storage::Static(&[]),
             }),
+            native_view: None,
         },
         data::host::HostedFunctionMetadata {
             completion: data::host::HostFunctionCompletion::Value,
@@ -73878,7 +73970,9 @@ pub fn main() {
                     },
                 ]),
                 native_rules: None,
+                native_sources: data::Storage::Static(&[]),
             }),
+            native_view: None,
         },
         data::host::HostedFunctionMetadata {
             completion: data::host::HostFunctionCompletion::Value,
@@ -73993,7 +74087,9 @@ pub fn main() {
                 construction_customs: data::Storage::Static(&[]),
                 construction_externals: data::Storage::Static(&[]),
                 native_rules: None,
+                native_sources: data::Storage::Static(&[]),
             }),
+            native_view: None,
         },
         data::host::HostedFunctionMetadata {
             completion: data::host::HostFunctionCompletion::Value,
@@ -74566,7 +74662,9 @@ pub fn main() {
                         arguments: data::Storage::Static(&[]),
                     },
                 ])),
+                native_sources: data::Storage::Static(&[]),
             }),
+            native_view: None,
         },
         data::host::HostedFunctionMetadata {
             completion: data::host::HostFunctionCompletion::Value,
@@ -74704,7 +74802,9 @@ pub fn main() {
                 construction_customs: data::Storage::Static(&[]),
                 construction_externals: data::Storage::Static(&[]),
                 native_rules: None,
+                native_sources: data::Storage::Static(&[]),
             }),
+            native_view: None,
         },
         data::host::HostedFunctionMetadata {
             completion: data::host::HostFunctionCompletion::Value,
@@ -75337,7 +75437,9 @@ pub fn main() {
                 construction_customs: data::Storage::Static(&[]),
                 construction_externals: data::Storage::Static(&[]),
                 native_rules: None,
+                native_sources: data::Storage::Static(&[]),
             }),
+            native_view: None,
         },
         data::host::HostedFunctionMetadata {
             completion: data::host::HostFunctionCompletion::Value,
@@ -75954,7 +76056,9 @@ pub fn main() {
                     },
                 ]),
                 native_rules: None,
+                native_sources: data::Storage::Static(&[]),
             }),
+            native_view: None,
         },
         data::host::HostedFunctionMetadata {
             completion: data::host::HostFunctionCompletion::Value,
@@ -76166,7 +76270,9 @@ pub fn main() {
                 construction_customs: data::Storage::Static(&[]),
                 construction_externals: data::Storage::Static(&[]),
                 native_rules: None,
+                native_sources: data::Storage::Static(&[]),
             }),
+            native_view: None,
         },
         data::host::HostedFunctionMetadata {
             completion: data::host::HostFunctionCompletion::Value,
@@ -76346,7 +76452,9 @@ pub fn main() {
                 construction_customs: data::Storage::Static(&[]),
                 construction_externals: data::Storage::Static(&[]),
                 native_rules: None,
+                native_sources: data::Storage::Static(&[]),
             }),
+            native_view: None,
         },
         data::host::HostedFunctionMetadata {
             completion: data::host::HostFunctionCompletion::Value,
@@ -76633,7 +76741,9 @@ pub fn main() {
                     },
                 ]),
                 native_rules: None,
+                native_sources: data::Storage::Static(&[]),
             }),
+            native_view: None,
         },
         data::host::HostedFunctionMetadata {
             completion: data::host::HostFunctionCompletion::Value,
@@ -76847,7 +76957,9 @@ pub fn main() {
                 construction_customs: data::Storage::Static(&[]),
                 construction_externals: data::Storage::Static(&[]),
                 native_rules: None,
+                native_sources: data::Storage::Static(&[]),
             }),
+            native_view: None,
         },
         data::host::HostedFunctionMetadata {
             completion: data::host::HostFunctionCompletion::Value,
@@ -76939,7 +77051,9 @@ pub fn main() {
                 construction_customs: data::Storage::Static(&[]),
                 construction_externals: data::Storage::Static(&[]),
                 native_rules: None,
+                native_sources: data::Storage::Static(&[]),
             }),
+            native_view: None,
         },
         data::host::HostedFunctionMetadata {
             completion: data::host::HostFunctionCompletion::Value,
@@ -77046,7 +77160,9 @@ pub fn main() {
                     },
                 ]),
                 native_rules: None,
+                native_sources: data::Storage::Static(&[]),
             }),
+            native_view: None,
         },
         data::host::HostedFunctionMetadata {
             completion: data::host::HostFunctionCompletion::Value,
@@ -77167,7 +77283,9 @@ pub fn main() {
                 construction_customs: data::Storage::Static(&[]),
                 construction_externals: data::Storage::Static(&[]),
                 native_rules: None,
+                native_sources: data::Storage::Static(&[]),
             }),
+            native_view: None,
         },
         data::host::HostedFunctionMetadata {
             completion: data::host::HostFunctionCompletion::Value,
@@ -77367,7 +77485,9 @@ pub fn main() {
                 construction_customs: data::Storage::Static(&[]),
                 construction_externals: data::Storage::Static(&[]),
                 native_rules: None,
+                native_sources: data::Storage::Static(&[]),
             }),
+            native_view: None,
         },
         data::host::HostedFunctionMetadata {
             completion: data::host::HostFunctionCompletion::Value,
@@ -77656,7 +77776,9 @@ pub fn main() {
                     },
                 ]),
                 native_rules: None,
+                native_sources: data::Storage::Static(&[]),
             }),
+            native_view: None,
         },
         data::host::HostedFunctionMetadata {
             completion: data::host::HostFunctionCompletion::Value,
@@ -77902,7 +78024,9 @@ pub fn main() {
                 construction_customs: data::Storage::Static(&[]),
                 construction_externals: data::Storage::Static(&[]),
                 native_rules: None,
+                native_sources: data::Storage::Static(&[]),
             }),
+            native_view: None,
         },
         data::host::HostedFunctionMetadata {
             completion: data::host::HostFunctionCompletion::Value,
@@ -77989,7 +78113,9 @@ pub fn main() {
                 construction_customs: data::Storage::Static(&[]),
                 construction_externals: data::Storage::Static(&[]),
                 native_rules: None,
+                native_sources: data::Storage::Static(&[]),
             }),
+            native_view: None,
         },
         data::host::HostedFunctionMetadata {
             completion: data::host::HostFunctionCompletion::Value,
@@ -78626,7 +78752,9 @@ pub fn main() {
                 construction_customs: data::Storage::Static(&[]),
                 construction_externals: data::Storage::Static(&[]),
                 native_rules: None,
+                native_sources: data::Storage::Static(&[]),
             }),
+            native_view: None,
         },
         data::host::HostedFunctionMetadata {
             completion: data::host::HostFunctionCompletion::Value,
@@ -78822,7 +78950,9 @@ pub fn main() {
                     },
                 ]),
                 native_rules: None,
+                native_sources: data::Storage::Static(&[]),
             }),
+            native_view: None,
         },
         data::host::HostedFunctionMetadata {
             completion: data::host::HostFunctionCompletion::Value,
@@ -78982,7 +79112,9 @@ pub fn main() {
                 construction_customs: data::Storage::Static(&[]),
                 construction_externals: data::Storage::Static(&[]),
                 native_rules: None,
+                native_sources: data::Storage::Static(&[]),
             }),
+            native_view: None,
         },
         data::host::HostedFunctionMetadata {
             completion: data::host::HostFunctionCompletion::Value,
@@ -79223,7 +79355,9 @@ pub fn main() {
                     },
                 ]),
                 native_rules: None,
+                native_sources: data::Storage::Static(&[]),
             }),
+            native_view: None,
         },
         data::host::HostedFunctionMetadata {
             completion: data::host::HostFunctionCompletion::Value,
@@ -79397,7 +79531,9 @@ pub fn main() {
                 construction_customs: data::Storage::Static(&[]),
                 construction_externals: data::Storage::Static(&[]),
                 native_rules: None,
+                native_sources: data::Storage::Static(&[]),
             }),
+            native_view: None,
         },
         data::host::HostedFunctionMetadata {
             completion: data::host::HostFunctionCompletion::Value,
@@ -79583,7 +79719,9 @@ pub fn main() {
                     },
                 ]),
                 native_rules: None,
+                native_sources: data::Storage::Static(&[]),
             }),
+            native_view: None,
         },
         data::host::HostedFunctionMetadata {
             completion: data::host::HostFunctionCompletion::Value,
@@ -80321,7 +80459,9 @@ pub fn main() {
                         arguments: data::Storage::Static(&[]),
                     },
                 ])),
+                native_sources: data::Storage::Static(&[]),
             }),
+            native_view: None,
         },
         data::host::HostedFunctionMetadata {
             completion: data::host::HostFunctionCompletion::Value,
@@ -81055,7 +81195,9 @@ pub fn main() {
                         arguments: data::Storage::Static(&[]),
                     },
                 ])),
+                native_sources: data::Storage::Static(&[]),
             }),
+            native_view: None,
         },
         data::host::HostedFunctionMetadata {
             completion: data::host::HostFunctionCompletion::Value,
@@ -81173,7 +81315,9 @@ pub fn main() {
                 construction_customs: data::Storage::Static(&[]),
                 construction_externals: data::Storage::Static(&[]),
                 native_rules: None,
+                native_sources: data::Storage::Static(&[]),
             }),
+            native_view: None,
         },
         data::host::HostedFunctionMetadata {
             completion: data::host::HostFunctionCompletion::Value,
@@ -81360,7 +81504,9 @@ pub fn main() {
                 construction_customs: data::Storage::Static(&[]),
                 construction_externals: data::Storage::Static(&[]),
                 native_rules: None,
+                native_sources: data::Storage::Static(&[]),
             }),
+            native_view: None,
         },
         data::host::HostedFunctionMetadata {
             completion: data::host::HostFunctionCompletion::Value,
@@ -81684,7 +81830,9 @@ pub fn main() {
                         arguments: data::Storage::Static(&[]),
                     },
                 ])),
+                native_sources: data::Storage::Static(&[]),
             }),
+            native_view: None,
         },
         data::host::HostedFunctionMetadata {
             completion: data::host::HostFunctionCompletion::Value,
@@ -81795,7 +81943,9 @@ pub fn main() {
                 construction_customs: data::Storage::Static(&[]),
                 construction_externals: data::Storage::Static(&[]),
                 native_rules: None,
+                native_sources: data::Storage::Static(&[]),
             }),
+            native_view: None,
         },
         data::host::HostedFunctionMetadata {
             completion: data::host::HostFunctionCompletion::Value,
@@ -81885,7 +82035,9 @@ pub fn main() {
                 construction_customs: data::Storage::Static(&[]),
                 construction_externals: data::Storage::Static(&[]),
                 native_rules: None,
+                native_sources: data::Storage::Static(&[]),
             }),
+            native_view: None,
         },
         data::host::HostedFunctionMetadata {
             completion: data::host::HostFunctionCompletion::Value,
@@ -82021,7 +82173,9 @@ pub fn main() {
                     },
                 ]),
                 native_rules: None,
+                native_sources: data::Storage::Static(&[]),
             }),
+            native_view: None,
         },
         data::host::HostedFunctionMetadata {
             completion: data::host::HostFunctionCompletion::Value,
@@ -82992,7 +83146,9 @@ pub fn main() {
                         arguments: data::Storage::Static(&[]),
                     },
                 ])),
+                native_sources: data::Storage::Static(&[]),
             }),
+            native_view: None,
         },
         data::host::HostedFunctionMetadata {
             completion: data::host::HostFunctionCompletion::Value,
@@ -83744,7 +83900,9 @@ pub fn main() {
                         arguments: data::Storage::Static(&[]),
                     },
                 ])),
+                native_sources: data::Storage::Static(&[]),
             }),
+            native_view: None,
         },
         data::host::HostedFunctionMetadata {
             completion: data::host::HostFunctionCompletion::Value,
@@ -84499,11 +84657,13 @@ pub fn main() {
                         arguments: data::Storage::Static(&[]),
                     },
                 ])),
+                native_sources: data::Storage::Static(&[]),
             }),
+            native_view: None,
         },
     ]),
     never_functions: data::Storage::Static(&[]),
     callables: data::Storage::Static(&[]),
 };
 
-// Preparation inputs: sha256:c611ebdbe73271cb08cbf91ca1eef95cfb72b6ba1699dfe97f9119bc8ed03566
+// Preparation inputs: sha256:3afd321b5c428173e8392aa8bbafe64a87975184ce472fede7b89388a997d263
