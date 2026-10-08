@@ -1,5 +1,5 @@
 [workspace]
-members = ["filepath", "gleam-regexp", "gleam-otp", "houdini", "gzlib", "gleam-crypto", "simplifile", "platform", "logging", "term-size", "birl", "gleam-httpc", "global-value", "argv", "splitter", "envoy", "operating-system", "exception", "glisten"]
+members = ["filepath", "gleam-regexp", "gleam-otp", "houdini", "gzlib", "gleam-crypto", "simplifile", "platform", "logging", "term-size", "birl", "gleam-httpc", "global-value", "argv", "splitter", "envoy", "operating-system", "exception", "glisten", "gramps"]
 resolver = "3"
 
 [workspace.package]
@@ -8,8 +8,8 @@ rust-version = "1.96"
 license = "Apache-2.0"
 
 [workspace.dependencies]
-geam = { git = "https://github.com/panarch/geam.git", rev = "6a6cf4624447b53362bf394513578d708682f0e5", default-features = false, features = ["provider"] }
-geam-core = { git = "https://github.com/panarch/geam.git", rev = "6a6cf4624447b53362bf394513578d708682f0e5" }
+geam = { git = "https://github.com/panarch/geam.git", rev = "08b5651661f83d59423ff20e271c62fb42a2f2ae", default-features = false, features = ["provider"] }
+geam-core = { git = "https://github.com/panarch/geam.git", rev = "08b5651661f83d59423ff20e271c62fb42a2f2ae" }
 regex = "1.12"
 regex-syntax = "0.8"
 sha2 = "0.10"

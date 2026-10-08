@@ -1,0 +1,4 @@
+7828090a48478234299427c1c9a4425e9c0c6e92aca98d02f5e273c2974d57f0  src/gramps/websocket.gleam
+c89f667df5fd6bb1ddf27e8833d76ba74466724f709c73dfb875476ecd6287ec  src/gramps/websocket/compression.gleam
+cc8a7a5c0d8921a9f47af3996c80436d147a030c12b665f02a8488fb76c69b43  src/gramps/http.gleam
+559b658cce246d74e5563208bb82cae4324c7824419df25ffd1dfde0a181be2b  src/gramps_ffi.erl

@@ -6,7 +6,7 @@ rust-version = "1.96"
 publish = false
 
 [dependencies]
-geam = { git = "https://github.com/panarch/geam.git", rev = "6a6cf4624447b53362bf394513578d708682f0e5", default-features = false, features = ["embedding", "gleam-stdlib", "tokio", "geam-builtin"] }
+geam = { git = "https://github.com/panarch/geam.git", rev = "08b5651661f83d59423ff20e271c62fb42a2f2ae", default-features = false, features = ["embedding", "gleam-stdlib", "tokio", "geam-builtin"] }
 geam-regexp = { path = "../.." }
 tokio = { version = "1.53.1", default-features = false, features = ["rt"] }
 

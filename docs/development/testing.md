@@ -5,7 +5,8 @@ Providers. The current production packages are `geam-filepath`,
 `geam-regexp`, `geam-otp`, `geam-houdini`, `geam-gzlib`, `geam-crypto`,
 `geam-simplifile`, `geam-platform`, `geam-logging`, `geam-term-size`,
 `geam-birl`, `geam-httpc`, `geam-global-value`, `geam-argv`, `geam-splitter`,
-`geam-envoy`, `geam-operating-system`, `geam-exception`, and `geam-glisten`.
+`geam-envoy`, `geam-operating-system`, `geam-exception`, `geam-glisten`, and
+`geam-gramps`.
 This document must remain the source of truth for the checks actually run.
 
 For acceptance rules, see [review-policy.md](review-policy.md). For practical
@@ -74,14 +75,14 @@ output before exit, prevented continuation, and fresh scopes after exit.
 ## Dependency Preparation
 
 The Rust workspace, fixture consumers, and report service example use Geam
-`main` commit `6a6cf4624447b53362bf394513578d708682f0e5`. Houdini also
+`main` commit `08b5651661f83d59423ff20e271c62fb42a2f2ae`. Houdini also
 uses the public `geam-core` byte-slice helper from that commit. The Gleam
 projects resolve the unmodified `filepath` 1.1.2, `gleam_regexp` 1.1.1,
 `gleam_otp` 1.3.0, `houdini` 1.2.0, `gzlib` 2.0.0, `gleam_crypto` 1.6.0,
 `simplifile` 2.7.0, `platform` 1.0.0, `logging` 1.5.0, `term_size` 1.0.1,
 `birl` 2.0.0, `gleam_httpc` 5.0.0, `global_value` 1.0.0, `argv` 1.1.0,
 `splitter` 1.3.0, `envoy` 1.2.0, `operating_system` 1.0.1, `exception` 2.1.1,
-and `glisten` 9.0.1 packages from Hex.
+`glisten` 9.0.1, and `gramps` 6.0.1 packages from Hex.
 The crypto, simplifile, logging, term_size, birl, global_value, splitter,
 envoy, and exception fixtures and the `operating_system` standalone fixture pin
 `gleam_stdlib` 1.0.3 for compatibility with this Geam commit; the simplifile
@@ -182,13 +183,14 @@ Rust tests:
 ```
 
 When updating the common Geam revision, rebuild the pinned CLI and synchronize
-the OTP, httpc, and Glisten prepared embedding data before running the Rust workspace
+the OTP, httpc, Glisten, and gramps prepared embedding data before running the Rust workspace
 checks. These generated programs target that commit's prepared representation:
 
 ```sh
 (cd gleam-otp/fixtures/embedding && "$GEAM_BIN" embedding sync)
 (cd gleam-httpc/fixtures/embedding && "$GEAM_BIN" embedding sync)
 (cd glisten/fixtures/embedding && "$GEAM_BIN" embedding sync)
+(cd gramps/fixtures/embedding && "$GEAM_BIN" embedding sync)
 ```
 
 Commit the generated changes together with the pin; use `embedding check` to
@@ -217,13 +219,13 @@ commit (a Git-package `cargo install` can resolve a published `geam-core`):
 
 ```sh
 git init -q target/geam-source
-git -C target/geam-source fetch --depth=1 https://github.com/panarch/geam.git 6a6cf4624447b53362bf394513578d708682f0e5
+git -C target/geam-source fetch --depth=1 https://github.com/panarch/geam.git 08b5651661f83d59423ff20e271c62fb42a2f2ae
 git -C target/geam-source checkout --detach -q FETCH_HEAD
 CARGO_TARGET_DIR="$PWD/target/geam-cli-build" \
   cargo build --manifest-path "$PWD/target/geam-source/Cargo.toml" \
   --locked --release --bin geam
 export GEAM_BIN="$PWD/target/geam-cli-build/release/geam"
-export GEAM_REV=6a6cf4624447b53362bf394513578d708682f0e5
+export GEAM_REV=08b5651661f83d59423ff20e271c62fb42a2f2ae
 ```
 
 ## Standard Verification
@@ -503,6 +505,7 @@ cargo package --list --package geam-envoy --locked
 cargo package --list --package geam-operating-system --locked
 cargo package --list --package geam-exception --locked
 cargo package --list --package geam-glisten --locked
+cargo package --list --package geam-gramps --locked
 ```
 
 Confirm that each list contains `LICENSE` along with the manifest, README, and
@@ -560,6 +563,60 @@ The embedding integration test starts its consumer through the same driver and
 requires all seven scenarios in live and freshly generated prepared execution.
 The execution host enables time only; Glisten owns its explicitly selected IO
 reactor. Generated bindings and the prepared program are checked in together.
+
+## Gramps Verification
+
+The [gramps 6.0.1 provider](../../gramps/README.md) composes `geam-crypto`
+with Geam's stdlib and Erlang components. Its fixtures and reusable Upgrade
+echo example use unchanged Hex source with stdlib 1.0.3, Erlang 1.3.0, HTTP
+4.3.0 and crypto 1.6.0. Before workspace tests, download its source dependencies:
+
+```sh
+(cd gramps/fixtures/gleam && gleam deps download && gleam format --check && gleam check)
+(cd gramps/fixtures/embedding/gleam && gleam deps download && gleam format --check && gleam check)
+(cd gramps/examples/upgrade_echo && gleam deps download && gleam format --check && gleam check)
+(cd gramps/fixtures/gleam/build/packages/gramps && shasum -a 256 -c ../../../../upstream.sha256)
+```
+
+[CONTRACTS.md](../../gramps/fixtures/CONTRACTS.md) maps all 13 native
+declarations to mandatory owner/source tests. Compression lifecycle tests use
+real source process identities, mailboxes, monitors, cancellation and service
+hooks. The original Erlang reference checks common source-facing results;
+Geam-only cases separately check typed More/URI normalization. The independent
+embedding Cargo test runs both live and prepared scopes and launches an Erlang
+zlib peer for both compression directions, takeover/reset and four message
+families. It compares recovered bytes rather than the compressors' wire bytes.
+
+```sh
+cargo test --package geam-gramps --locked
+bash .github/scripts/run_ci.sh provider gramps erlang
+(cd gramps/fixtures/embedding && "$GEAM_BIN" embedding check)
+(cd gramps/fixtures/embedding && cargo fmt --all --check)
+(cd gramps/fixtures/embedding && cargo clippy --all-targets --locked -- -D warnings)
+(cd gramps/fixtures/embedding && RUSTDOCFLAGS='-D warnings' cargo doc --no-deps --locked)
+(cd gramps/fixtures/embedding && cargo test --locked)
+bash .github/scripts/run_ci.sh provider gramps embedding
+(cd gramps/fixtures/gleam && "$GEAM_BIN" prepare)
+bash .github/scripts/run_ci.sh provider gramps standalone
+(cd gramps/fixtures/gleam && "$GEAM_BIN" build)
+bash .github/scripts/run_ci.sh provider gramps executable
+(cd gramps/examples/upgrade_echo && "$GEAM_BIN" prepare && "$GEAM_BIN" run)
+cargo package --list --package geam-gramps --locked
+```
+
+The example must print exactly [expected-output.txt](../../gramps/examples/upgrade_echo/expected-output.txt).
+Common CI retains root quality, checksum, package, bindings, standalone/build,
+outside-directory execution, example output and full `gramps/src/` line/region
+coverage gates. Cargo metadata selects Ubuntu, macOS and Windows; the
+[owner hook](../../gramps/fixtures/ci.sh) only selects the original Erlang
+reference module. Run the independent coverage gate from the root:
+
+```sh
+cargo llvm-cov clean --workspace
+cargo llvm-cov --package geam-gramps --locked \
+  --json --summary-only --output-path target/gramps-coverage.json
+cargo llvm-cov report --package geam-gramps --text --show-missing-lines
+```
 
 ## Package Integration Verification
 

@@ -4,6 +4,6 @@ This crate provides the Erlang native functions used by the unmodified [houdini 
 
 The original Gleam package owns the public escape API and its HTML escaping algorithm. This provider registers its private generic coerce/1 external and byte-range slice/3 external. String/BitArray conversions preserve their original bytes, including non-UTF-8 bytes, and byte-aligned slices share their input storage. It does not provide a JavaScript implementation or claim support for all of Lustre.
 
-The Geam and Geam Core dependencies use the same pinned main commit, 6a6cf4624447b53362bf394513578d708682f0e5. The [standalone fixture](fixtures/gleam/) selects this provider explicitly; the [embedding fixture](fixtures/embedding/) consumes this crate directly. Both use the original package from Hex.
+The Geam and Geam Core dependencies use the same pinned main commit, 08b5651661f83d59423ff20e271c62fb42a2f2ae. The [standalone fixture](fixtures/gleam/) selects this provider explicitly; the [embedding fixture](fixtures/embedding/) consumes this crate directly. Both use the original package from Hex.
 
 The crate is ready for source-based use with the pinned Geam commit. A crates.io release is a separate step while Geam is a Git dependency.

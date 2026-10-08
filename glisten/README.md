@@ -7,7 +7,7 @@ connection handlers, selectors, and supervision run as upstream source. The
 supported package range is limited to 9.0.1 until other versions are tested.
 
 Geam is pinned to `main` commit
-`6a6cf4624447b53362bf394513578d708682f0e5`. The
+`08b5651661f83d59423ff20e271c62fb42a2f2ae`. The
 [standalone fixture](fixtures/gleam/) selects `geam-glisten`, `geam-otp`,
 `geam-logging`, and `geam-argv` explicitly. The
 [embedding fixture](fixtures/embedding/) composes the same providers with

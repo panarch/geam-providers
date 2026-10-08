@@ -23,6 +23,7 @@ This repository implements native functions for existing Gleam packages through 
 | [`operating_system`](https://hex.pm/packages/operating_system) | [`geam-operating-system`](operating-system/README.md) | 1.0.1 |
 | [`exception`](https://hex.pm/packages/exception) | [`geam-exception`](exception/README.md) | 2.1.1 |
 | [`glisten`](https://hex.pm/packages/glisten) | [`geam-glisten`](glisten/README.md) | 9.0.1 |
+| [`gramps`](https://hex.pm/packages/gramps) | [`geam-gramps`](gramps/README.md) | 6.0.1 |
 
 ## Package integrations
 
@@ -31,6 +32,6 @@ This repository implements native functions for existing Gleam packages through 
 | [`directories`](https://hex.pm/packages/directories) | [Standalone and embedding](integrations/directories/README.md) | 1.2.0 | `geam-envoy`, `geam-platform`, `geam-simplifile`, `geam-filepath` |
 | [`clip`](https://hex.pm/packages/clip) | [Contracts, file-search CLI and embedding](integrations/clip/README.md) | 1.2.2 | `geam-argv`, `geam-simplifile`, `geam-filepath`, `geam-regexp` |
 
-The Geam dependencies are pinned to `main` commit `6a6cf4624447b53362bf394513578d708682f0e5` rather than a released version or local path. The Gleam packages come from Hex without changes to their upstream source. Publishing provider crates and testing consumption of published packages are separate steps after the required Geam features are released.
+The Geam dependencies are pinned to `main` commit `08b5651661f83d59423ff20e271c62fb42a2f2ae` rather than a released version or local path. The Gleam packages come from Hex without changes to their upstream source. Publishing provider crates and testing consumption of published packages are separate steps after the required Geam features are released.
 
 See [provider compatibility](docs/design/provider-compatibility.md) for the design boundary, the [testing guide](docs/development/testing.md) for verification steps and coverage requirements, and the [review policy](docs/development/review-policy.md) for code review criteria.

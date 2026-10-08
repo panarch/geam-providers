@@ -4,7 +4,7 @@ This fixture runs the unmodified [`directories` 1.2.0](https://hex.pm/packages/d
 
 The [standalone Gleam fixture](fixtures/gleam/) owns a shared source-backed scenario. The [embedding Gleam project](fixtures/embedding/gleam/) imports it as a local dependency, and the [Rust embedding consumer](fixtures/embedding/src/main.rs) supplies an isolated initial environment. The scenario creates directories under a temporary root, calls all 11 public `directories` functions with exact OS-specific expectations, checks environment priority and missing or empty directory candidates, then deletes the root. The same standalone Gleam module runs on original Erlang as an independent reference; it does not derive Geam's expected answers from Erlang output. The exported API is `preference_dir`, despite the plural spelling in the upstream README example.
 
-Both fixtures lock the original Hex release and Geam `main` commit `6a6cf4624447b53362bf394513578d708682f0e5`. [Checksums](fixtures/upstream.sha256) cover the downloaded `directories` Gleam module and manifest. The source is not copied or patched in this repository.
+Both fixtures lock the original Hex release and Geam `main` commit `08b5651661f83d59423ff20e271c62fb42a2f2ae`. [Checksums](fixtures/upstream.sha256) cover the downloaded `directories` Gleam module and manifest. The source is not copied or patched in this repository.
 
 Build the Geam CLI from that commit as described in the [testing guide](../../docs/development/testing.md), then set `GEAM_BIN` to the resulting executable. From the repository root:
 
@@ -23,7 +23,7 @@ by [ci.sh](ci.sh). With Bash, jq, Rust, Gleam and Erlang installed, use the
 common entry point from the repository root:
 
 ```sh
-export GEAM_REV=6a6cf4624447b53362bf394513578d708682f0e5
+export GEAM_REV=08b5651661f83d59423ff20e271c62fb42a2f2ae
 export GEAM_BIN="$PWD/target/geam-cli-build/release/geam"
 bash .github/scripts/run_ci.sh integration directories
 ```
