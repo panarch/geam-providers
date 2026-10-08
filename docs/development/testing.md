@@ -592,6 +592,8 @@ bindings, whose prepared tables overflow rustfmt's main thread stack on
 Windows. `geam embedding check` verifies both generated files against the
 pinned generator. Hand-written Rust remains subject to the formatting check;
 generated bindings still compile and run through the mandatory consumer gates.
+The example's Git attributes keep its managed Cargo manifest and expected
+output at LF on every platform.
 
 ```sh
 cargo test --package geam-gramps --locked
